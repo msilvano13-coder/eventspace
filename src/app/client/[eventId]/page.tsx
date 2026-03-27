@@ -4,8 +4,8 @@ import { useParams } from "next/navigation";
 import { useEvent, useStoreActions, useQuestionnaires } from "@/hooks/useStore";
 import Link from "next/link";
 import { useState } from "react";
-import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt } from "lucide-react";
-import { Question, Invoice } from "@/lib/types";
+import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Plus, X } from "lucide-react";
+import { Question, Invoice, Event } from "@/lib/types";
 
 function fmt12(time: string) {
   const [h, m] = time.split(":").map(Number);
@@ -85,6 +85,9 @@ export default function ClientPortalPage() {
             </span>
           </div>
         </div>
+
+        {/* Color Palette */}
+        <ClientColorPalette event={event} onUpdate={(colors) => updateEvent(event.id, { colorPalette: colors })} />
 
         {/* Day Timeline */}
         {schedule.length > 0 && (
@@ -456,6 +459,92 @@ function ClientQuestionField({
               </label>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Client Color Palette ──
+function ClientColorPalette({ event, onUpdate }: { event: Event; onUpdate: (colors: string[]) => void }) {
+  const [adding, setAdding] = useState(false);
+  const [newColor, setNewColor] = useState("#d4a5a5");
+  const colors = event.colorPalette ?? [];
+
+  return (
+    <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-rose-300 via-violet-300 to-amber-300" />
+          <h2 className="font-heading font-semibold text-stone-800 text-sm">Color Palette</h2>
+        </div>
+        {!adding && (
+          <button
+            onClick={() => setAdding(true)}
+            className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600"
+          >
+            <Plus size={13} />
+            Add color
+          </button>
+        )}
+      </div>
+
+      {colors.length === 0 && !adding ? (
+        <p className="text-sm text-stone-400">No colors added yet. Add your event colors!</p>
+      ) : (
+        <div className="flex flex-wrap gap-2.5 items-center">
+          {colors.map((color, i) => (
+            <div key={i} className="group relative text-center">
+              <div
+                className="w-10 h-10 rounded-xl ring-1 ring-stone-200 shadow-sm"
+                style={{ backgroundColor: color }}
+              />
+              <button
+                onClick={() => onUpdate(colors.filter((_, idx) => idx !== i))}
+                className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-white border border-stone-200 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+              >
+                <X size={8} className="text-stone-400" />
+              </button>
+              <p className="text-[9px] text-stone-400 mt-1 font-mono">{color}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {adding && (
+        <div className="flex items-center gap-3 mt-3 bg-stone-50 rounded-xl border border-stone-200 p-3">
+          <input
+            type="color"
+            value={newColor}
+            onChange={(e) => setNewColor(e.target.value)}
+            className="w-10 h-10 rounded-lg border border-stone-200 cursor-pointer bg-transparent p-0.5"
+          />
+          <div className="flex-1">
+            <input
+              value={newColor}
+              onChange={(e) => setNewColor(e.target.value)}
+              placeholder="#000000"
+              className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-sm font-mono focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
+            />
+          </div>
+          <button
+            onClick={() => {
+              if (newColor) {
+                onUpdate([...colors, newColor]);
+                setNewColor("#d4a5a5");
+                setAdding(false);
+              }
+            }}
+            className="text-xs font-medium bg-rose-400 text-white px-3 py-1.5 rounded-lg hover:bg-rose-500 transition-colors"
+          >
+            Add
+          </button>
+          <button
+            onClick={() => { setAdding(false); setNewColor("#d4a5a5"); }}
+            className="text-xs text-stone-400 hover:text-stone-600 px-2 py-1.5 rounded-lg hover:bg-stone-100 transition-colors"
+          >
+            Cancel
+          </button>
         </div>
       )}
     </div>

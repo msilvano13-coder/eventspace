@@ -29,6 +29,7 @@ export interface Event {
   questionnaires: QuestionnaireAssignment[];
   invoices: Invoice[];
   expenses: Expense[];
+  colorPalette: string[];
   comments: Comment[];
   createdAt: string;
   updatedAt: string;

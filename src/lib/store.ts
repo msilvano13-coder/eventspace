@@ -33,6 +33,7 @@ class EventStore {
           if (!evt.questionnaires) evt.questionnaires = [];
           if (!evt.invoices) evt.invoices = [];
           if (!evt.expenses) evt.expenses = [];
+          if (!evt.colorPalette) evt.colorPalette = [];
         });
       } catch {
         this.events = this.seedMap();

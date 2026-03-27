@@ -55,7 +55,7 @@ export default function Sidebar() {
       </aside>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 inset-x-0 z-30 bg-white/90 backdrop-blur-md border-t border-stone-200 md:hidden mobile-bottom-nav">
+      <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-stone-200 md:hidden mobile-bottom-nav">
         <div className="flex justify-around items-center h-14">
           {navItems.map((item) => {
             const active =

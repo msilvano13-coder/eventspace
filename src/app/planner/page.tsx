@@ -69,6 +69,17 @@ export default function PlannerDashboard() {
                 {event.clientName}
               </div>
             </div>
+            {(event.colorPalette ?? []).length > 0 && (
+              <div className="flex gap-1.5 mt-3">
+                {(event.colorPalette ?? []).map((color, i) => (
+                  <div
+                    key={i}
+                    className="w-5 h-5 rounded-full ring-1 ring-stone-200"
+                    style={{ backgroundColor: color }}
+                  />
+                ))}
+              </div>
+            )}
             <div className="mt-4 pt-3 border-t border-stone-100 flex items-center justify-between text-xs text-stone-400">
               <span>
                 {event.timeline.filter((t) => t.completed).length}/{event.timeline.length} to-dos · {(event.schedule ?? []).length} timeline moments
@@ -168,6 +179,7 @@ function NewEventModal({
                 questionnaires: [],
                 invoices: [],
                 expenses: [],
+                colorPalette: [],
                 comments: [],
               })
             }

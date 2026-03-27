@@ -27,6 +27,7 @@ import {
   ClipboardList,
   Receipt,
   Wallet,
+  Palette,
 } from "lucide-react";
 import { TimelineItem, Vendor, VendorCategory, QuestionnaireAssignment, Expense } from "@/lib/types";
 
@@ -74,6 +75,10 @@ export default function EventDetailPage() {
   const [addingExpense, setAddingExpense] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "other", date: "", notes: "" });
+
+  // ── Color palette state ──
+  const [addingColor, setAddingColor] = useState(false);
+  const [newColor, setNewColor] = useState("#d4a5a5");
 
   useEffect(() => { if (addingTodo) newTodoRef.current?.focus(); }, [addingTodo]);
   useEffect(() => { if (editingTodoId) editTodoRef.current?.focus(); }, [editingTodoId]);
@@ -457,6 +462,88 @@ export default function EventDetailPage() {
               <Mail size={14} className="text-stone-400" />
               {event.clientEmail}
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── Color Palette ── */}
+      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Palette size={16} className="text-rose-400" />
+            <h2 className="font-heading font-semibold text-stone-800">Color Palette</h2>
+          </div>
+          {!addingColor && (
+            <button
+              onClick={() => setAddingColor(true)}
+              className="flex items-center gap-1.5 text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors"
+            >
+              <Plus size={13} />
+              Add color
+            </button>
+          )}
+        </div>
+
+        {(event.colorPalette ?? []).length === 0 && !addingColor ? (
+          <p className="text-sm text-stone-400">No colors added yet.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2.5 items-center">
+            {(event.colorPalette ?? []).map((color, i) => (
+              <div key={i} className="group relative">
+                <button
+                  className="w-10 h-10 rounded-xl border-2 border-white shadow-sm ring-1 ring-stone-200 transition-transform hover:scale-110"
+                  style={{ backgroundColor: color }}
+                  title={color}
+                />
+                <button
+                  onClick={() => {
+                    const updated = (event.colorPalette ?? []).filter((_, idx) => idx !== i);
+                    updateEvent(event.id, { colorPalette: updated });
+                  }}
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-white border border-stone-200 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                >
+                  <X size={8} className="text-stone-400" />
+                </button>
+                <p className="text-[9px] text-stone-400 text-center mt-1 font-mono">{color}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {addingColor && (
+          <div className="flex items-center gap-3 mt-3 bg-stone-50 rounded-xl border border-stone-200 p-3">
+            <input
+              type="color"
+              value={newColor}
+              onChange={(e) => setNewColor(e.target.value)}
+              className="w-10 h-10 rounded-lg border border-stone-200 cursor-pointer bg-transparent p-0.5"
+            />
+            <div className="flex-1">
+              <input
+                value={newColor}
+                onChange={(e) => setNewColor(e.target.value)}
+                placeholder="#000000"
+                className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-sm font-mono focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
+              />
+            </div>
+            <button
+              onClick={() => {
+                if (newColor) {
+                  updateEvent(event.id, { colorPalette: [...(event.colorPalette ?? []), newColor] });
+                  setNewColor("#d4a5a5");
+                  setAddingColor(false);
+                }
+              }}
+              className="text-xs font-medium bg-rose-400 text-white px-3 py-1.5 rounded-lg hover:bg-rose-500 transition-colors"
+            >
+              Add
+            </button>
+            <button
+              onClick={() => { setAddingColor(false); setNewColor("#d4a5a5"); }}
+              className="text-xs text-stone-400 hover:text-stone-600 px-2 py-1.5 rounded-lg hover:bg-stone-100 transition-colors"
+            >
+              Cancel
+            </button>
           </div>
         )}
       </div>
