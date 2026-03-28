@@ -168,6 +168,15 @@ export default function Sidebar() {
                 );
               })}
             </div>
+            <div className="mt-2 pt-2 border-t border-stone-100">
+              <button
+                onClick={() => { setShowMore(false); handleSignOut(); }}
+                className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm text-stone-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <LogOut size={18} />
+                <span className="font-medium">Sign Out</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
