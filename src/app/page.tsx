@@ -13,7 +13,6 @@ import {
   MessageSquare,
   ChevronDown,
   ChevronRight,
-  Star,
   Check,
   ArrowRight,
   Menu,
@@ -149,7 +148,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Where is my data stored?",
-    a: "All data stays in your browser's local storage. Nothing is sent to a server. This means your data is private by default, but you should use the same browser and device to access your events.",
+    a: "Your data is securely stored in the cloud using Supabase. You can access your events from any device by signing in to your account.",
   },
   {
     q: "Can multiple planners use EventSpace on the same account?",
@@ -157,26 +156,6 @@ const FAQS: { q: string; a: string }[] = [
   },
 ];
 
-const TESTIMONIALS = [
-  {
-    name: "Sarah M.",
-    role: "Wedding Planner, Austin TX",
-    text: "The floor plan tool alone saved me hours per event. Clients love being able to see their layout before the big day.",
-    rating: 5,
-  },
-  {
-    name: "David K.",
-    role: "Corporate Event Coordinator",
-    text: "I switched from spreadsheets and email chains to EventSpace. The client portal is a game changer — my clients feel so taken care of.",
-    rating: 5,
-  },
-  {
-    name: "Jessica R.",
-    role: "Freelance Event Designer",
-    text: "Finally, a tool that doesn't cost $300/month. I can manage vendors, guests, and timelines all in one place.",
-    rating: 5,
-  },
-];
 
 /* ------------------------------------------------------------------ */
 /*  Components                                                         */
@@ -204,15 +183,6 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   );
 }
 
-function StarRating({ count }: { count: number }) {
-  return (
-    <div className="flex gap-0.5">
-      {Array.from({ length: count }).map((_, i) => (
-        <Star key={i} size={16} className="fill-amber-400 text-amber-400" />
-      ))}
-    </div>
-  );
-}
 
 /* ------------------------------------------------------------------ */
 /*  Page                                                               */
@@ -340,24 +310,6 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* ── Social Proof Bar ───────────────────────────────────── */}
-      <section className="border-y border-stone-200 bg-white" aria-label="Key metrics">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-          {[
-            { value: "1,200+", label: "Events Planned" },
-            { value: "850+", label: "Active Planners" },
-            { value: "50K+", label: "Guests Managed" },
-            { value: "4.9★", label: "Average Rating" },
-          ].map((stat) => (
-            <div key={stat.label}>
-              <p className="font-heading text-2xl sm:text-3xl font-bold text-stone-900">
-                {stat.value}
-              </p>
-              <p className="mt-1 text-sm text-stone-500">{stat.label}</p>
-            </div>
-          ))}
-        </div>
-      </section>
 
       {/* ── Features ───────────────────────────────────────────── */}
       <section id="features" className="py-20 sm:py-28">
@@ -430,37 +382,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── Testimonials ───────────────────────────────────────── */}
-      <section className="py-20 sm:py-28" aria-label="Testimonials">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900">
-              Loved by Event Professionals
-            </h2>
-            <p className="mt-4 text-lg text-stone-500 max-w-2xl mx-auto">
-              Hear from planners who use EventSpace every day.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((t) => (
-              <div
-                key={t.name}
-                className="bg-white rounded-2xl p-6 border border-stone-100 shadow-soft"
-              >
-                <StarRating count={t.rating} />
-                <p className="mt-4 text-stone-600 leading-relaxed text-sm">
-                  &ldquo;{t.text}&rdquo;
-                </p>
-                <div className="mt-4 pt-4 border-t border-stone-100">
-                  <p className="font-medium text-stone-900 text-sm">{t.name}</p>
-                  <p className="text-stone-400 text-xs">{t.role}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* ── Pricing ────────────────────────────────────────────── */}
       <section id="pricing" className="py-20 sm:py-28 bg-white border-y border-stone-100">
@@ -573,8 +494,7 @@ export default function HomePage() {
             Ready to Streamline Your Events?
           </h2>
           <p className="mt-4 text-lg text-rose-100 max-w-xl mx-auto">
-            Join hundreds of event professionals who plan smarter with
-            EventSpace. Try Professional free for 30 days.
+            Plan smarter with EventSpace. Try Professional free for 30 days.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
