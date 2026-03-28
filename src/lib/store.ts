@@ -49,6 +49,8 @@ class EventStore {
           delete (evt as any).comments;
           delete (evt as any).floorPlanThumbnail;
           if (!evt.moodBoard) evt.moodBoard = [];
+          // Add thumb field to mood board images missing it (use url as fallback)
+          (evt.moodBoard ?? []).forEach((m: any) => { if (!m.thumb) m.thumb = m.url ?? ""; });
           if (!evt.messages) evt.messages = [];
           // Add mealChoice to vendors missing it
           (evt.vendors ?? []).forEach((v: any) => { if (!v.mealChoice) v.mealChoice = ""; });

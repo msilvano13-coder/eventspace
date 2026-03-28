@@ -165,9 +165,10 @@ export default function ClientPortalPage() {
                 {(event.moodBoard ?? []).map((img) => (
                   <div key={img.id} className="break-inside-avoid">
                     <img
-                      src={img.url}
+                      src={img.thumb || img.url}
                       alt={img.caption}
                       className="w-full rounded-xl object-cover"
+                      loading="lazy"
                     />
                     {img.caption && (
                       <p className="text-[10px] text-stone-400 mt-1 truncate">{img.caption}</p>

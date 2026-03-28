@@ -230,7 +230,8 @@ export const VENDOR_TO_BUDGET_CATEGORY: Record<VendorCategory, string> = {
 
 export interface MoodBoardImage {
   id: string;
-  url: string;        // base64 data URL
+  url: string;        // compressed base64 data URL (max 1200px wide, JPEG 0.7)
+  thumb: string;      // thumbnail base64 (max 400px wide, JPEG 0.6) for grid view
   caption: string;
   addedAt: string;
 }

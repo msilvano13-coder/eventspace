@@ -4,8 +4,9 @@ import { useParams } from "next/navigation";
 import { useEvent, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
 import { useState } from "react";
-import { ArrowLeft, Plus, X, Image, Pencil, Check } from "lucide-react";
+import { ArrowLeft, Plus, X, Image, Pencil, Check, Loader2, ZoomIn, HardDrive } from "lucide-react";
 import { MoodBoardImage } from "@/lib/types";
+import { compressImage, base64ByteSize, formatBytes, estimateStorageUsed } from "@/lib/image-compress";
 
 export default function MoodBoardPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -13,6 +14,10 @@ export default function MoodBoardPage() {
   const { updateEvent } = useStoreActions();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCaption, setEditCaption] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadCount, setUploadCount] = useState(0);
+  const [uploadTotal, setUploadTotal] = useState(0);
+  const [lightboxId, setLightboxId] = useState<string | null>(null);
 
   if (!event) {
     return (
@@ -26,27 +31,50 @@ export default function MoodBoardPage() {
   }
 
   const images = event.moodBoard ?? [];
+  const lightboxImg = lightboxId ? images.find((m) => m.id === lightboxId) : null;
 
-  function addImages(files: FileList) {
-    Array.from(files).forEach((file) => {
-      if (file.size > 2 * 1024 * 1024) return; // 2MB limit
-      const reader = new FileReader();
-      reader.onload = () => {
+  // Calculate storage stats
+  const boardBytes = images.reduce(
+    (sum, img) => sum + base64ByteSize(img.url) + base64ByteSize(img.thumb || ""),
+    0
+  );
+  const totalStorage = estimateStorageUsed();
+  const STORAGE_WARN = 3.5 * 1024 * 1024; // warn at 3.5MB
+
+  async function addImages(files: FileList) {
+    const fileArr = Array.from(files);
+    if (fileArr.length === 0) return;
+
+    setUploading(true);
+    setUploadCount(0);
+    setUploadTotal(fileArr.length);
+
+    let currentImages = [...images];
+
+    for (let i = 0; i < fileArr.length; i++) {
+      setUploadCount(i + 1);
+      try {
+        const { full, thumb } = await compressImage(fileArr[i]);
         const newImg: MoodBoardImage = {
           id: crypto.randomUUID(),
-          url: reader.result as string,
-          caption: file.name.replace(/\.[^.]+$/, ""),
+          url: full,
+          thumb,
+          caption: fileArr[i].name.replace(/\.[^.]+$/, ""),
           addedAt: new Date().toISOString(),
         };
-        // Re-read current state to avoid overwriting concurrent uploads
-        updateEvent(eventId, { moodBoard: [...images, newImg] });
-      };
-      reader.readAsDataURL(file);
-    });
+        currentImages = [...currentImages, newImg];
+        updateEvent(eventId, { moodBoard: currentImages });
+      } catch {
+        // Skip files that fail (too large, corrupt, etc.)
+      }
+    }
+
+    setUploading(false);
   }
 
   function removeImage(id: string) {
     updateEvent(eventId, { moodBoard: images.filter((m) => m.id !== id) });
+    if (lightboxId === id) setLightboxId(null);
   }
 
   function saveCaption(id: string) {
@@ -67,21 +95,31 @@ export default function MoodBoardPage() {
         </Link>
       </div>
 
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-heading font-bold text-stone-800">Mood Board</h1>
           <p className="text-sm text-stone-400 mt-1">
             {images.length} image{images.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <label className="flex items-center gap-2 bg-rose-400 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-soft cursor-pointer">
-          <Plus size={16} />
-          Add Images
+        <label className={`flex items-center gap-2 bg-rose-400 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-soft cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+          {uploading ? (
+            <>
+              <Loader2 size={16} className="animate-spin" />
+              {uploadCount}/{uploadTotal}
+            </>
+          ) : (
+            <>
+              <Plus size={16} />
+              Add Images
+            </>
+          )}
           <input
             type="file"
             accept="image/*"
             multiple
             className="hidden"
+            disabled={uploading}
             onChange={(e) => {
               if (e.target.files) addImages(e.target.files);
               e.target.value = "";
@@ -90,11 +128,33 @@ export default function MoodBoardPage() {
         </label>
       </div>
 
+      {/* Storage indicator */}
+      {images.length > 0 && (
+        <div className={`flex items-center gap-2 text-xs mb-6 px-3 py-2 rounded-lg ${
+          totalStorage > STORAGE_WARN
+            ? "bg-amber-50 text-amber-600 border border-amber-200"
+            : "bg-stone-50 text-stone-400"
+        }`}>
+          <HardDrive size={12} />
+          <span>
+            Board: {formatBytes(boardBytes)} · Total storage: ~{formatBytes(totalStorage)}
+          </span>
+          {totalStorage > STORAGE_WARN && (
+            <span className="font-medium ml-1">— Storage getting full. Consider removing unused images.</span>
+          )}
+        </div>
+      )}
+
       {images.length === 0 ? (
         <div className="text-center py-20">
           <Image size={48} className="mx-auto text-stone-200 mb-4" />
           <p className="text-lg text-stone-400 font-heading">No inspiration images yet</p>
-          <p className="text-sm text-stone-300 mt-2">Upload photos to build your vision board.</p>
+          <p className="text-sm text-stone-300 mt-2">
+            Upload photos to build your vision board.
+          </p>
+          <p className="text-xs text-stone-300 mt-1">
+            Images are automatically compressed for optimal storage.
+          </p>
           <label className="inline-flex items-center gap-2 mt-6 bg-rose-400 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">
             <Plus size={16} />
             Upload Photos
@@ -117,21 +177,39 @@ export default function MoodBoardPage() {
               key={img.id}
               className="break-inside-avoid group relative bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden"
             >
+              {/* Use thumbnail for grid, full image in lightbox */}
               <img
-                src={img.url}
+                src={img.thumb || img.url}
                 alt={img.caption}
-                className="w-full object-cover"
+                className="w-full object-cover cursor-pointer"
+                loading="lazy"
+                onClick={() => setLightboxId(img.id)}
               />
               {/* Hover overlay */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
 
-              {/* Delete button */}
-              <button
-                onClick={() => removeImage(img.id)}
-                className="absolute top-2 right-2 w-7 h-7 bg-white/90 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-white"
-              >
-                <X size={12} className="text-stone-500" />
-              </button>
+              {/* Top-right actions */}
+              <div className="absolute top-2 right-2 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => setLightboxId(img.id)}
+                  className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center shadow-sm hover:bg-white"
+                >
+                  <ZoomIn size={12} className="text-stone-500" />
+                </button>
+                <button
+                  onClick={() => removeImage(img.id)}
+                  className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center shadow-sm hover:bg-white"
+                >
+                  <X size={12} className="text-stone-500" />
+                </button>
+              </div>
+
+              {/* Size badge */}
+              <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <span className="text-[9px] bg-black/50 text-white/80 px-1.5 py-0.5 rounded-full">
+                  {formatBytes(base64ByteSize(img.url))}
+                </span>
+              </div>
 
               {/* Caption */}
               <div className="absolute bottom-0 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-3">
@@ -170,6 +248,28 @@ export default function MoodBoardPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Lightbox */}
+      {lightboxImg && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setLightboxId(null)}
+        >
+          <button className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors">
+            <X size={20} className="text-white" />
+          </button>
+          <div className="max-w-4xl max-h-[85vh] relative" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={lightboxImg.url}
+              alt={lightboxImg.caption}
+              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+            />
+            {lightboxImg.caption && (
+              <p className="text-center text-white/80 text-sm mt-3">{lightboxImg.caption}</p>
+            )}
+          </div>
         </div>
       )}
     </div>
