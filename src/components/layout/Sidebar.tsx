@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet, Settings, Inbox, BarChart3, Search, Heart, FileText, MoreHorizontal, X, LogOut, Lock } from "lucide-react";
+import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet, Settings, Inbox, BarChart3, Search, Heart, FileText, MoreHorizontal, X, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { usePlannerProfile } from "@/hooks/useStore";
@@ -65,22 +65,19 @@ export default function Sidebar() {
           {navItems.map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(item.href + "/");
-            const locked = isDiy && isProFeature(item.href);
+            if (isDiy && isProFeature(item.href)) return null;
             return (
               <Link
                 key={item.href}
-                href={locked ? "/planner/upgrade" : item.href}
+                href={item.href}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
-                  locked
-                    ? "text-stone-300 hover:text-stone-400 hover:bg-stone-50"
-                    : active
-                      ? "bg-rose-50 text-rose-600 font-medium"
-                      : "text-stone-500 hover:text-stone-800 hover:bg-stone-100"
+                  active
+                    ? "bg-rose-50 text-rose-600 font-medium"
+                    : "text-stone-500 hover:text-stone-800 hover:bg-stone-100"
                 }`}
               >
                 <item.icon size={18} />
-                <span className="flex-1">{item.label}</span>
-                {locked && <Lock size={14} className="text-stone-300" />}
+                {item.label}
               </Link>
             );
           })}
@@ -110,20 +107,19 @@ export default function Sidebar() {
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-stone-200 md:hidden mobile-bottom-nav">
         <div className="flex items-center h-14">
-          {mobileMainItems.map((item) => {
+          {mobileMainItems.filter((item) => !(isDiy && isProFeature(item.href))).map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(item.href + "/");
-            const locked = isDiy && isProFeature(item.href);
             return (
               <Link
                 key={item.href}
-                href={locked ? "/planner/upgrade" : item.href}
+                href={item.href}
                 onClick={() => setShowMore(false)}
                 className={`flex-1 flex flex-col items-center gap-0.5 py-2 min-w-0 ${
-                  locked ? "text-stone-200" : active ? "text-rose-500" : "text-stone-400"
+                  active ? "text-rose-500" : "text-stone-400"
                 }`}
               >
-                {locked ? <Lock size={20} /> : <item.icon size={20} />}
+                <item.icon size={20} />
                 <span className="text-[10px] font-medium truncate max-w-full px-1">{item.label}</span>
               </Link>
             );
@@ -152,24 +148,21 @@ export default function Sidebar() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="grid grid-cols-3 gap-1">
-              {mobileMoreItems.map((item) => {
+              {mobileMoreItems.filter((item) => !(isDiy && isProFeature(item.href))).map((item) => {
                 const active =
                   pathname === item.href || pathname.startsWith(item.href + "/");
-                const locked = isDiy && isProFeature(item.href);
                 return (
                   <Link
                     key={item.href}
-                    href={locked ? "/planner/upgrade" : item.href}
+                    href={item.href}
                     onClick={() => setShowMore(false)}
                     className={`flex flex-col items-center gap-1.5 py-3 rounded-xl transition-colors ${
-                      locked
-                        ? "text-stone-300"
-                        : active
-                          ? "bg-rose-50 text-rose-500"
-                          : "text-stone-500 hover:bg-stone-50"
+                      active
+                        ? "bg-rose-50 text-rose-500"
+                        : "text-stone-500 hover:bg-stone-50"
                     }`}
                   >
-                    {locked ? <Lock size={20} /> : <item.icon size={20} />}
+                    <item.icon size={20} />
                     <span className="text-[11px] font-medium">{item.label}</span>
                   </Link>
                 );
