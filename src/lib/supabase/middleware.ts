@@ -58,7 +58,14 @@ export async function updateSession(request: NextRequest) {
       .eq("id", user.id)
       .single();
 
-    if (profile) {
+    if (!profile) {
+      // No profile row for authenticated user — redirect to /planner to let the app handle it
+      const url = request.nextUrl.clone();
+      url.pathname = "/planner";
+      if (pathname !== "/planner") {
+        return NextResponse.redirect(url);
+      }
+    } else {
       const isExpired = profile.plan === "expired";
       const isTrialOver =
         profile.plan === "trial" &&

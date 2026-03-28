@@ -20,13 +20,12 @@ export async function POST() {
       .single();
 
     if (!profile?.stripe_subscription_id) {
-      // DIY is a one-time payment — just downgrade in DB
+      // DIY is a one-time purchase — there is no subscription to cancel
       if (profile?.plan === "diy") {
-        await supabase
-          .from("profiles")
-          .update({ plan: "expired", stripe_subscription_id: null })
-          .eq("id", user.id);
-        return NextResponse.json({ success: true });
+        return NextResponse.json(
+          { error: "DIY plans don't have a subscription to cancel" },
+          { status: 400 }
+        );
       }
       return NextResponse.json(
         { error: "No active subscription found" },

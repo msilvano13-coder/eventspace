@@ -51,16 +51,18 @@ export async function POST(request: Request) {
 
         if (userId) {
           // Primary: match by user ID from metadata
-          await supabaseAdmin
+          const { error } = await supabaseAdmin
             .from("profiles")
             .update(updateData)
             .eq("id", userId);
+          if (error) console.error("checkout.session.completed update by userId failed:", error);
         } else if (customerId) {
           // Fallback: match by stripe_customer_id
-          await supabaseAdmin
+          const { error } = await supabaseAdmin
             .from("profiles")
             .update(updateData)
             .eq("stripe_customer_id", customerId);
+          if (error) console.error("checkout.session.completed update by customerId failed:", error);
         }
 
         break;
@@ -76,10 +78,11 @@ export async function POST(request: Request) {
         if (!customerId) break;
 
         // Keep professional plan active on renewal
-        await supabaseAdmin
+        const { error } = await supabaseAdmin
           .from("profiles")
           .update({ plan: "professional" })
           .eq("stripe_customer_id", customerId);
+        if (error) console.error("invoice.payment_succeeded update failed:", error);
 
         break;
       }
@@ -91,12 +94,9 @@ export async function POST(request: Request) {
             ? invoice.customer
             : invoice.customer?.id;
 
-        if (!customerId) break;
-
-        await supabaseAdmin
-          .from("profiles")
-          .update({ plan: "expired" })
-          .eq("stripe_customer_id", customerId);
+        console.warn(
+          `invoice.payment_failed for customer ${customerId}. Stripe will retry; not expiring plan yet.`
+        );
 
         break;
       }
@@ -110,13 +110,14 @@ export async function POST(request: Request) {
 
         if (!customerId) break;
 
-        await supabaseAdmin
+        const { error } = await supabaseAdmin
           .from("profiles")
           .update({
             plan: "expired",
             stripe_subscription_id: null,
           })
           .eq("stripe_customer_id", customerId);
+        if (error) console.error("customer.subscription.deleted update failed:", error);
 
         break;
       }

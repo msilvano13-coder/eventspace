@@ -1374,7 +1374,7 @@ export async function fetchProfile(): Promise<PlannerProfile> {
         phone: "",
         website: "",
         logoUrl: "",
-        brandColor: "#6366f1",
+        brandColor: "#e88b8b",
         tagline: "",
         plan: "trial",
         trialEndsAt: null,

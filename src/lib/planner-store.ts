@@ -74,6 +74,12 @@ class PlannerProfileStore {
     return () => this.listeners.delete(listener);
   };
 
+  async refetch(): Promise<void> {
+    this.hydrated = false;
+    this.hydrating = false;
+    await this.hydrate();
+  }
+
   private emit() {
     this.listeners.forEach((l) => l());
   }

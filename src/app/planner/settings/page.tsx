@@ -1,6 +1,7 @@
 "use client";
 
 import { usePlannerProfile, usePlannerProfileActions } from "@/hooks/useStore";
+import { plannerStore } from "@/lib/planner-store";
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Camera, Save, X, CreditCard, ExternalLink, CheckCircle2, Loader2, Mail, Shield, Calendar, AlertTriangle } from "lucide-react";
@@ -36,9 +37,10 @@ function SettingsContent() {
     });
   }, []);
 
-  // Show success message after Stripe checkout redirect
+  // Show success message after Stripe checkout redirect and re-hydrate profile
   useEffect(() => {
     if (searchParams.get("session_id")) {
+      plannerStore.refetch();
       setShowSuccess(true);
       const timer = setTimeout(() => setShowSuccess(false), 5000);
       return () => clearTimeout(timer);
