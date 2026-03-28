@@ -18,7 +18,7 @@ function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawRedirect = searchParams.get("redirect") || "/planner";
-  const redirect = rawRedirect.startsWith("/") ? rawRedirect : "/planner";
+  const redirect = rawRedirect && rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/planner";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

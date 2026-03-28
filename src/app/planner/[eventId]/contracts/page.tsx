@@ -127,6 +127,7 @@ export default function EventContractsPage() {
       fileData: template.fileData,
       fileName: template.fileName,
       fileSize: template.fileSize,
+      storagePath: template.storagePath ?? null,
     });
     updateEvent(event!.id, { contracts: [...contracts, contract] });
     showToast(`Assigned "${template.name}"${vendor ? ` to ${vendor.name}` : ""}`);

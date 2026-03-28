@@ -24,6 +24,8 @@ import type {
   PreferredVendor,
   ContractTemplate,
 } from "@/lib/types";
+import { MAX_EVENTS } from "@/lib/plan-features";
+import type { PlanType } from "@/lib/types";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Helper: get current authenticated user id
@@ -648,6 +650,13 @@ function profileToRow(p: Partial<PlannerProfile>): Record<string, unknown> {
   return row;
 }
 
+function safeProfileToRow(p: Partial<PlannerProfile>): Record<string, unknown> {
+  // Strip out fields that should only be set by webhooks/server
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
+  const { plan, trialEndsAt, stripeCustomerId, stripeSubscriptionId, stripePaymentId, ...safe } = p as any;
+  return profileToRow(safe as Partial<PlannerProfile>);
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function profileFromRow(r: any): PlannerProfile {
   return {
@@ -925,6 +934,26 @@ export async function createEvent(
   userId: string
 ): Promise<Event> {
   const supabase = createClient();
+
+  // Server-side event limit enforcement
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("plan")
+    .eq("id", userId)
+    .single();
+
+  const plan = (profile?.plan as PlanType) || "trial";
+  const maxEvents = MAX_EVENTS[plan] ?? 0;
+
+  const { count: activeCount } = await supabase
+    .from("events")
+    .select("id", { count: "exact", head: true })
+    .eq("planner_id", userId)
+    .is("archived_at", null);
+
+  if ((activeCount ?? 0) >= maxEvents) {
+    throw new Error("Event limit reached for your current plan.");
+  }
 
   const { data: created, error } = await supabase
     .from("events")
@@ -1413,7 +1442,7 @@ export async function updateProfile(
 ): Promise<void> {
   const supabase = createClient();
   const userId = await getUserId();
-  const row = profileToRow(partial);
+  const row = safeProfileToRow(partial);
 
   if (Object.keys(row).length === 0) return;
 

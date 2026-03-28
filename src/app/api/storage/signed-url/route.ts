@@ -18,6 +18,28 @@ export async function POST(request: Request) {
       );
     }
 
+    // Whitelist allowed buckets
+    const ALLOWED_BUCKETS = ["event-files"];
+    if (!ALLOWED_BUCKETS.includes(bucket)) {
+      return NextResponse.json(
+        { error: "Invalid bucket" },
+        { status: 400 }
+      );
+    }
+
+    // Validate path against traversal attacks
+    if (
+      path.includes("..") ||
+      path.includes("\\") ||
+      path.includes("\0") ||
+      path.startsWith("/")
+    ) {
+      return NextResponse.json(
+        { error: "Invalid path" },
+        { status: 400 }
+      );
+    }
+
     // Validate the share token by looking up the event
     const { data: event, error: eventError } = await supabaseAdmin
       .from("events")
@@ -37,6 +59,14 @@ export async function POST(request: Request) {
 
     // Auto-prefix the planner's user_id if not already present (client portal doesn't know the user_id)
     const resolvedPath = path.startsWith(`${plannerId}/`) ? path : `${plannerId}/${path}`;
+
+    // Validate resolved path starts with the planner's user_id (defence-in-depth)
+    if (!resolvedPath.startsWith(`${plannerId}/`)) {
+      return NextResponse.json(
+        { error: "Path does not match the expected planner scope" },
+        { status: 403 }
+      );
+    }
 
     // Create a signed URL with 1-hour expiry using the service role client
     const { data: signedUrlData, error: signedUrlError } =

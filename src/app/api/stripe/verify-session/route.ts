@@ -45,6 +45,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No plan in session" }, { status: 400 });
     }
 
+    // For one-time payments (DIY), only update if payment is confirmed.
+    // If not yet paid, the webhook will handle it when payment confirms.
+    if (session.mode === "payment" && session.payment_status !== "paid") {
+      return NextResponse.json({ plan, pending: true });
+    }
+
     const updateData: Record<string, unknown> = {
       plan,
       stripe_customer_id: session.customer as string,

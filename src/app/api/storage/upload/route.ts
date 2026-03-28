@@ -21,6 +21,37 @@ export async function POST(request: Request) {
       );
     }
 
+    // Whitelist allowed buckets
+    const ALLOWED_BUCKETS = ["event-files"];
+    if (!ALLOWED_BUCKETS.includes(bucket)) {
+      return NextResponse.json(
+        { error: "Invalid bucket" },
+        { status: 400 }
+      );
+    }
+
+    // Validate path against traversal attacks
+    if (
+      path.includes("..") ||
+      path.includes("\\") ||
+      path.includes("\0") ||
+      path.startsWith("/")
+    ) {
+      return NextResponse.json(
+        { error: "Invalid path" },
+        { status: 400 }
+      );
+    }
+
+    // Enforce file size limit (10 MB)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { error: "File size exceeds 10 MB limit" },
+        { status: 400 }
+      );
+    }
+
     // Validate the share token by looking up the event
     const { data: event, error: eventError } = await supabaseAdmin
       .from("events")
@@ -40,6 +71,14 @@ export async function POST(request: Request) {
 
     // Auto-prefix the planner's user_id if not already present (client portal doesn't know the user_id)
     const resolvedPath = path.startsWith(`${plannerId}/`) ? path : `${plannerId}/${path}`;
+
+    // Validate resolved path starts with the planner's user_id (defence-in-depth)
+    if (!resolvedPath.startsWith(`${plannerId}/`)) {
+      return NextResponse.json(
+        { error: "Path does not match the expected planner scope" },
+        { status: 403 }
+      );
+    }
 
     // Upload the file using the service role client (bypasses RLS)
     const { error: uploadError } = await supabaseAdmin.storage

@@ -35,7 +35,47 @@ export async function POST() {
       }
     }
 
-    // 3. Delete all user data from Supabase tables (order matters for foreign keys)
+    // 2b. Delete Stripe customer
+    if (profile?.stripe_customer_id) {
+      try {
+        await stripe.customers.del(profile.stripe_customer_id);
+      } catch (err) {
+        console.error("Failed to delete Stripe customer:", err);
+      }
+    }
+
+    // 3. Delete all storage files for this user
+    const userId = user.id;
+    try {
+      // List and delete all files in event-files bucket under this user
+      const { data: eventFiles } = await supabaseAdmin.storage.from("event-files").list(userId, { limit: 1000 });
+      if (eventFiles && eventFiles.length > 0) {
+        await supabaseAdmin.storage.from("event-files").remove(
+          eventFiles.map(f => `${userId}/${f.name}`)
+        );
+      }
+
+      // Delete brand assets (logo)
+      const { data: brandFiles } = await supabaseAdmin.storage.from("brand-assets").list(userId, { limit: 10 });
+      if (brandFiles && brandFiles.length > 0) {
+        await supabaseAdmin.storage.from("brand-assets").remove(
+          brandFiles.map(f => `${userId}/${f.name}`)
+        );
+      }
+
+      // Delete contract templates
+      const { data: templateFiles } = await supabaseAdmin.storage.from("contract-templates").list(userId, { limit: 100 });
+      if (templateFiles && templateFiles.length > 0) {
+        await supabaseAdmin.storage.from("contract-templates").remove(
+          templateFiles.map(f => `${userId}/${f.name}`)
+        );
+      }
+    } catch (err) {
+      console.error("Storage cleanup during account deletion failed:", err);
+      // Continue with deletion even if storage cleanup fails
+    }
+
+    // 4. Delete all user data from Supabase tables (order matters for foreign keys)
     // First get all event IDs for this user
     const { data: events } = await supabaseAdmin
       .from("events")
@@ -86,10 +126,10 @@ export async function POST() {
       await supabaseAdmin.from(table).delete().eq("planner_id", user.id);
     }
 
-    // 4. Delete the profile
+    // 5. Delete the profile
     await supabaseAdmin.from("profiles").delete().eq("id", user.id);
 
-    // 5. Delete the auth user (requires admin client)
+    // 6. Delete the auth user (requires admin client)
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
     if (deleteError) {
       console.error("Failed to delete auth user:", deleteError);

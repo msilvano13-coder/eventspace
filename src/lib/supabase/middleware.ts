@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { PRO_ONLY_ROUTES } from "@/lib/plan-features";
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -62,9 +63,7 @@ export async function updateSession(request: NextRequest) {
       // No profile row — treat as expired to force upgrade/contact support
       const url = request.nextUrl.clone();
       url.pathname = "/planner/upgrade";
-      if (pathname !== "/planner") {
-        return NextResponse.redirect(url);
-      }
+      return NextResponse.redirect(url);
     } else {
       const isExpired = profile.plan === "expired";
       const isTrialOver =
@@ -74,6 +73,13 @@ export async function updateSession(request: NextRequest) {
       if (isExpired || isTrialOver) {
         const url = request.nextUrl.clone();
         url.pathname = "/planner/upgrade";
+        return NextResponse.redirect(url);
+      }
+
+      // Block DIY users from Pro-only routes
+      if (profile.plan === "diy" && PRO_ONLY_ROUTES.has(pathname)) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/planner";
         return NextResponse.redirect(url);
       }
     }
