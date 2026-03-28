@@ -157,6 +157,11 @@ export function exportEventPDF(event: Event, plannerName?: string) {
         doc.text(contact, margin + 2, y);
         y += 4.5;
       }
+      if (v.mealChoice) {
+        doc.setFontSize(8);
+        doc.text(`Meal: ${v.mealChoice}`, margin + 2, y);
+        y += 4.5;
+      }
     });
 
     const totalContracts = vendors.reduce((s, v) => s + v.contractTotal, 0);

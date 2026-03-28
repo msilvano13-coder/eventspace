@@ -72,7 +72,7 @@ export default function EventDetailPage() {
   const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
   const [addingVendor, setAddingVendor] = useState(false);
   const [vendorForm, setVendorForm] = useState<Omit<Vendor, "id">>({
-    name: "", category: "other", contact: "", phone: "", email: "", notes: "", contractTotal: 0, payments: [],
+    name: "", category: "other", contact: "", phone: "", email: "", notes: "", mealChoice: "", contractTotal: 0, payments: [],
   });
 
   // ── Questionnaire assign state ──
@@ -201,13 +201,13 @@ export default function EventDetailPage() {
 
   // ── Vendor handlers ──
   function startAddVendor() {
-    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "", contractTotal: 0, payments: [] });
+    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "", mealChoice: "", contractTotal: 0, payments: [] });
     setEditingVendorId(null);
     setAddingVendor(true);
   }
 
   function startEditVendor(v: Vendor) {
-    setVendorForm({ name: v.name, category: v.category, contact: v.contact, phone: v.phone, email: v.email, notes: v.notes, contractTotal: v.contractTotal ?? 0, payments: v.payments ?? [] });
+    setVendorForm({ name: v.name, category: v.category, contact: v.contact, phone: v.phone, email: v.email, notes: v.notes, mealChoice: v.mealChoice ?? "", contractTotal: v.contractTotal ?? 0, payments: v.payments ?? [] });
     setEditingVendorId(v.id);
     setAddingVendor(false);
   }
@@ -223,13 +223,13 @@ export default function EventDetailPage() {
       updateEvent(event!.id, { vendors: [...vendors, newVendor] });
       setAddingVendor(false);
     }
-    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "", contractTotal: 0, payments: [] });
+    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "", mealChoice: "", contractTotal: 0, payments: [] });
   }
 
   function cancelVendor() {
     setAddingVendor(false);
     setEditingVendorId(null);
-    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "", contractTotal: 0, payments: [] });
+    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "", mealChoice: "", contractTotal: 0, payments: [] });
   }
 
   function deleteVendor(id: string) {
@@ -1363,6 +1363,15 @@ function VendorForm({
             className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
           />
         </div>
+        <div className="col-span-2">
+          <label className="block text-xs font-medium text-stone-500 mb-1">Vendor Meal</label>
+          <input
+            value={form.mealChoice}
+            onChange={(e) => onChange({ ...form, mealChoice: e.target.value })}
+            placeholder="e.g. Chicken, Vegetarian, Fish…"
+            className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
+          />
+        </div>
       </div>
       <div className="flex gap-2 justify-end">
         <button onClick={onSave} disabled={!form.name.trim()} className="text-xs font-medium bg-rose-400 text-white px-4 py-2 rounded-xl hover:bg-rose-500 disabled:opacity-50 transition-colors">
@@ -1432,6 +1441,11 @@ function VendorRow({ vendor, onEdit, onDelete, isExpanded, onToggle, onAddPaymen
             {vendor.email && <span className="flex items-center gap-1 text-xs text-stone-400"><Mail size={11} />{vendor.email}</span>}
           </div>
           {vendor.notes && <p className="text-xs text-stone-400 mt-1 ml-5 italic">{vendor.notes}</p>}
+          {vendor.mealChoice && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 mt-1.5 ml-5">
+              🍽 {vendor.mealChoice}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
           <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">

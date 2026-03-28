@@ -50,6 +50,8 @@ class EventStore {
           delete (evt as any).floorPlanThumbnail;
           if (!evt.moodBoard) evt.moodBoard = [];
           if (!evt.messages) evt.messages = [];
+          // Add mealChoice to vendors missing it
+          (evt.vendors ?? []).forEach((v: any) => { if (!v.mealChoice) v.mealChoice = ""; });
         });
       } catch {
         this.events = this.seedMap();

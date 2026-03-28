@@ -40,9 +40,9 @@ export function getSeedData(): Event[] {
         { id: "t4", title: "Rehearsal dinner", dueDate: "2026-06-14", completed: false, order: 4 },
       ],
       vendors: [
-        { id: "v1", name: "Petal & Bloom", category: "flowers", contact: "Maria Chen", phone: "555-0101", email: "maria@petalbloom.com", notes: "White garden roses, greenery arches", contractTotal: 0, payments: [] },
-        { id: "v2", name: "Golden Hour Photography", category: "photography", contact: "James Kirk", phone: "555-0102", email: "james@goldenhour.com", notes: "8hr package, second shooter included", contractTotal: 0, payments: [] },
-        { id: "v3", name: "La Belle Cuisine", category: "catering", contact: "Chef Antoine", phone: "555-0103", email: "catering@labelle.com", notes: "3-course plated dinner, 150 guests", contractTotal: 0, payments: [] },
+        { id: "v1", name: "Petal & Bloom", category: "flowers", contact: "Maria Chen", phone: "555-0101", email: "maria@petalbloom.com", notes: "White garden roses, greenery arches", mealChoice: "", contractTotal: 0, payments: [] },
+        { id: "v2", name: "Golden Hour Photography", category: "photography", contact: "James Kirk", phone: "555-0102", email: "james@goldenhour.com", notes: "8hr package, second shooter included", mealChoice: "Chicken", contractTotal: 0, payments: [] },
+        { id: "v3", name: "La Belle Cuisine", category: "catering", contact: "Chef Antoine", phone: "555-0103", email: "catering@labelle.com", notes: "3-course plated dinner, 150 guests", mealChoice: "", contractTotal: 0, payments: [] },
       ],
       questionnaires: [],
       invoices: [],

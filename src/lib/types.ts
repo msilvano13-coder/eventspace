@@ -123,6 +123,7 @@ export interface Vendor {
   phone: string;
   email: string;
   notes: string;
+  mealChoice: string;          // vendor meal selection (e.g. "Chicken", "Vegetarian")
   contractTotal: number;
   payments: VendorPaymentItem[];
 }
