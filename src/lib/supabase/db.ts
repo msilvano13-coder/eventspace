@@ -90,6 +90,7 @@ function eventFromRow(r: any): Event {
     floorPlanJSON: null,
     colorPalette: r.color_palette ?? [],
     archivedAt: r.archived_at ?? null,
+    shareToken: r.share_token ?? '',
     createdAt: r.created_at,
     updatedAt: r.updated_at,
     // Sub-entities — mapped if present, otherwise empty arrays
@@ -1655,4 +1656,229 @@ export async function deleteContractTemplate(id: string): Promise<void> {
     .eq("id", id);
 
   if (error) throw new Error(`removeContractTemplate: ${error.message}`);
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Client Portal (public, uses RPC to bypass RLS)
+// ════════════════════════════════════════════════════════════════════════════
+
+export async function fetchClientEvent(shareToken: string): Promise<Event | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('get_client_event', { p_share_token: shareToken });
+  if (error || !data) return null;
+  return clientEventFromRow(data);
+}
+
+// Map the RPC result (snake_case JSON) to Event type
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function clientEventFromRow(r: any): Event {
+  return {
+    id: r.id,
+    name: r.name,
+    date: r.date,
+    venue: r.venue,
+    clientName: r.client_name,
+    clientEmail: r.client_email,
+    status: r.status,
+    floorPlanJSON: null,
+    colorPalette: r.color_palette ?? [],
+    archivedAt: r.archived_at ?? null,
+    shareToken: r.share_token ?? '',
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+    floorPlans: (r.floor_plans ?? []).map((fp: any) => ({
+      id: fp.id,
+      name: fp.name,
+      json: fp.json ?? null,
+      lightingZones: (fp.lighting_zones ?? []).map((lz: any) => ({
+        id: lz.id, name: lz.name, type: lz.type, color: lz.color,
+        intensity: lz.intensity, x: lz.x, y: lz.y, size: lz.size, notes: lz.notes,
+      })),
+    })),
+    timeline: (r.timeline_items ?? []).map((t: any) => ({
+      id: t.id, title: t.title, dueDate: t.due_date ?? null,
+      completed: t.completed ?? false, order: t.sort_order ?? 0,
+    })),
+    schedule: (r.schedule_items ?? []).map((s: any) => ({
+      id: s.id, time: s.time, title: s.title, notes: s.notes,
+    })),
+    vendors: (r.vendors ?? []).map((v: any) => ({
+      id: v.id, name: v.name, category: v.category, contact: v.contact,
+      phone: v.phone, email: v.email, notes: v.notes,
+      mealChoice: v.meal_choice ?? '', contractTotal: v.contract_total ?? 0,
+      payments: (v.vendor_payments ?? []).map((p: any) => ({
+        id: p.id, description: p.description, amount: p.amount,
+        dueDate: p.due_date, paid: p.paid, paidDate: p.paid_date,
+      })),
+    })),
+    guests: (r.guests ?? []).map((g: any) => ({
+      id: g.id, name: g.name, email: g.email, rsvp: g.rsvp,
+      mealChoice: g.meal_choice ?? '', tableAssignment: g.table_assignment ?? '',
+      plusOne: g.plus_one ?? false, plusOneName: g.plus_one_name ?? '',
+      dietaryNotes: g.dietary_notes ?? '',
+    })),
+    questionnaires: (r.questionnaire_assignments ?? []).map((qa: any) => ({
+      questionnaireId: qa.questionnaire_id, questionnaireName: qa.questionnaire_name,
+      answers: qa.answers ?? {}, completedAt: qa.completed_at,
+    })),
+    invoices: (r.invoices ?? []).map((i: any) => ({
+      id: i.id, number: i.number, status: i.status, notes: i.notes,
+      dueDate: i.due_date, createdAt: i.created_at,
+      lineItems: (i.invoice_line_items ?? []).map((li: any) => ({
+        id: li.id, description: li.description, quantity: li.quantity,
+        unitPrice: li.unit_price,
+      })),
+    })),
+    expenses: (r.expenses ?? []).map((ex: any) => ({
+      id: ex.id, description: ex.description, amount: ex.amount,
+      category: ex.category, date: ex.date, notes: ex.notes,
+    })),
+    budget: (r.budget_items ?? []).map((b: any) => ({
+      id: b.id, category: b.category, allocated: b.allocated, notes: b.notes,
+    })),
+    contracts: (r.event_contracts ?? []).map((c: any) => ({
+      id: c.id, templateId: c.template_id, name: c.name, type: c.type,
+      vendorId: c.vendor_id, vendorName: c.vendor_name,
+      fileData: c.file_data, fileName: c.file_name, fileSize: c.file_size,
+      signedFileData: c.signed_file_data, signedFileName: c.signed_file_name,
+      signedAt: c.signed_at, assignedAt: c.assigned_at,
+      plannerSignature: c.planner_signature, plannerSignedAt: c.planner_signed_at,
+      plannerSignedName: c.planner_signed_name,
+      clientSignature: c.client_signature, clientSignedAt: c.client_signed_at,
+      clientSignedName: c.client_signed_name,
+    })),
+    files: (r.shared_files ?? []).map((f: any) => ({
+      id: f.id, name: f.name, type: f.type, url: f.url, uploadedAt: f.uploaded_at,
+    })),
+    moodBoard: (r.mood_board_images ?? []).map((m: any) => ({
+      id: m.id, url: m.url, thumb: m.thumb, caption: m.caption, addedAt: m.added_at,
+    })),
+    messages: (r.messages ?? []).map((msg: any) => ({
+      id: msg.id, sender: msg.sender, senderName: msg.sender_name,
+      text: msg.text, createdAt: msg.created_at,
+    })),
+    discoveredVendors: (r.discovered_vendors ?? []).map((dv: any) => ({
+      id: dv.id, name: dv.name, category: dv.category,
+      rating: dv.rating, reviewCount: dv.review_count,
+      phone: dv.phone, website: dv.website, address: dv.address,
+      priceLevel: dv.price_level, googleMapsUrl: dv.google_maps_url,
+      sharedAt: dv.shared_at,
+    })),
+  };
+}
+
+// Client portal update functions - each calls the corresponding RPC
+export async function clientUpdateGuests(shareToken: string, guests: Guest[]): Promise<void> {
+  const supabase = createClient();
+  const rows = guests.map(g => ({
+    id: g.id, name: g.name, email: g.email, rsvp: g.rsvp,
+    meal_choice: g.mealChoice, table_assignment: g.tableAssignment,
+    plus_one: g.plusOne, plus_one_name: g.plusOneName, dietary_notes: g.dietaryNotes,
+  }));
+  const { error } = await supabase.rpc('client_update_guests', { p_share_token: shareToken, p_guests: rows });
+  if (error) throw new Error(`clientUpdateGuests: ${error.message}`);
+}
+
+export async function clientUpdateMessages(shareToken: string, messages: Message[]): Promise<void> {
+  const supabase = createClient();
+  const rows = messages.map(m => ({
+    id: m.id, sender: m.sender, sender_name: m.senderName, text: m.text, created_at: m.createdAt,
+  }));
+  const { error } = await supabase.rpc('client_update_messages', { p_share_token: shareToken, p_messages: rows });
+  if (error) throw new Error(`clientUpdateMessages: ${error.message}`);
+}
+
+export async function clientUpdateQuestionnaireAssignments(shareToken: string, assignments: QuestionnaireAssignment[]): Promise<void> {
+  const supabase = createClient();
+  const rows = assignments.map(a => ({
+    id: crypto.randomUUID(),
+    questionnaire_id: a.questionnaireId,
+    questionnaire_name: a.questionnaireName,
+    answers: a.answers,
+    completed_at: a.completedAt,
+  }));
+  const { error } = await supabase.rpc('client_update_questionnaire_assignments', { p_share_token: shareToken, p_assignments: rows });
+  if (error) throw new Error(`clientUpdateQuestionnaireAssignments: ${error.message}`);
+}
+
+export async function clientUpdateContracts(shareToken: string, contracts: EventContract[]): Promise<void> {
+  const supabase = createClient();
+  const rows = contracts.map(c => ({
+    id: c.id, template_id: c.templateId, name: c.name, type: c.type,
+    vendor_id: c.vendorId, vendor_name: c.vendorName,
+    file_data: c.fileData, file_name: c.fileName, file_size: c.fileSize,
+    signed_file_data: c.signedFileData, signed_file_name: c.signedFileName,
+    signed_at: c.signedAt, assigned_at: c.assignedAt,
+    planner_signature: c.plannerSignature, planner_signed_at: c.plannerSignedAt,
+    planner_signed_name: c.plannerSignedName,
+    client_signature: c.clientSignature, client_signed_at: c.clientSignedAt,
+    client_signed_name: c.clientSignedName,
+  }));
+  const { error } = await supabase.rpc('client_update_contracts', { p_share_token: shareToken, p_contracts: rows });
+  if (error) throw new Error(`clientUpdateContracts: ${error.message}`);
+}
+
+export async function clientUpdateFiles(shareToken: string, files: SharedFile[]): Promise<void> {
+  const supabase = createClient();
+  const rows = files.map(f => ({
+    id: f.id, name: f.name, type: f.type, url: f.url, uploaded_at: f.uploadedAt,
+  }));
+  const { error } = await supabase.rpc('client_update_files', { p_share_token: shareToken, p_files: rows });
+  if (error) throw new Error(`clientUpdateFiles: ${error.message}`);
+}
+
+export async function clientUpdateMoodBoard(shareToken: string, images: MoodBoardImage[]): Promise<void> {
+  const supabase = createClient();
+  const rows = images.map(m => ({
+    id: m.id, url: m.url, thumb: m.thumb, caption: m.caption, added_at: m.addedAt,
+  }));
+  const { error } = await supabase.rpc('client_update_mood_board', { p_share_token: shareToken, p_images: rows });
+  if (error) throw new Error(`clientUpdateMoodBoard: ${error.message}`);
+}
+
+export async function clientUpdateTimeline(shareToken: string, items: TimelineItem[]): Promise<void> {
+  const supabase = createClient();
+  const rows = items.map(t => ({
+    id: t.id, title: t.title, due_date: t.dueDate, completed: t.completed, sort_order: t.order,
+  }));
+  const { error } = await supabase.rpc('client_update_timeline', { p_share_token: shareToken, p_items: rows });
+  if (error) throw new Error(`clientUpdateTimeline: ${error.message}`);
+}
+
+export async function clientUpdateSchedule(shareToken: string, items: ScheduleItem[]): Promise<void> {
+  const supabase = createClient();
+  const rows = items.map(s => ({
+    id: s.id, time: s.time, title: s.title, notes: s.notes,
+  }));
+  const { error } = await supabase.rpc('client_update_schedule', { p_share_token: shareToken, p_items: rows });
+  if (error) throw new Error(`clientUpdateSchedule: ${error.message}`);
+}
+
+export async function clientUpdateEventFields(shareToken: string, fields: Partial<Event>): Promise<void> {
+  const supabase = createClient();
+  const payload: any = {};
+  if (fields.colorPalette !== undefined) payload.color_palette = fields.colorPalette;
+  const { error } = await supabase.rpc('client_update_event_fields', { p_share_token: shareToken, p_fields: payload });
+  if (error) throw new Error(`clientUpdateEventFields: ${error.message}`);
+}
+
+export async function clientUpdateBudget(shareToken: string, items: BudgetItem[]): Promise<void> {
+  const supabase = createClient();
+  const rows = items.map(b => ({
+    id: b.id, category: b.category, allocated: b.allocated, notes: b.notes,
+  }));
+  const { error } = await supabase.rpc('client_update_budget', { p_share_token: shareToken, p_items: rows });
+  if (error) throw new Error(`clientUpdateBudget: ${error.message}`);
+}
+
+export async function clientUpdateDiscoveredVendors(shareToken: string, vendors: DiscoveredVendor[]): Promise<void> {
+  const supabase = createClient();
+  const rows = vendors.map(dv => ({
+    id: dv.id, name: dv.name, category: dv.category, rating: dv.rating,
+    review_count: dv.reviewCount, phone: dv.phone, website: dv.website,
+    address: dv.address, price_level: dv.priceLevel, google_maps_url: dv.googleMapsUrl,
+    shared_at: dv.sharedAt,
+  }));
+  const { error } = await supabase.rpc('client_update_discovered_vendors', { p_share_token: shareToken, p_vendors: rows });
+  if (error) throw new Error(`clientUpdateDiscoveredVendors: ${error.message}`);
 }

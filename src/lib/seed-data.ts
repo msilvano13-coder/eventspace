@@ -55,6 +55,7 @@ export function getSeedData(): Event[] {
       budget: [],
       messages: [],
       archivedAt: null,
+      shareToken: '',
       schedule: [
         { id: "s1", time: "10:00", title: "Bridal party prep begins", notes: "Hair & makeup at venue suite" },
         { id: "s2", time: "12:00", title: "Groom & groomsmen arrive", notes: "" },
@@ -103,6 +104,7 @@ export function getSeedData(): Event[] {
       budget: [],
       messages: [],
       archivedAt: null,
+      shareToken: '',
       schedule: [
         { id: "s11", time: "17:00", title: "Doors open — cocktail reception", notes: "" },
         { id: "s12", time: "18:00", title: "Welcome remarks", notes: "CEO address, 10 min" },
@@ -154,6 +156,7 @@ export function getSeedData(): Event[] {
       budget: [],
       messages: [],
       archivedAt: null,
+      shareToken: '',
       schedule: [
         { id: "s17", time: "15:00", title: "Guests arrive", notes: "Champagne welcome" },
         { id: "s18", time: "15:30", title: "Garden ceremony", notes: "Vow renewal, 20 min" },

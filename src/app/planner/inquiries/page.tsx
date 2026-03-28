@@ -87,6 +87,7 @@ export default function InquiriesPage() {
       budget: [],
       messages: [],
       archivedAt: null,
+      shareToken: '',
     });
     deleteInquiry(inq.id);
     setConfirmBookId(null);

@@ -426,6 +426,7 @@ function NewEventModal({
                 budget: [],
                 messages: [],
                 archivedAt: null,
+                shareToken: '',
               })
             }
             disabled={!form.name || !form.date}

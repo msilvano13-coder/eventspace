@@ -64,6 +64,7 @@ export interface Event {
   budget: BudgetItem[];
   messages: Message[];
   archivedAt: string | null;
+  shareToken: string;
   createdAt: string;
   updatedAt: string;
 }
