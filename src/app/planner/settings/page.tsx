@@ -75,7 +75,6 @@ function SettingsContent() {
           : "Expired";
 
   const showUpgrade = profile.plan === "trial" || profile.plan === "expired";
-  const isDiy = profile.plan === "diy";
   const showManageBilling =
     profile.plan === "diy" || profile.plan === "professional";
 
