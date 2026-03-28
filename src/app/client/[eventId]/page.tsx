@@ -4,8 +4,8 @@ import { useParams } from "next/navigation";
 import { useEvent, useStoreActions, useQuestionnaires, usePlannerProfile } from "@/hooks/useStore";
 import Link from "next/link";
 import { useState } from "react";
-import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Plus, X, Users, Wallet } from "lucide-react";
-import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
+import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Plus, X, Users, Wallet, Pencil, Trash2 } from "lucide-react";
+import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, ScheduleItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
 import MessageThread from "@/components/event/MessageThread";
 
 function fmt12(time: string) {
@@ -36,6 +36,57 @@ export default function ClientPortalPage() {
   const allQuestionnaires = useQuestionnaires();
   const profile = usePlannerProfile();
   const [openQId, setOpenQId] = useState<string | null>(null);
+
+  // ── Day Timeline editing state ──
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
+  const [scheduleTime, setScheduleTime] = useState("");
+  const [scheduleTitle, setScheduleTitle] = useState("");
+  const [scheduleNotes, setScheduleNotes] = useState("");
+  const [addingSchedule, setAddingSchedule] = useState(false);
+
+  function startEditSchedule(item: ScheduleItem) {
+    setEditingScheduleId(item.id);
+    setScheduleTime(item.time);
+    setScheduleTitle(item.title);
+    setScheduleNotes(item.notes);
+  }
+
+  function saveScheduleEdit() {
+    if (!editingScheduleId || !scheduleTitle.trim() || !scheduleTime) { cancelScheduleEdit(); return; }
+    const updated = (event?.schedule ?? []).map((s) =>
+      s.id === editingScheduleId ? { ...s, time: scheduleTime, title: scheduleTitle.trim(), notes: scheduleNotes } : s
+    );
+    updateEvent(eventId, { schedule: updated });
+    cancelScheduleEdit();
+  }
+
+  function cancelScheduleEdit() {
+    setEditingScheduleId(null);
+    setScheduleTime("");
+    setScheduleTitle("");
+    setScheduleNotes("");
+  }
+
+  function deleteScheduleItem(id: string) {
+    updateEvent(eventId, { schedule: (event?.schedule ?? []).filter((s) => s.id !== id) });
+    if (editingScheduleId === id) cancelScheduleEdit();
+  }
+
+  function saveNewSchedule() {
+    if (!scheduleTitle.trim() || !scheduleTime) return;
+    const item: ScheduleItem = { id: crypto.randomUUID(), time: scheduleTime, title: scheduleTitle.trim(), notes: scheduleNotes };
+    updateEvent(eventId, { schedule: [...(event?.schedule ?? []), item] });
+    setScheduleTime("");
+    setScheduleTitle("");
+    setScheduleNotes("");
+  }
+
+  function cancelAddSchedule() {
+    setAddingSchedule(false);
+    setScheduleTime("");
+    setScheduleTitle("");
+    setScheduleNotes("");
+  }
 
   if (!event) {
     return (
@@ -128,46 +179,136 @@ export default function ClientPortalPage() {
           </div>
         )}
 
-        {/* Day Timeline */}
-        {schedule.length > 0 && (
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
-            <div className="flex items-center gap-2 px-5 pt-5 pb-4 border-b border-stone-100">
+        {/* Day Timeline — editable */}
+        <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
+          <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-stone-100">
+            <div className="flex items-center gap-2">
               <Clock size={15} className="text-violet-400" />
               <h2 className="font-heading font-semibold text-stone-800">Day Timeline</h2>
             </div>
-            <div className="px-5 py-4 relative">
-              {/* Vertical line */}
-              <div className="absolute left-[calc(1.25rem+80px)] top-4 bottom-4 w-px bg-stone-100" />
-              <div className="space-y-1">
-                {schedule.map((item, idx) => (
-                  <div key={item.id} className="flex gap-5 py-2.5">
-                    {/* Time */}
-                    <div className="w-20 shrink-0 text-right pt-0.5">
-                      <span className="text-xs font-semibold text-stone-400 tracking-wide whitespace-nowrap">
-                        {fmt12(item.time)}
-                      </span>
-                    </div>
-                    {/* Dot */}
-                    <div className="relative shrink-0" style={{ width: 0 }}>
-                      <div className={`w-2.5 h-2.5 rounded-full border-2 border-white z-10 mt-1 -ml-1.5 ${
-                        idx === 0 ? "bg-rose-400 shadow-sm shadow-rose-200" : "bg-stone-300"
-                      }`} />
-                    </div>
-                    {/* Content */}
-                    <div className="flex-1 min-w-0 pb-1">
-                      <p className={`text-sm font-semibold leading-snug ${idx === 0 ? "text-stone-900" : "text-stone-700"}`}>
-                        {item.title}
-                      </p>
-                      {item.notes && (
-                        <p className="text-xs text-stone-400 mt-0.5 leading-relaxed">{item.notes}</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {!addingSchedule && (
+              <button
+                onClick={() => setAddingSchedule(true)}
+                className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600"
+              >
+                <Plus size={13} /> Add
+              </button>
+            )}
           </div>
-        )}
+          <div className="px-5 py-4 relative">
+            {schedule.length === 0 && !addingSchedule ? (
+              <div className="text-center py-6">
+                <p className="text-sm text-stone-400 mb-2">No schedule yet.</p>
+                <button onClick={() => setAddingSchedule(true)} className="text-sm text-rose-500 hover:text-rose-600 font-medium">
+                  + Add the first moment
+                </button>
+              </div>
+            ) : (
+              <>
+                {schedule.length > 0 && (
+                  <div className="absolute left-[calc(1.25rem+80px)] top-4 bottom-4 w-px bg-stone-100" />
+                )}
+                <div className="space-y-1">
+                  {schedule.map((item, idx) =>
+                    editingScheduleId === item.id ? (
+                      <div key={item.id} className="bg-stone-50 rounded-xl border border-stone-200 p-3 space-y-2 my-2">
+                        <div className="flex gap-2 items-center">
+                          <input
+                            type="time"
+                            value={scheduleTime}
+                            onChange={(e) => setScheduleTime(e.target.value)}
+                            className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-rose-300 bg-white font-medium text-stone-700"
+                          />
+                          <input
+                            value={scheduleTitle}
+                            onChange={(e) => setScheduleTitle(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === "Enter") saveScheduleEdit(); if (e.key === "Escape") cancelScheduleEdit(); }}
+                            placeholder="Activity"
+                            autoFocus
+                            className="flex-1 text-sm font-medium text-stone-800 border border-stone-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-rose-300 bg-white"
+                          />
+                        </div>
+                        <input
+                          value={scheduleNotes}
+                          onChange={(e) => setScheduleNotes(e.target.value)}
+                          placeholder="Notes (optional)"
+                          className="w-full text-sm text-stone-500 border border-stone-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-rose-300 bg-white"
+                        />
+                        <div className="flex gap-2 justify-end">
+                          <button onClick={saveScheduleEdit} className="text-xs font-medium bg-rose-400 text-white px-3 py-1.5 rounded-lg hover:bg-rose-500 transition-colors">Save</button>
+                          <button onClick={cancelScheduleEdit} className="text-xs text-stone-400 hover:text-stone-600 px-2 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">Cancel</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div key={item.id} className="group flex gap-5 py-2.5">
+                        <div className="w-20 shrink-0 text-right pt-0.5">
+                          <span className="text-xs font-semibold text-stone-400 tracking-wide whitespace-nowrap">
+                            {fmt12(item.time)}
+                          </span>
+                        </div>
+                        <div className="relative shrink-0" style={{ width: 0 }}>
+                          <div className={`w-2.5 h-2.5 rounded-full border-2 border-white z-10 mt-1 -ml-1.5 ${
+                            idx === 0 ? "bg-rose-400 shadow-sm shadow-rose-200" : "bg-stone-300"
+                          }`} />
+                        </div>
+                        <div className="flex-1 min-w-0 pb-1 flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className={`text-sm font-semibold leading-snug ${idx === 0 ? "text-stone-900" : "text-stone-700"}`}>
+                              {item.title}
+                            </p>
+                            {item.notes && (
+                              <p className="text-xs text-stone-400 mt-0.5 leading-relaxed">{item.notes}</p>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                            <button onClick={() => startEditSchedule(item)} className="p-1 text-stone-300 hover:text-stone-500 hover:bg-stone-100 rounded-lg transition-colors">
+                              <Pencil size={12} />
+                            </button>
+                            <button onClick={() => deleteScheduleItem(item.id)} className="p-1 text-stone-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors">
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  )}
+
+                  {/* Add new schedule item form */}
+                  {addingSchedule && (
+                    <div className="bg-stone-50 rounded-xl border border-rose-200 p-3 space-y-2 my-2">
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="time"
+                          value={scheduleTime}
+                          onChange={(e) => setScheduleTime(e.target.value)}
+                          className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-rose-300 bg-white font-medium text-stone-700"
+                        />
+                        <input
+                          value={scheduleTitle}
+                          onChange={(e) => setScheduleTitle(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") saveNewSchedule(); if (e.key === "Escape") cancelAddSchedule(); }}
+                          placeholder="Activity…"
+                          autoFocus
+                          className="flex-1 text-sm font-medium text-stone-800 border border-stone-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-rose-300 bg-white"
+                        />
+                      </div>
+                      <input
+                        value={scheduleNotes}
+                        onChange={(e) => setScheduleNotes(e.target.value)}
+                        placeholder="Notes (optional)"
+                        className="w-full text-sm text-stone-500 border border-stone-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-rose-300 bg-white"
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button onClick={saveNewSchedule} disabled={!scheduleTitle.trim() || !scheduleTime} className="text-xs font-medium bg-rose-400 text-white px-3 py-1.5 rounded-lg hover:bg-rose-500 disabled:opacity-50 transition-colors">Add</button>
+                        <button onClick={cancelAddSchedule} className="text-xs text-stone-400 hover:text-stone-600 px-2 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">Cancel</button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
 
         {/* Quick links row */}
         <div className="grid grid-cols-2 gap-3">
@@ -191,7 +332,7 @@ export default function ClientPortalPage() {
           </Link>
         </div>
 
-        {/* To Do List — read-only progress view */}
+        {/* To Do List — client can toggle completion */}
         {todos.length > 0 && (
           <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
             <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-stone-100">
@@ -216,7 +357,16 @@ export default function ClientPortalPage() {
 
             <div className="px-5 py-3 space-y-0.5">
               {todos.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 py-2">
+                <button
+                  key={item.id}
+                  className="flex items-center gap-3 py-2 w-full text-left hover:bg-stone-50 rounded-lg px-1 -mx-1 transition-colors"
+                  onClick={() => {
+                    const updated = (event.timeline ?? []).map((t) =>
+                      t.id === item.id ? { ...t, completed: !t.completed } : t
+                    );
+                    updateEvent(eventId, { timeline: updated });
+                  }}
+                >
                   {item.completed ? (
                     <Check size={14} className="text-emerald-500 shrink-0" />
                   ) : (
@@ -230,7 +380,7 @@ export default function ClientPortalPage() {
                       {new Date(item.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </span>
                   )}
-                </div>
+                </button>
               ))}
             </div>
           </div>
