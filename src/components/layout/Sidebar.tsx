@@ -83,7 +83,7 @@ export default function Sidebar() {
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-stone-200 md:hidden mobile-bottom-nav">
-        <div className="flex justify-around items-center h-14">
+        <div className="flex items-center h-14">
           {mobileMainItems.map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(item.href + "/");
@@ -92,18 +92,18 @@ export default function Sidebar() {
                 key={item.href}
                 href={item.href}
                 onClick={() => setShowMore(false)}
-                className={`flex flex-col items-center gap-0.5 py-2 px-3 ${
+                className={`flex-1 flex flex-col items-center gap-0.5 py-2 min-w-0 ${
                   active ? "text-rose-500" : "text-stone-400"
                 }`}
               >
                 <item.icon size={20} />
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <span className="text-[10px] font-medium truncate max-w-full px-1">{item.label}</span>
               </Link>
             );
           })}
           <button
             onClick={() => setShowMore(!showMore)}
-            className={`flex flex-col items-center gap-0.5 py-2 px-3 ${
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2 min-w-0 ${
               moreActive || showMore ? "text-rose-500" : "text-stone-400"
             }`}
           >
