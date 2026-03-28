@@ -39,8 +39,8 @@ function SignInForm() {
       return;
     }
 
-    router.push(redirect);
     router.refresh();
+    router.push(redirect);
   }
 
   return (

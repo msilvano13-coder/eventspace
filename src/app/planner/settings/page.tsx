@@ -37,10 +37,17 @@ function SettingsContent() {
     });
   }, []);
 
-  // Show success message after Stripe checkout redirect and re-hydrate profile
+  // After Stripe checkout redirect, verify the session server-side to update plan immediately
   useEffect(() => {
-    if (searchParams.get("session_id")) {
-      plannerStore.refetch();
+    const sessionId = searchParams.get("session_id");
+    if (sessionId) {
+      fetch("/api/stripe/verify-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      })
+        .then(() => plannerStore.refetch())
+        .catch((err) => console.error("verify-session failed:", err));
       setShowSuccess(true);
       const timer = setTimeout(() => setShowSuccess(false), 5000);
       return () => clearTimeout(timer);
@@ -68,6 +75,7 @@ function SettingsContent() {
           : "Expired";
 
   const showUpgrade = profile.plan === "trial" || profile.plan === "expired";
+  const isDiy = profile.plan === "diy";
   const showManageBilling =
     profile.plan === "diy" || profile.plan === "professional";
 
@@ -423,8 +431,8 @@ function SettingsContent() {
               )}
             </div>
 
-            {/* Cancel Plan */}
-            {showManageBilling && !cancelSuccess && (
+            {/* Cancel Plan — only for subscription plans, not one-time DIY */}
+            {profile.plan === "professional" && !cancelSuccess && (
               <div className="border-t border-stone-100 pt-4">
                 {!showCancelConfirm ? (
                   <button

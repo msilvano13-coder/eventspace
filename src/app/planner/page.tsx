@@ -1,7 +1,7 @@
 "use client";
 
 import { useEvents, useStoreActions, usePlannerProfile } from "@/hooks/useStore";
-import { Plus, Calendar, MapPin, User, ChevronRight, Archive, RotateCcw, Search, X, SlidersHorizontal, Lock } from "lucide-react";
+import { Plus, Calendar, MapPin, User, ChevronRight, Archive, RotateCcw, Search, X, SlidersHorizontal, Lock, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useState, useMemo } from "react";
 import { canCreateEvent } from "@/lib/plan-features";
@@ -97,6 +97,11 @@ export default function PlannerDashboard() {
             <Plus size={16} />
             New Event
           </button>
+        ) : profile.plan === "diy" ? (
+          <span className="flex items-center gap-2 bg-stone-100 text-stone-400 px-4 py-2.5 rounded-xl text-sm font-medium">
+            <Lock size={16} />
+            1 Event Limit (DIY)
+          </span>
         ) : (
           <Link
             href="/planner/upgrade"
@@ -348,8 +353,8 @@ export default function PlannerDashboard() {
       {showModal && (
         <NewEventModal
           onClose={() => setShowModal(false)}
-          onCreate={(data) => {
-            createEvent(data);
+          onCreate={async (data) => {
+            await createEvent(data);
             setShowModal(false);
           }}
         />
@@ -363,7 +368,7 @@ function NewEventModal({
   onCreate,
 }: {
   onClose: () => void;
-  onCreate: (data: any) => void;
+  onCreate: (data: any) => Promise<void>;
 }) {
   const [form, setForm] = useState({
     name: "",
@@ -372,6 +377,7 @@ function NewEventModal({
     clientName: "",
     clientEmail: "",
   });
+  const [creating, setCreating] = useState(false);
 
   return (
     <div
@@ -412,8 +418,9 @@ function NewEventModal({
             Cancel
           </button>
           <button
-            onClick={() =>
-              onCreate({
+            onClick={async () => {
+              setCreating(true);
+              await onCreate({
                 ...form,
                 status: "planning" as const,
                 floorPlanJSON: null,
@@ -439,12 +446,12 @@ function NewEventModal({
                 messages: [],
                 archivedAt: null,
                 shareToken: '',
-              })
-            }
-            disabled={!form.name || !form.date}
-            className="bg-rose-400 hover:bg-rose-500 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
+              });
+            }}
+            disabled={!form.name || !form.date || creating}
+            className="bg-rose-400 hover:bg-rose-500 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
           >
-            Create
+            {creating ? <><Loader2 size={14} className="animate-spin" />Creating...</> : "Create"}
           </button>
         </div>
       </div>

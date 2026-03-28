@@ -38,6 +38,12 @@ export async function POST(request: Request) {
 
         if (!plan) break;
 
+        // For one-time payments (DIY), only grant access if payment is confirmed
+        if (session.mode === "payment" && session.payment_status !== "paid") {
+          console.warn(`checkout.session.completed: payment_status=${session.payment_status} for session ${session.id}, deferring plan update`);
+          break;
+        }
+
         const updateData: Record<string, unknown> = {
           plan,
           stripe_customer_id: customerId,
@@ -51,20 +57,67 @@ export async function POST(request: Request) {
 
         if (userId) {
           // Primary: match by user ID from metadata
-          const { error } = await supabaseAdmin
+          const { error, count } = await supabaseAdmin
             .from("profiles")
             .update(updateData)
             .eq("id", userId);
           if (error) console.error("checkout.session.completed update by userId failed:", error);
+          if (count === 0) console.warn(`checkout.session.completed: no profile matched userId=${userId}`);
         } else if (customerId) {
           // Fallback: match by stripe_customer_id
-          const { error } = await supabaseAdmin
+          const { error, count } = await supabaseAdmin
             .from("profiles")
             .update(updateData)
             .eq("stripe_customer_id", customerId);
           if (error) console.error("checkout.session.completed update by customerId failed:", error);
+          if (count === 0) console.warn(`checkout.session.completed: no profile matched customerId=${customerId}`);
+        } else {
+          console.error("checkout.session.completed: no userId or customerId available, cannot update plan");
         }
 
+        break;
+      }
+
+      case "checkout.session.async_payment_succeeded": {
+        // Delayed payment methods (bank debits, etc.) confirm payment after checkout
+        const asyncSession = event.data.object as Stripe.Checkout.Session;
+        const asyncUserId = asyncSession.metadata?.supabase_user_id;
+        const asyncPlan = asyncSession.metadata?.plan as "diy" | "professional";
+        const asyncCustomerId = asyncSession.customer as string;
+
+        if (!asyncPlan) break;
+
+        const asyncUpdateData: Record<string, unknown> = {
+          plan: asyncPlan,
+          stripe_customer_id: asyncCustomerId,
+        };
+        if (asyncPlan === "diy") {
+          asyncUpdateData.stripe_payment_id = asyncSession.payment_intent as string;
+        }
+
+        if (asyncUserId) {
+          const { error } = await supabaseAdmin.from("profiles").update(asyncUpdateData).eq("id", asyncUserId);
+          if (error) console.error("async_payment_succeeded update failed:", error);
+        } else if (asyncCustomerId) {
+          const { error } = await supabaseAdmin.from("profiles").update(asyncUpdateData).eq("stripe_customer_id", asyncCustomerId);
+          if (error) console.error("async_payment_succeeded fallback update failed:", error);
+        }
+        break;
+      }
+
+      case "checkout.session.async_payment_failed": {
+        // Delayed payment failed — revoke access
+        const failedSession = event.data.object as Stripe.Checkout.Session;
+        const failedUserId = failedSession.metadata?.supabase_user_id;
+        const failedCustomerId = failedSession.customer as string;
+
+        if (failedUserId) {
+          const { error } = await supabaseAdmin.from("profiles").update({ plan: "expired" }).eq("id", failedUserId);
+          if (error) console.error("async_payment_failed update failed:", error);
+        } else if (failedCustomerId) {
+          const { error } = await supabaseAdmin.from("profiles").update({ plan: "expired" }).eq("stripe_customer_id", failedCustomerId);
+          if (error) console.error("async_payment_failed fallback update failed:", error);
+        }
         break;
       }
 

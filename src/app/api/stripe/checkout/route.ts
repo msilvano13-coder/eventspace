@@ -21,12 +21,28 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
-    // Look up existing profile for stripe_customer_id
+    // Look up existing profile for stripe_customer_id and current plan
     const { data: profile } = await supabase
       .from("profiles")
-      .select("stripe_customer_id")
+      .select("stripe_customer_id, plan")
       .eq("id", user.id)
       .single();
+
+    // Prevent duplicate purchases
+    if (profile?.plan === plan) {
+      return NextResponse.json(
+        { error: `You already have the ${plan === "diy" ? "DIY" : "Professional"} plan.` },
+        { status: 400 }
+      );
+    }
+
+    // DIY is standalone — cannot upgrade to Professional
+    if (profile?.plan === "diy" && plan === "professional") {
+      return NextResponse.json(
+        { error: "DIY plans cannot be upgraded to Professional." },
+        { status: 400 }
+      );
+    }
 
     let customerId = profile?.stripe_customer_id;
 
@@ -39,10 +55,18 @@ export async function POST(request: Request) {
       customerId = customer.id;
 
       // Store the customer ID
-      await supabase
+      const { error: updateErr } = await supabase
         .from("profiles")
         .update({ stripe_customer_id: customerId })
         .eq("id", user.id);
+
+      if (updateErr) {
+        console.error("Failed to save stripe_customer_id:", updateErr);
+        return NextResponse.json(
+          { error: "Failed to link payment account. Please try again." },
+          { status: 500 }
+        );
+      }
     }
 
     const origin = new URL(request.url).origin;
@@ -72,7 +96,6 @@ export async function POST(request: Request) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
-      payment_method_configuration: undefined,
       line_items: [
         {
           price: process.env.STRIPE_PRICE_PROFESSIONAL!,

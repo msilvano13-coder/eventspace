@@ -59,9 +59,9 @@ export async function updateSession(request: NextRequest) {
       .single();
 
     if (!profile) {
-      // No profile row for authenticated user — redirect to /planner to let the app handle it
+      // No profile row — treat as expired to force upgrade/contact support
       const url = request.nextUrl.clone();
-      url.pathname = "/planner";
+      url.pathname = "/planner/upgrade";
       if (pathname !== "/planner") {
         return NextResponse.redirect(url);
       }
@@ -69,8 +69,7 @@ export async function updateSession(request: NextRequest) {
       const isExpired = profile.plan === "expired";
       const isTrialOver =
         profile.plan === "trial" &&
-        profile.trial_ends_at &&
-        new Date(profile.trial_ends_at).getTime() < Date.now();
+        (!profile.trial_ends_at || new Date(profile.trial_ends_at).getTime() < Date.now());
 
       if (isExpired || isTrialOver) {
         const url = request.nextUrl.clone();

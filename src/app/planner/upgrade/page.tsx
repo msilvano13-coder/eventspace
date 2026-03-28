@@ -2,6 +2,7 @@
 
 import { usePlannerProfile } from "@/hooks/useStore";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Check, Sparkles, Loader2 } from "lucide-react";
 
 const DIY_FEATURES = [
@@ -32,9 +33,16 @@ const PRO_FEATURES = [
 
 export default function UpgradePage() {
   const profile = usePlannerProfile();
+  const router = useRouter();
   const [loadingPlan, setLoadingPlan] = useState<"diy" | "professional" | null>(
     null
   );
+
+  // DIY is a standalone plan — no upgrade path
+  if (profile.plan === "diy") {
+    router.replace("/planner");
+    return null;
+  }
 
   const trialDaysLeft =
     profile.trialEndsAt

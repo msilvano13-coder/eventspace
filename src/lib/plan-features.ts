@@ -13,7 +13,7 @@ export const PRO_ONLY_ROUTES = new Set([
 
 // Max active events per plan
 export const MAX_EVENTS: Record<PlanType, number> = {
-  trial: 999,       // Unlimited during trial (trial is time-limited instead)
+  trial: 3,
   diy: 1,
   professional: 999,
   expired: 0,

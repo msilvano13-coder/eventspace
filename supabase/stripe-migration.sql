@@ -23,10 +23,11 @@ ALTER TABLE public.profiles ALTER COLUMN trial_ends_at SET DEFAULT (now() + INTE
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, plan, trial_ends_at)
+  INSERT INTO public.profiles (id, email, planner_name, plan, trial_ends_at)
   VALUES (
     new.id,
     COALESCE(new.email, ''),
+    COALESCE(new.raw_user_meta_data->>'full_name', ''),
     'trial',
     now() + INTERVAL '30 days'
   );
