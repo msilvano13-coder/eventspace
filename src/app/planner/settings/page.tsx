@@ -1,8 +1,10 @@
 "use client";
 
 import { usePlannerProfile, usePlannerProfileActions } from "@/hooks/useStore";
-import { useState, useRef } from "react";
-import { Camera, Save, X } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
+import { Camera, Save, X, CreditCard, ExternalLink, CheckCircle2, Loader2 } from "lucide-react";
+import Link from "next/link";
 
 export default function SettingsPage() {
   const profile = usePlannerProfile();
@@ -10,6 +12,59 @@ export default function SettingsPage() {
   const [form, setForm] = useState(profile);
   const [saved, setSaved] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const searchParams = useSearchParams();
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [portalLoading, setPortalLoading] = useState(false);
+
+  // Show success message after Stripe checkout redirect
+  useEffect(() => {
+    if (searchParams.get("session_id")) {
+      setShowSuccess(true);
+      const timer = setTimeout(() => setShowSuccess(false), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams]);
+
+  const trialDaysLeft =
+    profile.trialEndsAt
+      ? Math.max(
+          0,
+          Math.ceil(
+            (new Date(profile.trialEndsAt).getTime() - Date.now()) /
+              (1000 * 60 * 60 * 24)
+          )
+        )
+      : 0;
+
+  const planLabel =
+    profile.plan === "trial"
+      ? "Trial"
+      : profile.plan === "diy"
+        ? "DIY"
+        : profile.plan === "professional"
+          ? "Professional"
+          : "Expired";
+
+  const showUpgrade = profile.plan === "trial" || profile.plan === "expired";
+  const showManageBilling =
+    profile.plan === "diy" || profile.plan === "professional";
+
+  async function handleManageBilling() {
+    setPortalLoading(true);
+    try {
+      const res = await fetch("/api/stripe/portal", { method: "POST" });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Something went wrong");
+        setPortalLoading(false);
+      }
+    } catch {
+      alert("Something went wrong. Please try again.");
+      setPortalLoading(false);
+    }
+  }
 
   // Sync form when profile loads from localStorage
   const [initialized, setInitialized] = useState(false);
@@ -219,6 +274,81 @@ export default function SettingsPage() {
               <p className="text-[10px] text-stone-300">
                 Planned by {form.businessName || "Your Business"} {form.website && `· ${form.website}`}
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Billing & Plan */}
+        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft">
+          <h2 className="font-heading font-semibold text-stone-800 mb-4 flex items-center gap-2">
+            <CreditCard size={16} className="text-stone-400" />
+            Billing & Plan
+          </h2>
+
+          {showSuccess && (
+            <div className="mb-4 flex items-center gap-2 bg-emerald-50 text-emerald-700 px-4 py-3 rounded-xl text-sm font-medium">
+              <CheckCircle2 size={16} />
+              Payment successful! Your plan has been updated.
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex-1">
+              <p className="text-sm text-stone-600">
+                Current plan:{" "}
+                <span className="font-semibold text-stone-900">
+                  {planLabel}
+                </span>
+              </p>
+              {profile.plan === "trial" && trialDaysLeft > 0 && (
+                <p className="text-xs text-stone-400 mt-1">
+                  <span className="text-rose-500 font-medium">
+                    {trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""}
+                  </span>{" "}
+                  remaining on your trial
+                </p>
+              )}
+              {profile.plan === "trial" && trialDaysLeft <= 0 && (
+                <p className="text-xs text-rose-500 font-medium mt-1">
+                  Your trial has expired
+                </p>
+              )}
+              {profile.plan === "expired" && (
+                <p className="text-xs text-rose-500 font-medium mt-1">
+                  Upgrade to regain access
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              {showUpgrade && (
+                <Link
+                  href="/planner/upgrade"
+                  className="flex items-center gap-2 bg-rose-400 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-rose-500 transition-colors"
+                >
+                  Upgrade
+                  <ExternalLink size={12} />
+                </Link>
+              )}
+              {showManageBilling && (
+                <button
+                  onClick={handleManageBilling}
+                  disabled={portalLoading}
+                  className="flex items-center gap-2 bg-stone-100 text-stone-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-stone-200 transition-colors disabled:opacity-50"
+                >
+                  {portalLoading ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      Manage Billing
+                      <ExternalLink size={12} />
+                    </>
+                  )}
+                </button>
+              )}
             </div>
           </div>
         </div>

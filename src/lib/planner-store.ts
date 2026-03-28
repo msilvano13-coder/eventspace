@@ -14,6 +14,11 @@ const DEFAULT_PROFILE: PlannerProfile = {
   logoUrl: "",
   brandColor: "#e88b8b",
   tagline: "",
+  plan: "trial",
+  trialEndsAt: null,
+  stripeCustomerId: null,
+  stripeSubscriptionId: null,
+  stripePaymentId: null,
 };
 
 class PlannerProfileStore {

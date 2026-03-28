@@ -626,6 +626,11 @@ function profileToRow(p: Partial<PlannerProfile>): Record<string, unknown> {
   if (p.logoUrl !== undefined) row.logo_url = p.logoUrl;
   if (p.brandColor !== undefined) row.brand_color = p.brandColor;
   if (p.tagline !== undefined) row.tagline = p.tagline;
+  if (p.plan !== undefined) row.plan = p.plan;
+  if (p.trialEndsAt !== undefined) row.trial_ends_at = p.trialEndsAt;
+  if (p.stripeCustomerId !== undefined) row.stripe_customer_id = p.stripeCustomerId;
+  if (p.stripeSubscriptionId !== undefined) row.stripe_subscription_id = p.stripeSubscriptionId;
+  if (p.stripePaymentId !== undefined) row.stripe_payment_id = p.stripePaymentId;
   return row;
 }
 
@@ -638,8 +643,13 @@ function profileFromRow(r: any): PlannerProfile {
     phone: r.phone ?? "",
     website: r.website ?? "",
     logoUrl: r.logo_url ?? "",
-    brandColor: r.brand_color ?? "#6366f1",
+    brandColor: r.brand_color ?? "#e88b8b",
     tagline: r.tagline ?? "",
+    plan: r.plan ?? "trial",
+    trialEndsAt: r.trial_ends_at ?? null,
+    stripeCustomerId: r.stripe_customer_id ?? null,
+    stripeSubscriptionId: r.stripe_subscription_id ?? null,
+    stripePaymentId: r.stripe_payment_id ?? null,
   };
 }
 
@@ -1366,6 +1376,11 @@ export async function fetchProfile(): Promise<PlannerProfile> {
         logoUrl: "",
         brandColor: "#6366f1",
         tagline: "",
+        plan: "trial",
+        trialEndsAt: null,
+        stripeCustomerId: null,
+        stripeSubscriptionId: null,
+        stripePaymentId: null,
       };
     }
     throw new Error(`fetchProfile: ${error.message}`);

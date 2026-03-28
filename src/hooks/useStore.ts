@@ -166,6 +166,8 @@ function plannerSubscribeAndHydrate(cb: () => void) {
 const defaultProfile: PlannerProfile = {
   businessName: "", plannerName: "", email: "", phone: "",
   website: "", logoUrl: "", brandColor: "#e88b8b", tagline: "",
+  plan: "trial", trialEndsAt: null, stripeCustomerId: null,
+  stripeSubscriptionId: null, stripePaymentId: null,
 };
 
 export function usePlannerProfile(): PlannerProfile {

@@ -44,5 +44,34 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Paywall check for authenticated planner routes
+  const pathname = request.nextUrl.pathname;
+  if (
+    user &&
+    pathname.startsWith("/planner") &&
+    pathname !== "/planner/upgrade" &&
+    pathname !== "/planner/settings"
+  ) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("plan, trial_ends_at")
+      .eq("id", user.id)
+      .single();
+
+    if (profile) {
+      const isExpired = profile.plan === "expired";
+      const isTrialOver =
+        profile.plan === "trial" &&
+        profile.trial_ends_at &&
+        new Date(profile.trial_ends_at).getTime() < Date.now();
+
+      if (isExpired || isTrialOver) {
+        const url = request.nextUrl.clone();
+        url.pathname = "/planner/upgrade";
+        return NextResponse.redirect(url);
+      }
+    }
+  }
+
   return supabaseResponse;
 }

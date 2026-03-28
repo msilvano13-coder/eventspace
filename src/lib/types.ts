@@ -1,5 +1,7 @@
 // ── Planner Profile ──
 
+export type PlanType = "trial" | "diy" | "professional" | "expired";
+
 export interface PlannerProfile {
   businessName: string;
   plannerName: string;
@@ -9,6 +11,11 @@ export interface PlannerProfile {
   logoUrl: string;          // base64 data URL or empty
   brandColor: string;       // hex color
   tagline: string;
+  plan: PlanType;
+  trialEndsAt: string | null;
+  stripeCustomerId: string | null;
+  stripeSubscriptionId: string | null;
+  stripePaymentId: string | null;
 }
 
 export type LightingType = "uplight" | "spotlight" | "pinspot" | "gobo" | "wash" | "string" | "candles";
