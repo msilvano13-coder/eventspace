@@ -98,8 +98,8 @@ export default function LightingOverlay({ zones, onUpdateZones, selectedZoneId, 
   return (
     <div
       ref={overlayRef}
-      className="absolute inset-0 z-20"
-      style={{ background: "rgba(10, 10, 30, 0.55)", cursor: dragging ? "grabbing" : "default" }}
+      className="absolute inset-0"
+      style={{ background: "rgba(10, 10, 30, 0.55)", cursor: dragging ? "grabbing" : "default", zIndex: 35 }}
       onClick={handleOverlayClick}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}

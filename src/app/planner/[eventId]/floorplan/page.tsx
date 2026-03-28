@@ -200,17 +200,17 @@ export default function FloorPlanPage() {
               eventId={eventId}
               initialJSON={activePlan.json}
               onSave={handleSave}
+              canvasOverlay={
+                <LightingOverlay
+                  zones={lightingZones}
+                  onUpdateZones={handleUpdateLightingZones}
+                  selectedZoneId={selectedZoneId}
+                  onSelectZone={setSelectedZoneId}
+                  enabled={showLighting}
+                />
+              }
             />
           )}
-
-          {/* Lighting overlay on top of canvas */}
-          <LightingOverlay
-            zones={lightingZones}
-            onUpdateZones={handleUpdateLightingZones}
-            selectedZoneId={selectedZoneId}
-            onSelectZone={setSelectedZoneId}
-            enabled={showLighting}
-          />
         </div>
 
         {/* Lighting Panel — Desktop: side panel */}

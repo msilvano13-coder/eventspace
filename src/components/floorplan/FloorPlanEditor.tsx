@@ -20,6 +20,7 @@ interface Props {
   eventId: string;
   initialJSON: string | null;
   onSave: (json: string) => void;
+  canvasOverlay?: React.ReactNode;
 }
 
 interface SelectedInfo {
@@ -53,7 +54,7 @@ function RoomShapePreview({ preset }: { preset: RoomPreset }) {
   );
 }
 
-export default function FloorPlanEditor({ eventId, initialJSON, onSave }: Props) {
+export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOverlay }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
@@ -455,6 +456,7 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave }: Props)
           onDrop={handleDrop}
         >
           <canvas ref={canvasRef} />
+          {canvasOverlay}
         </div>
 
         <div className="hidden md:block">
