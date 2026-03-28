@@ -1,9 +1,10 @@
 "use client";
 
-import { useEvents, useStoreActions } from "@/hooks/useStore";
-import { Plus, Calendar, MapPin, User, ChevronRight, Archive, RotateCcw, Search, X, SlidersHorizontal } from "lucide-react";
+import { useEvents, useStoreActions, usePlannerProfile } from "@/hooks/useStore";
+import { Plus, Calendar, MapPin, User, ChevronRight, Archive, RotateCcw, Search, X, SlidersHorizontal, Lock } from "lucide-react";
 import Link from "next/link";
 import { useState, useMemo } from "react";
+import { canCreateEvent } from "@/lib/plan-features";
 
 const statusColors: Record<string, string> = {
   planning: "bg-amber-50 text-amber-700",
@@ -19,6 +20,7 @@ type SortOption = "date-asc" | "date-desc" | "name" | "recent";
 export default function PlannerDashboard() {
   const events = useEvents();
   const { createEvent, updateEvent } = useStoreActions();
+  const profile = usePlannerProfile();
   const [showModal, setShowModal] = useState(false);
   const [tab, setTab] = useState<Tab>("active");
   const [search, setSearch] = useState("");
@@ -87,13 +89,23 @@ export default function PlannerDashboard() {
             {activeEvents.length} active{archivedEvents.length > 0 ? ` · ${archivedEvents.length} archived` : ""}
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 bg-rose-400 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-soft"
-        >
-          <Plus size={16} />
-          New Event
-        </button>
+        {canCreateEvent(profile.plan, activeEvents.length) ? (
+          <button
+            onClick={() => setShowModal(true)}
+            className="flex items-center gap-2 bg-rose-400 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-soft"
+          >
+            <Plus size={16} />
+            New Event
+          </button>
+        ) : (
+          <Link
+            href="/planner/upgrade"
+            className="flex items-center gap-2 bg-stone-200 text-stone-500 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
+          >
+            <Lock size={16} />
+            Upgrade for More Events
+          </Link>
+        )}
       </div>
 
       {/* Tabs */}

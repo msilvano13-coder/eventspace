@@ -417,9 +417,11 @@ export default function HomePage() {
                   "Floor plan editor",
                   "Guest management & RSVPs",
                   "Day-of timeline",
+                  "Vendor tracking & search",
+                  "Contracts & budget",
                   "Color palette & mood board",
                   "Shared files",
-                  "Client portal link",
+                  "Read-only vendor link",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2">
                     <Check size={16} className="shrink-0 text-emerald-500 mt-0.5" />
@@ -451,11 +453,13 @@ export default function HomePage() {
               <ul className="space-y-3 text-sm text-stone-600">
                 {[
                   "Unlimited events",
-                  "Contracts & e-signatures",
+                  "Inquiries & leads pipeline",
+                  "Client questionnaires",
                   "Invoicing & payment tracking",
                   "Financial reports & dashboard",
-                  "Vendor management & discovery",
-                  "Client questionnaires",
+                  "Calendar view (all events)",
+                  "Preferred vendors list",
+                  "Contract templates",
                   "Branded client portal",
                   "CSV import & export",
                   "Priority support",
