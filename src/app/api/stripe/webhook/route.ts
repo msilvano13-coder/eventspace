@@ -34,12 +34,13 @@ export async function POST(request: Request) {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.supabase_user_id;
         const plan = session.metadata?.plan as "diy" | "professional";
+        const customerId = session.customer as string;
 
-        if (!userId || !plan) break;
+        if (!plan) break;
 
         const updateData: Record<string, unknown> = {
           plan,
-          stripe_customer_id: session.customer as string,
+          stripe_customer_id: customerId,
         };
 
         if (plan === "diy") {
@@ -48,10 +49,19 @@ export async function POST(request: Request) {
           updateData.stripe_subscription_id = session.subscription as string;
         }
 
-        await supabaseAdmin
-          .from("profiles")
-          .update(updateData)
-          .eq("id", userId);
+        if (userId) {
+          // Primary: match by user ID from metadata
+          await supabaseAdmin
+            .from("profiles")
+            .update(updateData)
+            .eq("id", userId);
+        } else if (customerId) {
+          // Fallback: match by stripe_customer_id
+          await supabaseAdmin
+            .from("profiles")
+            .update(updateData)
+            .eq("stripe_customer_id", customerId);
+        }
 
         break;
       }
