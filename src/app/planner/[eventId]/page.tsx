@@ -1227,7 +1227,8 @@ export default function EventDetailPage() {
       />
 
       {/* ── Danger Zone ── */}
-      <div className="mt-12 pt-6 border-t border-stone-200 pb-8">
+      <div className="mt-20 pt-8 border-t-2 border-dashed border-stone-200 pb-12">
+        <p className="text-center text-[11px] text-stone-300 uppercase tracking-widest font-medium mb-4">Danger Zone</p>
         <div className="flex justify-center">
           <button
             onClick={() => setShowDeleteConfirm(true)}
