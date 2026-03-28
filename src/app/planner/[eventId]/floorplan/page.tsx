@@ -213,10 +213,11 @@ export default function FloorPlanPage() {
           )}
         </div>
 
-        {/* Lighting Panel — Desktop: side panel */}
+        {/* Lighting Panel */}
         {showLighting && (
           <>
-            <div className="hidden md:block">
+            {/* Desktop: absolute side panel (like SeatingPanel) */}
+            <div className="absolute top-0 right-0 bottom-0 z-40 hidden md:block shadow-xl">
               <LightingPanel
                 zones={lightingZones}
                 onUpdateZones={handleUpdateLightingZones}
@@ -224,14 +225,13 @@ export default function FloorPlanPage() {
                 onSelectZone={setSelectedZoneId}
               />
             </div>
-            {/* Mobile: bottom sheet */}
-            <div className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-xl max-h-[55vh] overflow-y-auto">
-              <div className="sticky top-0 bg-white border-b border-stone-100 px-4 py-3 flex items-center justify-between rounded-t-2xl z-10">
-                <div className="w-10 h-1 bg-stone-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-2" />
-                <h3 className="text-sm font-heading font-semibold text-stone-800 pt-2">Lighting Design</h3>
+            {/* Mobile: full-screen overlay */}
+            <div className="absolute inset-0 z-40 md:hidden bg-white overflow-y-auto">
+              <div className="sticky top-0 z-10 bg-white border-b border-stone-200 flex items-center justify-between px-4 py-3">
+                <h3 className="text-sm font-heading font-semibold text-stone-800">Lighting Design</h3>
                 <button
                   onClick={() => { setShowLighting(false); setSelectedZoneId(null); }}
-                  className="text-xs text-stone-400 hover:text-stone-600 font-medium pt-2"
+                  className="text-xs text-stone-400 hover:text-stone-600 font-medium"
                 >
                   Done
                 </button>
