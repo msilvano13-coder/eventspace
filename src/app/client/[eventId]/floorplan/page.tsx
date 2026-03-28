@@ -2,18 +2,21 @@
 
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
-import { useEvent } from "@/hooks/useStore";
+import { useEvent, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Plus, Users } from "lucide-react";
+import { useCallback, useState } from "react";
+import { FloorPlan, Guest } from "@/lib/types";
+import { v4 as uuid } from "uuid";
+import SeatingPanel from "@/components/floorplan/SeatingPanel";
 
-const ReadOnlyCanvas = dynamic(
-  () => import("@/components/client/ClientFloorPlanView"),
+const FloorPlanEditor = dynamic(
+  () => import("@/components/floorplan/FloorPlanEditor"),
   {
     ssr: false,
     loading: () => (
       <div className="flex-1 flex items-center justify-center bg-stone-100">
-        <p className="text-stone-400 text-sm">Loading floor plan...</p>
+        <p className="text-stone-400 text-sm">Loading editor...</p>
       </div>
     ),
   }
@@ -22,70 +25,138 @@ const ReadOnlyCanvas = dynamic(
 export default function ClientFloorPlanPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
-  const [activeTab, setActiveTab] = useState(0);
+  const { updateEvent } = useStoreActions();
+  const [activePlanId, setActivePlanId] = useState<string>("ceremony");
+  const [showAddTab, setShowAddTab] = useState(false);
+  const [newTabName, setNewTabName] = useState("");
+  const [showSeating, setShowSeating] = useState(false);
+
+  const handleSave = useCallback(
+    (json: string) => {
+      if (!event) return;
+      const updated = event.floorPlans.map((fp) =>
+        fp.id === activePlanId ? { ...fp, json } : fp
+      );
+      updateEvent(eventId, { floorPlans: updated });
+    },
+    [eventId, activePlanId, updateEvent, event]
+  );
 
   if (!event) {
-    return <div className="p-8 text-stone-500">Event not found.</div>;
-  }
-
-  // Get floor plans that have content
-  const plans = (event.floorPlans ?? []).filter((fp) => fp.json);
-  const hasLegacy = !!event.floorPlanJSON;
-
-  if (plans.length === 0 && !hasLegacy) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center">
-        <p className="text-stone-500">Floor plan not ready yet.</p>
-        <Link href={`/client/${eventId}`} className="text-rose-500 hover:underline text-sm mt-2">
-          Back to portal
-        </Link>
+      <div className="p-8">
+        <p className="text-stone-500">Event not found.</p>
       </div>
     );
   }
 
-  // Use multi-tab plans if available, otherwise fall back to legacy single plan
-  const activePlan = plans.length > 0
-    ? plans[Math.min(activeTab, plans.length - 1)]
-    : null;
-  const activeJSON = activePlan?.json ?? event.floorPlanJSON!;
+  const plans = event.floorPlans || [];
+  const activePlan = plans.find((p) => p.id === activePlanId) || plans[0];
+
+  function addTab() {
+    if (!newTabName.trim()) return;
+    const newPlan: FloorPlan = { id: uuid(), name: newTabName.trim(), json: null };
+    updateEvent(eventId, { floorPlans: [...plans, newPlan] });
+    setActivePlanId(newPlan.id);
+    setNewTabName("");
+    setShowAddTab(false);
+  }
 
   return (
-    <div className="flex flex-col h-screen">
-      <div className="bg-white border-b border-stone-200 flex-shrink-0">
-        <div className="h-11 md:h-12 flex items-center px-4 gap-3">
-          <Link
-            href={`/client/${eventId}`}
-            className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-600"
-          >
-            <ArrowLeft size={14} />
-            Back to Portal
-          </Link>
-          <div className="w-px h-5 bg-stone-200" />
-          <h2 className="text-sm font-medium text-stone-800 truncate">
-            {event.name} — Floor Plan
-          </h2>
-        </div>
+    <div className="fixed inset-0 z-50 flex flex-col bg-stone-50">
+      {/* Top bar */}
+      <div className="h-11 md:h-12 bg-white border-b border-stone-200 flex items-center px-4 gap-3 flex-shrink-0">
+        <Link
+          href={`/client/${eventId}`}
+          className="flex items-center gap-1 text-sm text-stone-400 hover:text-stone-600"
+        >
+          <ArrowLeft size={14} />
+          <span className="hidden sm:inline">Back to Portal</span>
+        </Link>
+        <div className="w-px h-5 bg-stone-200" />
+        <h2 className="text-sm font-medium text-stone-800 truncate hidden sm:block">
+          {event.name} — Floor Plan
+        </h2>
+        <div className="flex-1" />
+        <button
+          onClick={() => setShowSeating(!showSeating)}
+          className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+            showSeating
+              ? "bg-rose-50 text-rose-600 border border-rose-200"
+              : "text-stone-400 hover:text-stone-600 hover:bg-stone-50 border border-transparent"
+          }`}
+        >
+          <Users size={13} />
+          <span className="hidden sm:inline">Seating</span>
+        </button>
+        <span className="text-xs text-stone-400 hidden sm:inline">Auto-saved</span>
+      </div>
 
-        {plans.length > 1 && (
-          <div className="flex gap-1 px-4 pb-2">
-            {plans.map((fp, i) => (
-              <button
-                key={fp.id}
-                onClick={() => setActiveTab(i)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  i === activeTab
-                    ? "bg-rose-50 text-rose-600"
-                    : "text-stone-400 hover:text-stone-600 hover:bg-stone-100"
-                }`}
-              >
-                {fp.name}
-              </button>
-            ))}
+      {/* Floor plan tabs */}
+      <div className="bg-white border-b border-stone-200 flex items-center px-2 sm:px-4 overflow-x-auto flex-shrink-0">
+        {plans.map((plan) => (
+          <button
+            key={plan.id}
+            onClick={() => setActivePlanId(plan.id)}
+            className={`px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+              plan.id === activePlan?.id
+                ? "border-rose-400 text-rose-600"
+                : "border-transparent text-stone-400 hover:text-stone-600"
+            }`}
+          >
+            {plan.name}
+          </button>
+        ))}
+        {showAddTab ? (
+          <div className="flex items-center gap-1 px-2">
+            <input
+              type="text"
+              value={newTabName}
+              onChange={(e) => setNewTabName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && addTab()}
+              placeholder="Plan name..."
+              autoFocus
+              className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 w-28 outline-none focus:border-rose-400"
+            />
+            <button onClick={addTab} className="text-rose-500 text-xs font-medium">
+              Add
+            </button>
+            <button
+              onClick={() => setShowAddTab(false)}
+              className="text-stone-400 text-xs"
+            >
+              Cancel
+            </button>
           </div>
+        ) : (
+          <button
+            onClick={() => setShowAddTab(true)}
+            className="px-2 py-2.5 text-stone-300 hover:text-stone-500 transition-colors"
+          >
+            <Plus size={14} />
+          </button>
         )}
       </div>
-      <div className="flex-1">
-        <ReadOnlyCanvas key={activeJSON} floorPlanJSON={activeJSON} />
+
+      {/* Editor + Seating */}
+      <div className="flex-1 relative overflow-hidden">
+        {activePlan && (
+          <FloorPlanEditor
+            key={activePlan.id}
+            eventId={eventId}
+            initialJSON={activePlan.json}
+            onSave={handleSave}
+          />
+        )}
+        {showSeating && (
+          <div className="absolute top-0 right-0 bottom-0 z-40 hidden md:block shadow-xl">
+            <SeatingPanel
+              floorPlanJSON={activePlan?.json ?? null}
+              guests={event.guests ?? []}
+              onUpdateGuests={(guests: Guest[]) => updateEvent(eventId, { guests })}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

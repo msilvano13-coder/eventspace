@@ -155,7 +155,7 @@ export default function CalendarPage() {
 
             return (
               <div
-                key={idx}
+                key={key}
                 className={`min-h-[80px] sm:min-h-[100px] border-b border-r border-stone-100 p-1.5 sm:p-2 ${
                   !day.isCurrentMonth ? "bg-stone-50/50" : ""
                 } ${idx % 7 === 0 ? "border-l-0" : ""}`}

@@ -1,11 +1,12 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEvent, useStoreActions, useQuestionnaires } from "@/hooks/useStore";
+import { useEvent, useStoreActions, useQuestionnaires, usePlannerProfile } from "@/hooks/useStore";
 import Link from "next/link";
 import { useState } from "react";
-import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Plus, X } from "lucide-react";
-import { Question, Invoice, Event } from "@/lib/types";
+import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Plus, X, Users, Wallet } from "lucide-react";
+import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
+import MessageThread from "@/components/event/MessageThread";
 
 function fmt12(time: string) {
   const [h, m] = time.split(":").map(Number);
@@ -33,6 +34,7 @@ export default function ClientPortalPage() {
   const event = useEvent(eventId);
   const { updateEvent } = useStoreActions();
   const allQuestionnaires = useQuestionnaires();
+  const profile = usePlannerProfile();
   const [openQId, setOpenQId] = useState<string | null>(null);
 
   if (!event) {
@@ -47,7 +49,7 @@ export default function ClientPortalPage() {
   }
 
   const schedule = [...(event.schedule ?? [])].sort((a, b) => a.time.localeCompare(b.time));
-  const todos = [...event.timeline].sort((a, b) => a.order - b.order);
+  const todos = [...(event.timeline ?? [])].sort((a, b) => a.order - b.order);
   const completedCount = todos.filter((t) => t.completed).length;
 
   return (
@@ -55,12 +57,21 @@ export default function ClientPortalPage() {
       {/* Header */}
       <header className="bg-white border-b border-stone-100">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 py-4 flex items-center gap-3">
-          <div className="w-8 h-8 bg-rose-400 rounded-lg flex items-center justify-center font-heading font-bold text-white text-sm shrink-0">
-            E
-          </div>
-          <div className="min-w-0">
+          {profile.logoUrl ? (
+            <img src={profile.logoUrl} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+          ) : (
+            <div
+              className="w-9 h-9 rounded-lg flex items-center justify-center font-heading font-bold text-white text-sm shrink-0"
+              style={{ backgroundColor: profile.brandColor || "#e88b8b" }}
+            >
+              {(profile.businessName || "E")[0].toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
             <h1 className="font-heading font-semibold text-stone-800 truncate">{event.name}</h1>
-            <p className="text-xs text-stone-400">Client Portal</p>
+            <p className="text-xs text-stone-400">
+              {profile.businessName ? `by ${profile.businessName}` : "Client Portal"}
+            </p>
           </div>
         </div>
       </header>
@@ -132,7 +143,7 @@ export default function ClientPortalPage() {
 
         {/* Quick links row */}
         <div className="grid grid-cols-2 gap-3">
-          {event.floorPlanJSON && (
+          {(event.floorPlanJSON || (event.floorPlans ?? []).some((fp) => fp.json)) && (
             <Link
               href={`/client/${event.id}/floorplan`}
               className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
@@ -148,7 +159,7 @@ export default function ClientPortalPage() {
           >
             <FileText size={22} className="text-blue-400 mb-2" />
             <h3 className="font-heading font-semibold text-stone-800 group-hover:text-blue-500 text-sm">Files</h3>
-            <p className="text-xs text-stone-400 mt-1">{event.files.length} shared files</p>
+            <p className="text-xs text-stone-400 mt-1">{(event.files ?? []).length} shared files</p>
           </Link>
         </div>
 
@@ -285,6 +296,18 @@ export default function ClientPortalPage() {
           </div>
         )}
 
+        {/* Guest RSVP */}
+        <ClientGuestRSVP
+          event={event}
+          onUpdate={(guests) => updateEvent(event.id, { guests })}
+        />
+
+        {/* Budget */}
+        <ClientBudget
+          event={event}
+          onUpdate={(budget) => updateEvent(event.id, { budget })}
+        />
+
         {/* Invoices */}
         {(event.invoices ?? []).filter((inv) => inv.status !== "draft").length > 0 && (
           <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
@@ -331,7 +354,25 @@ export default function ClientPortalPage() {
           </div>
         )}
 
-        <p className="text-center text-xs text-stone-300 pb-4">Powered by EventSpace</p>
+        {/* Messages */}
+        <MessageThread
+          messages={event.messages ?? []}
+          senderRole="client"
+          senderName={event.clientName || "Client"}
+          onSend={(msgs: Message[]) => updateEvent(event.id, { messages: msgs })}
+        />
+
+        <div className="text-center pb-6 pt-2">
+          {profile.businessName && (
+            <p className="text-xs text-stone-400 mb-0.5">
+              Planned by <span className="font-medium">{profile.businessName}</span>
+              {profile.website && (
+                <> · <span className="text-stone-300">{profile.website}</span></>
+              )}
+            </p>
+          )}
+          <p className="text-[10px] text-stone-300">Powered by EventSpace</p>
+        </div>
       </div>
     </div>
   );
@@ -546,6 +587,456 @@ function ClientColorPalette({ event, onUpdate }: { event: Event; onUpdate: (colo
             Cancel
           </button>
         </div>
+      )}
+    </div>
+  );
+}
+
+// ── Client Guest RSVP ──
+const RSVP_COLORS: Record<RsvpStatus, string> = {
+  pending: "bg-amber-50 text-amber-600 border-amber-200",
+  accepted: "bg-emerald-50 text-emerald-600 border-emerald-200",
+  declined: "bg-red-50 text-red-500 border-red-200",
+};
+
+function ClientBudget({ event, onUpdate }: { event: Event; onUpdate: (budget: BudgetItem[]) => void }) {
+  const items = event.budget ?? [];
+  const vendorList = event.vendors ?? [];
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [form, setForm] = useState({ category: "Venue", allocated: "", notes: "" });
+
+  const totalAlloc = items.reduce((s, b) => s + b.allocated, 0);
+  const totalCommitted = vendorList.reduce((s, v) => s + (v.contractTotal ?? 0), 0);
+  const remaining = totalAlloc - totalCommitted;
+
+  function getCommitted(budgetCategory: string): number {
+    return vendorList
+      .filter((v) => VENDOR_TO_BUDGET_CATEGORY[v.category] === budgetCategory)
+      .reduce((sum, v) => sum + (v.contractTotal ?? 0), 0);
+  }
+
+  function startAdd() {
+    const used = items.map((b) => b.category);
+    const next = BUDGET_CATEGORIES.find((c) => !used.includes(c)) || "Other";
+    setForm({ category: next, allocated: "", notes: "" });
+    setEditingId(null);
+    setAdding(true);
+  }
+
+  function startEdit(item: BudgetItem) {
+    setForm({ category: item.category, allocated: String(item.allocated), notes: item.notes });
+    setEditingId(item.id);
+    setAdding(false);
+  }
+
+  function save() {
+    if (!form.category || !form.allocated) return;
+    const allocated = parseFloat(form.allocated);
+    if (isNaN(allocated) || allocated < 0) return;
+    if (editingId) {
+      onUpdate(items.map((b) => b.id === editingId ? { ...b, category: form.category, allocated, notes: form.notes.trim() } : b));
+      setEditingId(null);
+    } else {
+      const newItem: BudgetItem = { id: crypto.randomUUID(), category: form.category, allocated, notes: form.notes.trim() };
+      onUpdate([...items, newItem]);
+      setAdding(false);
+    }
+    setForm({ category: "Venue", allocated: "", notes: "" });
+  }
+
+  function cancel() {
+    setAdding(false);
+    setEditingId(null);
+    setForm({ category: "Venue", allocated: "", notes: "" });
+  }
+
+  function remove(id: string) {
+    onUpdate(items.filter((b) => b.id !== id));
+    if (editingId === id) cancel();
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
+      <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-stone-100">
+        <div className="flex items-center gap-2">
+          <Wallet size={15} className="text-emerald-500" />
+          <h2 className="font-heading font-semibold text-stone-800">Budget</h2>
+          {items.length > 0 && <span className="text-xs text-stone-400 ml-1">({fmtCurrency(totalAlloc)})</span>}
+        </div>
+        {!adding && !editingId && (
+          <button onClick={startAdd} className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600">
+            <Plus size={13} /> Add
+          </button>
+        )}
+      </div>
+
+      {items.length > 0 && (
+        <div className="grid grid-cols-3 gap-3 px-5 py-4 border-b border-stone-100 bg-stone-50/50">
+          <div className="text-center">
+            <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium">Budget</p>
+            <p className="text-sm font-heading font-bold text-stone-800 mt-0.5">{fmtCurrency(totalAlloc)}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium">Committed</p>
+            <p className="text-sm font-heading font-bold text-stone-800 mt-0.5">{fmtCurrency(totalCommitted)}</p>
+          </div>
+          <div className="text-center">
+            <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium">Remaining</p>
+            <p className={`text-sm font-heading font-bold mt-0.5 ${remaining >= 0 ? "text-emerald-600" : "text-red-500"}`}>{fmtCurrency(remaining)}</p>
+          </div>
+        </div>
+      )}
+
+      {(adding || editingId) && (
+        <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/30 space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Category</label>
+              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white">
+                {BUDGET_CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Allocated ($)</label>
+              <input type="number" min="0" step="0.01" value={form.allocated} onChange={(e) => setForm({ ...form, allocated: e.target.value })} placeholder="5000" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white" />
+            </div>
+            <div className="sm:col-span-2">
+              <label className="block text-xs font-medium text-stone-500 mb-1">Notes</label>
+              <input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes..." className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white" />
+            </div>
+          </div>
+          <div className="flex gap-2 justify-end">
+            <button onClick={save} disabled={!form.category || !form.allocated} className="text-xs font-medium bg-rose-400 text-white px-4 py-2 rounded-xl hover:bg-rose-500 disabled:opacity-50 transition-colors">
+              {editingId ? "Update" : "Add"}
+            </button>
+            <button onClick={cancel} className="text-xs text-stone-400 hover:text-stone-600 px-3 py-2">Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {items.length === 0 && !adding ? (
+        <div className="px-5 py-8 text-center">
+          <Wallet size={20} className="text-stone-300 mx-auto mb-2" />
+          <p className="text-sm text-stone-400">No budget items yet.</p>
+          <button onClick={startAdd} className="text-xs font-medium text-rose-500 hover:text-rose-600 mt-2">Add your first budget category</button>
+        </div>
+      ) : (
+        <div className="divide-y divide-stone-100">
+          {items.map((item) => {
+            const committed = getCommitted(item.category);
+            const pct = item.allocated > 0 ? Math.min((committed / item.allocated) * 100, 100) : 0;
+            const over = committed > item.allocated;
+            return (
+              <div
+                key={item.id}
+                className={`px-5 py-3.5 hover:bg-stone-50/50 transition-colors cursor-pointer ${editingId === item.id ? "bg-rose-50/30" : ""}`}
+                onClick={() => { if (!adding && !editingId) startEdit(item); }}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-sm font-medium text-stone-700">{item.category}</span>
+                  <div className="flex items-center gap-3 text-xs">
+                    <span className="text-stone-400">{fmtCurrency(committed)} / {fmtCurrency(item.allocated)}</span>
+                    <span className={`font-semibold ${over ? "text-red-500" : "text-emerald-600"}`}>
+                      {over ? `-${fmtCurrency(committed - item.allocated)} over` : fmtCurrency(item.allocated - committed) + " left"}
+                    </span>
+                  </div>
+                </div>
+                <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full transition-all ${over ? "bg-red-400" : pct > 80 ? "bg-amber-400" : "bg-emerald-400"}`} style={{ width: `${Math.min(pct, 100)}%` }} />
+                </div>
+                {item.notes && <p className="text-[10px] text-stone-400 mt-1">{item.notes}</p>}
+                {editingId === item.id && (
+                  <button onClick={(e) => { e.stopPropagation(); remove(item.id); }} className="text-[10px] text-red-400 hover:text-red-600 mt-1">Remove</button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ClientGuestRSVP({ event, onUpdate }: { event: Event; onUpdate: (guests: Guest[]) => void }) {
+  const guests = event.guests ?? [];
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [rsvpVal, setRsvpVal] = useState<RsvpStatus>("pending");
+  const [mealVal, setMealVal] = useState("");
+  const [dietaryVal, setDietaryVal] = useState("");
+  const [plusOneNameVal, setPlusOneNameVal] = useState("");
+  const [adding, setAdding] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [newMeal, setNewMeal] = useState("");
+  const [newDietary, setNewDietary] = useState("");
+  const [newPlusOne, setNewPlusOne] = useState(false);
+  const [newPlusOneName, setNewPlusOneName] = useState("");
+
+  const accepted = guests.filter((g) => g.rsvp === "accepted").length;
+  const pending = guests.filter((g) => g.rsvp === "pending").length;
+
+  function startEdit(g: Guest) {
+    setEditingId(g.id);
+    setRsvpVal(g.rsvp);
+    setMealVal(g.mealChoice);
+    setDietaryVal(g.dietaryNotes);
+    setPlusOneNameVal(g.plusOneName);
+  }
+
+  function saveEdit() {
+    if (!editingId) return;
+    const updated = guests.map((g) =>
+      g.id === editingId
+        ? { ...g, rsvp: rsvpVal, mealChoice: mealVal, dietaryNotes: dietaryVal, plusOneName: plusOneNameVal }
+        : g
+    );
+    onUpdate(updated);
+    setEditingId(null);
+  }
+
+  function addGuest() {
+    if (!newName.trim()) return;
+    const guest: Guest = {
+      id: crypto.randomUUID(),
+      name: newName.trim(),
+      email: newEmail.trim(),
+      rsvp: "accepted",
+      mealChoice: newMeal.trim(),
+      tableAssignment: "",
+      plusOne: newPlusOne,
+      plusOneName: newPlusOneName.trim(),
+      dietaryNotes: newDietary.trim(),
+    };
+    onUpdate([...guests, guest]);
+    cancelAdd();
+  }
+
+  function removeGuest(id: string) {
+    onUpdate(guests.filter((g) => g.id !== id));
+    if (editingId === id) setEditingId(null);
+  }
+
+  function cancelAdd() {
+    setAdding(false);
+    setNewName("");
+    setNewEmail("");
+    setNewMeal("");
+    setNewDietary("");
+    setNewPlusOne(false);
+    setNewPlusOneName("");
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
+      <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-stone-100">
+        <div className="flex items-center gap-2">
+          <Users size={15} className="text-amber-400" />
+          <h2 className="font-heading font-semibold text-stone-800">Guest List & RSVP</h2>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 text-xs text-stone-400">
+            <span><span className="font-semibold text-emerald-600">{accepted}</span> accepted</span>
+            <span><span className="font-semibold text-amber-600">{pending}</span> pending</span>
+          </div>
+          {!adding && (
+            <button
+              onClick={() => setAdding(true)}
+              className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600"
+            >
+              <Plus size={13} />
+              Add
+            </button>
+          )}
+        </div>
+      </div>
+
+      {adding && (
+        <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/50 space-y-3">
+          <p className="text-xs font-medium text-stone-500">Add a guest</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Name *</label>
+              <input
+                autoFocus
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                placeholder="Guest name"
+                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Email</label>
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="guest@email.com"
+                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Meal Choice</label>
+              <input
+                value={newMeal}
+                onChange={(e) => setNewMeal(e.target.value)}
+                placeholder="e.g. Chicken, Fish"
+                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-stone-500 mb-1">Dietary Notes</label>
+              <input
+                value={newDietary}
+                onChange={(e) => setNewDietary(e.target.value)}
+                placeholder="Allergies, restrictions…"
+                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
+              />
+            </div>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={newPlusOne}
+              onChange={(e) => setNewPlusOne(e.target.checked)}
+              className="rounded border-stone-300 text-rose-400 focus:ring-rose-400/30"
+            />
+            <span className="text-sm text-stone-600">Bringing a plus one</span>
+          </label>
+          {newPlusOne && (
+            <input
+              value={newPlusOneName}
+              onChange={(e) => setNewPlusOneName(e.target.value)}
+              placeholder="Plus one name"
+              className="w-full sm:w-1/2 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
+            />
+          )}
+          <div className="flex gap-2 justify-end">
+            <button
+              onClick={addGuest}
+              disabled={!newName.trim()}
+              className="text-xs font-medium bg-rose-400 text-white px-4 py-2 rounded-lg hover:bg-rose-500 disabled:opacity-50 transition-colors"
+            >
+              Add Guest
+            </button>
+            <button onClick={cancelAdd} className="text-xs text-stone-400 hover:text-stone-600 px-3 py-2 rounded-lg hover:bg-stone-100 transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {guests.length === 0 && !adding ? (
+        <div className="px-5 py-8 text-center">
+          <Users size={20} className="text-stone-300 mx-auto mb-2" />
+          <p className="text-sm text-stone-400">No guests yet.</p>
+          <button
+            onClick={() => setAdding(true)}
+            className="text-xs font-medium text-rose-500 hover:text-rose-600 mt-2"
+          >
+            Add your first guest
+          </button>
+        </div>
+      ) : (
+      <div className="divide-y divide-stone-100">
+        {guests.map((guest) => (
+          <div key={guest.id} className="px-5 py-4">
+            {editingId === guest.id ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium text-stone-800">{guest.name}</span>
+                  {guest.plusOne && <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 font-medium">+1</span>}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-stone-500 mb-1">RSVP</label>
+                  <div className="flex gap-1.5">
+                    {(["accepted", "declined", "pending"] as RsvpStatus[]).map((status) => (
+                      <button
+                        key={status}
+                        onClick={() => setRsvpVal(status)}
+                        className={`text-xs font-medium px-3 py-2 rounded-lg border transition-colors ${
+                          rsvpVal === status
+                            ? RSVP_COLORS[status]
+                            : "border-stone-200 text-stone-400 hover:border-stone-300"
+                        }`}
+                      >
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-stone-500 mb-1">Meal Choice</label>
+                    <input
+                      value={mealVal}
+                      onChange={(e) => setMealVal(e.target.value)}
+                      placeholder="e.g. Chicken, Fish"
+                      className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-stone-500 mb-1">Dietary Notes</label>
+                    <input
+                      value={dietaryVal}
+                      onChange={(e) => setDietaryVal(e.target.value)}
+                      placeholder="Allergies…"
+                      className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none"
+                    />
+                  </div>
+                </div>
+                {guest.plusOne && (
+                  <div>
+                    <label className="block text-xs font-medium text-stone-500 mb-1">Plus One Name</label>
+                    <input
+                      value={plusOneNameVal}
+                      onChange={(e) => setPlusOneNameVal(e.target.value)}
+                      placeholder="Guest name"
+                      className="w-full sm:w-1/2 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none"
+                    />
+                  </div>
+                )}
+                <div className="flex gap-2 justify-end">
+                  <button
+                    onClick={() => removeGuest(guest.id)}
+                    className="text-xs text-red-400 hover:text-red-600 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors mr-auto"
+                  >
+                    Remove
+                  </button>
+                  <button onClick={saveEdit} className="text-xs font-medium bg-rose-400 text-white px-4 py-2 rounded-lg hover:bg-rose-500 transition-colors">Save</button>
+                  <button onClick={() => setEditingId(null)} className="text-xs text-stone-400 hover:text-stone-600 px-3 py-2 rounded-lg hover:bg-stone-100 transition-colors">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="flex items-center justify-between cursor-pointer"
+                onClick={() => startEdit(guest)}
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-medium text-stone-800">{guest.name}</span>
+                    {guest.plusOne && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-50 text-violet-600 font-medium">
+                        +1{guest.plusOneName ? `: ${guest.plusOneName}` : ""}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 mt-1 text-xs text-stone-400">
+                    {guest.mealChoice && <span>{guest.mealChoice}</span>}
+                    {guest.dietaryNotes && <span className="italic">{guest.dietaryNotes}</span>}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`text-[11px] px-2.5 py-1 rounded-full font-medium ${RSVP_COLORS[guest.rsvp].split(" ").slice(0, 2).join(" ")}`}>
+                    {guest.rsvp}
+                  </span>
+                  <span className="text-[10px] text-stone-300">tap to edit</span>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
       )}
     </div>
   );

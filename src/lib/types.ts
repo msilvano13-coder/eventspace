@@ -1,3 +1,16 @@
+// ── Planner Profile ──
+
+export interface PlannerProfile {
+  businessName: string;
+  plannerName: string;
+  email: string;
+  phone: string;
+  website: string;
+  logoUrl: string;          // base64 data URL or empty
+  brandColor: string;       // hex color
+  tagline: string;
+}
+
 export interface FloorPlan {
   id: string;
   name: string;
@@ -20,7 +33,6 @@ export interface Event {
   clientEmail: string;
   status: "planning" | "confirmed" | "completed";
   floorPlanJSON: string | null;
-  floorPlanThumbnail: string | null;
   floorPlans: FloorPlan[];
   files: SharedFile[];
   timeline: TimelineItem[];   // to-do checklist items
@@ -29,8 +41,10 @@ export interface Event {
   questionnaires: QuestionnaireAssignment[];
   invoices: Invoice[];
   expenses: Expense[];
+  guests: Guest[];
   colorPalette: string[];
-  comments: Comment[];
+  budget: BudgetItem[];
+  messages: Message[];
   createdAt: string;
   updatedAt: string;
 }
@@ -56,15 +70,6 @@ export interface TimelineItem {
   dueDate: string | null;
   completed: boolean;
   order: number;
-}
-
-export interface Comment {
-  id: string;
-  author: string;
-  text: string;
-  x?: number;
-  y?: number;
-  createdAt: string;
 }
 
 export interface FurnitureItemDef {
@@ -100,6 +105,15 @@ export type VendorCategory =
   | "officiant"
   | "other";
 
+export interface VendorPaymentItem {
+  id: string;
+  description: string;
+  amount: number;
+  dueDate: string;
+  paid: boolean;
+  paidDate: string | null;
+}
+
 export interface Vendor {
   id: string;
   name: string;
@@ -108,6 +122,8 @@ export interface Vendor {
   phone: string;
   email: string;
   notes: string;
+  contractTotal: number;
+  payments: VendorPaymentItem[];
 }
 
 // ── Questionnaires ──
@@ -138,6 +154,22 @@ export interface QuestionnaireAssignment {
   completedAt: string | null;
 }
 
+// ── Guests ──
+
+export type RsvpStatus = "pending" | "accepted" | "declined";
+
+export interface Guest {
+  id: string;
+  name: string;
+  email: string;
+  rsvp: RsvpStatus;
+  mealChoice: string;
+  tableAssignment: string;
+  plusOne: boolean;
+  plusOneName: string;
+  dietaryNotes: string;
+}
+
 // ── Expenses ──
 
 export interface Expense {
@@ -147,6 +179,59 @@ export interface Expense {
   category: string;
   date: string;
   notes: string;
+}
+
+// ── Budget ──
+
+export const BUDGET_CATEGORIES = [
+  "Venue",
+  "Catering",
+  "Photography",
+  "Videography",
+  "Flowers & Decor",
+  "Music & Entertainment",
+  "Cake & Desserts",
+  "Attire & Beauty",
+  "Stationery",
+  "Transportation",
+  "Favors & Gifts",
+  "Officiant",
+  "Rentals",
+  "Lighting",
+  "Planner Fee",
+  "Other",
+] as const;
+
+export interface BudgetItem {
+  id: string;
+  category: string;
+  allocated: number;
+  notes: string;
+}
+
+// Maps vendor categories → budget categories for auto-tracking
+export const VENDOR_TO_BUDGET_CATEGORY: Record<VendorCategory, string> = {
+  venue: "Venue",
+  catering: "Catering",
+  photography: "Photography",
+  videography: "Videography",
+  flowers: "Flowers & Decor",
+  music: "Music & Entertainment",
+  cake: "Cake & Desserts",
+  "hair & makeup": "Attire & Beauty",
+  transport: "Transportation",
+  officiant: "Officiant",
+  other: "Other",
+};
+
+// ── Messages ──
+
+export interface Message {
+  id: string;
+  sender: "planner" | "client";
+  senderName: string;
+  text: string;
+  createdAt: string;
 }
 
 // ── Invoices ──
@@ -166,4 +251,23 @@ export interface Invoice {
   notes: string;
   dueDate: string | null;
   createdAt: string;
+}
+
+// ── Inquiries / Leads ──
+
+export type InquiryStatus = "inquiry" | "consultation";
+
+export interface Inquiry {
+  id: string;
+  name: string;
+  clientName: string;
+  clientEmail: string;
+  clientPhone: string;
+  eventDate: string;
+  venue: string;
+  estimatedBudget: string;
+  notes: string;
+  status: InquiryStatus;
+  createdAt: string;
+  updatedAt: string;
 }

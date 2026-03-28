@@ -11,7 +11,6 @@ type DirectoryEntry = {
   phone: string;
   category?: string;
   contact?: string;
-  notes?: string;
   events: { id: string; name: string; date: string }[];
 };
 
@@ -59,7 +58,6 @@ export default function DirectoryPage() {
             phone: vendor.phone,
             category: vendor.category,
             contact: vendor.contact,
-            notes: vendor.notes,
             events: [{ id: event.id, name: event.name, date: event.date }],
           });
         }
@@ -140,9 +138,9 @@ export default function DirectoryPage() {
         </div>
       ) : (
         <div className="space-y-2">
-          {filtered.map((entry, idx) => (
+          {filtered.map((entry) => (
             <div
-              key={`${entry.type}-${entry.name}-${idx}`}
+              key={`${entry.type}-${entry.name}-${entry.email}`}
               className="bg-white rounded-2xl border border-stone-200 p-4 shadow-soft"
             >
               <div className="flex items-start gap-3">
@@ -185,10 +183,6 @@ export default function DirectoryPage() {
                       </span>
                     )}
                   </div>
-
-                  {entry.notes && (
-                    <p className="text-xs text-stone-400 mt-1 italic">{entry.notes}</p>
-                  )}
 
                   {/* Associated events */}
                   <div className="flex flex-wrap gap-1.5 mt-2">

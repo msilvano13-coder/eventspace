@@ -2,18 +2,33 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet } from "lucide-react";
+import { useState } from "react";
+import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet, Settings, Inbox, BarChart3, MoreHorizontal, X } from "lucide-react";
 
 const navItems = [
   { href: "/planner", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/planner/inquiries", label: "Inquiries", icon: Inbox },
   { href: "/planner/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/planner/questionnaires", label: "Questionnaires", icon: ClipboardList },
   { href: "/planner/finances", label: "Finances", icon: Wallet },
+  { href: "/planner/reports", label: "Reports", icon: BarChart3 },
   { href: "/planner/directory", label: "Directory", icon: BookUser },
+];
+
+// First 4 items + "More" button for mobile bottom nav
+const mobileMainItems = navItems.slice(0, 4);
+const mobileMoreItems = [
+  ...navItems.slice(4),
+  { href: "/planner/settings", label: "Settings", icon: Settings },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [showMore, setShowMore] = useState(false);
+
+  const moreActive = mobileMoreItems.some(
+    (item) => pathname === item.href || pathname.startsWith(item.href + "/")
+  );
 
   return (
     <>
@@ -49,22 +64,33 @@ export default function Sidebar() {
             );
           })}
         </nav>
-        <div className="p-4 border-t border-stone-100 text-xs text-stone-400">
-          EventSpace v0.1
+        <div className="p-3 border-t border-stone-100">
+          <Link
+            href="/planner/settings"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
+              pathname === "/planner/settings"
+                ? "bg-rose-50 text-rose-600 font-medium"
+                : "text-stone-500 hover:text-stone-800 hover:bg-stone-100"
+            }`}
+          >
+            <Settings size={18} />
+            Settings
+          </Link>
         </div>
       </aside>
 
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-stone-200 md:hidden mobile-bottom-nav">
         <div className="flex justify-around items-center h-14">
-          {navItems.map((item) => {
+          {mobileMainItems.map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center gap-0.5 py-2 px-4 min-w-[64px] ${
+                onClick={() => setShowMore(false)}
+                className={`flex flex-col items-center gap-0.5 py-2 px-3 ${
                   active ? "text-rose-500" : "text-stone-400"
                 }`}
               >
@@ -73,8 +99,53 @@ export default function Sidebar() {
               </Link>
             );
           })}
+          <button
+            onClick={() => setShowMore(!showMore)}
+            className={`flex flex-col items-center gap-0.5 py-2 px-3 ${
+              moreActive || showMore ? "text-rose-500" : "text-stone-400"
+            }`}
+          >
+            {showMore ? <X size={20} /> : <MoreHorizontal size={20} />}
+            <span className="text-[10px] font-medium">More</span>
+          </button>
         </div>
       </nav>
+
+      {/* Mobile "More" sheet */}
+      {showMore && (
+        <div
+          className="fixed inset-0 z-40 md:hidden"
+          onClick={() => setShowMore(false)}
+        >
+          <div className="absolute inset-0 bg-stone-900/20" />
+          <div
+            className="absolute bottom-14 left-0 right-0 bg-white rounded-t-2xl border-t border-stone-200 shadow-xl p-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="grid grid-cols-3 gap-1">
+              {mobileMoreItems.map((item) => {
+                const active =
+                  pathname === item.href || pathname.startsWith(item.href + "/");
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setShowMore(false)}
+                    className={`flex flex-col items-center gap-1.5 py-3 rounded-xl transition-colors ${
+                      active
+                        ? "bg-rose-50 text-rose-500"
+                        : "text-stone-500 hover:bg-stone-50"
+                    }`}
+                  >
+                    <item.icon size={20} />
+                    <span className="text-[11px] font-medium">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

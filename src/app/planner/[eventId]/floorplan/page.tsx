@@ -4,10 +4,11 @@ import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useEvent, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Users } from "lucide-react";
 import { useCallback, useState } from "react";
-import { FloorPlan } from "@/lib/types";
+import { FloorPlan, Guest } from "@/lib/types";
 import { v4 as uuid } from "uuid";
+import SeatingPanel from "@/components/floorplan/SeatingPanel";
 
 const FloorPlanEditor = dynamic(
   () => import("@/components/floorplan/FloorPlanEditor"),
@@ -28,6 +29,7 @@ export default function FloorPlanPage() {
   const [activePlanId, setActivePlanId] = useState<string>("ceremony");
   const [showAddTab, setShowAddTab] = useState(false);
   const [newTabName, setNewTabName] = useState("");
+  const [showSeating, setShowSeating] = useState(false);
 
   const handleSave = useCallback(
     (json: string) => {
@@ -76,6 +78,17 @@ export default function FloorPlanPage() {
           {event.name}
         </h2>
         <div className="flex-1" />
+        <button
+          onClick={() => setShowSeating(!showSeating)}
+          className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+            showSeating
+              ? "bg-rose-50 text-rose-600 border border-rose-200"
+              : "text-stone-400 hover:text-stone-600 hover:bg-stone-50 border border-transparent"
+          }`}
+        >
+          <Users size={13} />
+          <span className="hidden sm:inline">Seating</span>
+        </button>
         <span className="text-xs text-stone-400 hidden sm:inline">Auto-saved</span>
       </div>
 
@@ -125,8 +138,8 @@ export default function FloorPlanPage() {
         )}
       </div>
 
-      {/* Editor */}
-      <div className="flex-1">
+      {/* Editor + Seating */}
+      <div className="flex-1 relative overflow-hidden">
         {activePlan && (
           <FloorPlanEditor
             key={activePlan.id}
@@ -134,6 +147,15 @@ export default function FloorPlanPage() {
             initialJSON={activePlan.json}
             onSave={handleSave}
           />
+        )}
+        {showSeating && (
+          <div className="absolute top-0 right-0 bottom-0 z-40 hidden md:block shadow-xl">
+            <SeatingPanel
+              floorPlanJSON={activePlan?.json ?? null}
+              guests={event.guests ?? []}
+              onUpdateGuests={(guests: Guest[]) => updateEvent(eventId, { guests })}
+            />
+          </div>
         )}
       </div>
     </div>

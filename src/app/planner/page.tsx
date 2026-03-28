@@ -5,7 +5,7 @@ import { Plus, Calendar, MapPin, User, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-const statusColors = {
+const statusColors: Record<string, string> = {
   planning: "bg-amber-50 text-amber-700",
   confirmed: "bg-emerald-50 text-emerald-700",
   completed: "bg-stone-100 text-stone-500",
@@ -46,9 +46,9 @@ export default function PlannerDashboard() {
                 {event.name}
               </h3>
               <span
-                className={`text-[11px] px-2.5 py-1 rounded-full font-medium ${statusColors[event.status]}`}
+                className={`text-[11px] px-2.5 py-1 rounded-full font-medium ${statusColors[event.status] ?? "bg-stone-100 text-stone-500"}`}
               >
-                {event.status}
+                {event.status.charAt(0).toUpperCase() + event.status.slice(1)}
               </span>
             </div>
             <div className="space-y-2 text-sm text-stone-500">
@@ -71,9 +71,9 @@ export default function PlannerDashboard() {
             </div>
             {(event.colorPalette ?? []).length > 0 && (
               <div className="flex gap-1.5 mt-3">
-                {(event.colorPalette ?? []).map((color, i) => (
+                {(event.colorPalette ?? []).map((color) => (
                   <div
-                    key={i}
+                    key={color}
                     className="w-5 h-5 rounded-full ring-1 ring-stone-200"
                     style={{ backgroundColor: color }}
                   />
@@ -91,6 +91,11 @@ export default function PlannerDashboard() {
             </div>
           </Link>
         ))}
+        {events.length === 0 && (
+          <div className="col-span-full text-center py-16">
+            <p className="text-stone-300 text-sm">No events yet — create one to get started.</p>
+          </div>
+        )}
       </div>
 
       {showModal && (
@@ -165,7 +170,6 @@ function NewEventModal({
                 ...form,
                 status: "planning" as const,
                 floorPlanJSON: null,
-                floorPlanThumbnail: null,
                 floorPlans: [
                   { id: "ceremony", name: "Ceremony", json: null },
                   { id: "cocktail", name: "Cocktail Hour", json: null },
@@ -179,8 +183,10 @@ function NewEventModal({
                 questionnaires: [],
                 invoices: [],
                 expenses: [],
+                guests: [],
                 colorPalette: [],
-                comments: [],
+                budget: [],
+                messages: [],
               })
             }
             disabled={!form.name || !form.date}

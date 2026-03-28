@@ -28,8 +28,11 @@ import {
   Receipt,
   Wallet,
   Palette,
+  Users,
+  ChevronRight,
 } from "lucide-react";
-import { TimelineItem, Vendor, VendorCategory, QuestionnaireAssignment, Expense } from "@/lib/types";
+import { TimelineItem, Vendor, VendorCategory, QuestionnaireAssignment, Expense, Message, BudgetItem, BUDGET_CATEGORIES, VendorPaymentItem, VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
+import MessageThread from "@/components/event/MessageThread";
 
 const STATUS_OPTIONS = ["planning", "confirmed", "completed"] as const;
 
@@ -65,7 +68,7 @@ export default function EventDetailPage() {
   const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
   const [addingVendor, setAddingVendor] = useState(false);
   const [vendorForm, setVendorForm] = useState<Omit<Vendor, "id">>({
-    name: "", category: "other", contact: "", phone: "", email: "", notes: "",
+    name: "", category: "other", contact: "", phone: "", email: "", notes: "", contractTotal: 0, payments: [],
   });
 
   // ── Questionnaire assign state ──
@@ -75,6 +78,16 @@ export default function EventDetailPage() {
   const [addingExpense, setAddingExpense] = useState(false);
   const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [expenseForm, setExpenseForm] = useState({ description: "", amount: "", category: "other", date: "", notes: "" });
+
+  // ── Budget state ──
+  const [addingBudget, setAddingBudget] = useState(false);
+  const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
+  const [budgetForm, setBudgetForm] = useState({ category: "Venue", allocated: "", notes: "" });
+
+  // ── Vendor Payments state ──
+  const [expandedVendorId, setExpandedVendorId] = useState<string | null>(null);
+  const [addingPaymentForVendor, setAddingPaymentForVendor] = useState<string | null>(null);
+  const [paymentForm, setPaymentForm] = useState({ description: "", amount: "", dueDate: "" });
 
   // ── Color palette state ──
   const [addingColor, setAddingColor] = useState(false);
@@ -184,13 +197,13 @@ export default function EventDetailPage() {
 
   // ── Vendor handlers ──
   function startAddVendor() {
-    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "" });
+    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "", contractTotal: 0, payments: [] });
     setEditingVendorId(null);
     setAddingVendor(true);
   }
 
   function startEditVendor(v: Vendor) {
-    setVendorForm({ name: v.name, category: v.category, contact: v.contact, phone: v.phone, email: v.email, notes: v.notes });
+    setVendorForm({ name: v.name, category: v.category, contact: v.contact, phone: v.phone, email: v.email, notes: v.notes, contractTotal: v.contractTotal ?? 0, payments: v.payments ?? [] });
     setEditingVendorId(v.id);
     setAddingVendor(false);
   }
@@ -206,13 +219,13 @@ export default function EventDetailPage() {
       updateEvent(event!.id, { vendors: [...vendors, newVendor] });
       setAddingVendor(false);
     }
-    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "" });
+    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "", contractTotal: 0, payments: [] });
   }
 
   function cancelVendor() {
     setAddingVendor(false);
     setEditingVendorId(null);
-    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "" });
+    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "", contractTotal: 0, payments: [] });
   }
 
   function deleteVendor(id: string) {
@@ -285,6 +298,92 @@ export default function EventDetailPage() {
   }
 
   const fmt = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+
+  // ── Budget handlers ──
+  const budgetItems = event?.budget ?? [];
+  const totalAllocated = budgetItems.reduce((sum, b) => sum + b.allocated, 0);
+
+  // Derive committed/paid per budget category from vendor contracts
+  function getCommittedForCategory(budgetCategory: string): number {
+    return vendors
+      .filter((v) => VENDOR_TO_BUDGET_CATEGORY[v.category] === budgetCategory)
+      .reduce((sum, v) => sum + (v.contractTotal ?? 0), 0);
+  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function getPaidForCategory(budgetCategory: string): number {
+    return vendors
+      .filter((v) => VENDOR_TO_BUDGET_CATEGORY[v.category] === budgetCategory)
+      .reduce((sum, v) => sum + (v.payments ?? []).filter((p) => p.paid).reduce((s, p) => s + p.amount, 0), 0);
+  }
+  const totalCommitted = vendors.reduce((s, v) => s + (v.contractTotal ?? 0), 0);
+  const totalPaid = vendors.reduce((s, v) => s + (v.payments ?? []).filter((p) => p.paid).reduce((ps, p) => ps + p.amount, 0), 0);
+  const totalRemaining = totalAllocated - totalCommitted;
+
+  function startAddBudget() {
+    const usedCategories = budgetItems.map((b) => b.category);
+    const nextCategory = BUDGET_CATEGORIES.find((c) => !usedCategories.includes(c)) || "Other";
+    setBudgetForm({ category: nextCategory, allocated: "", notes: "" });
+    setEditingBudgetId(null);
+    setAddingBudget(true);
+  }
+
+  function startEditBudget(item: BudgetItem) {
+    setBudgetForm({ category: item.category, allocated: String(item.allocated), notes: item.notes });
+    setEditingBudgetId(item.id);
+    setAddingBudget(false);
+  }
+
+  function saveBudget() {
+    if (!budgetForm.category || !budgetForm.allocated) return;
+    const allocated = parseFloat(budgetForm.allocated);
+    if (isNaN(allocated) || allocated < 0) return;
+    if (editingBudgetId) {
+      const updated = budgetItems.map((b) => b.id === editingBudgetId ? { ...b, category: budgetForm.category, allocated, notes: budgetForm.notes.trim() } : b);
+      updateEvent(event!.id, { budget: updated });
+      setEditingBudgetId(null);
+    } else {
+      const newItem: BudgetItem = { id: crypto.randomUUID(), category: budgetForm.category, allocated, notes: budgetForm.notes.trim() };
+      updateEvent(event!.id, { budget: [...budgetItems, newItem] });
+      setAddingBudget(false);
+    }
+    setBudgetForm({ category: "Venue", allocated: "", notes: "" });
+  }
+
+  function cancelBudget() {
+    setAddingBudget(false);
+    setEditingBudgetId(null);
+    setBudgetForm({ category: "Venue", allocated: "", notes: "" });
+  }
+
+  function deleteBudget(id: string) {
+    updateEvent(event!.id, { budget: budgetItems.filter((b) => b.id !== id) });
+    if (editingBudgetId === id) cancelBudget();
+  }
+
+  // ── Vendor Payment handlers ──
+  function addPaymentToVendor(vendorId: string) {
+    if (!paymentForm.description.trim() || !paymentForm.amount) return;
+    const amount = parseFloat(paymentForm.amount);
+    if (isNaN(amount) || amount < 0) return;
+    const newPayment: VendorPaymentItem = { id: crypto.randomUUID(), description: paymentForm.description.trim(), amount, dueDate: paymentForm.dueDate, paid: false, paidDate: null };
+    const updated = vendors.map((v) => v.id === vendorId ? { ...v, payments: [...(v.payments ?? []), newPayment] } : v);
+    updateEvent(event!.id, { vendors: updated });
+    setPaymentForm({ description: "", amount: "", dueDate: "" });
+    setAddingPaymentForVendor(null);
+  }
+
+  function toggleVendorPaymentPaid(vendorId: string, paymentId: string) {
+    const updated = vendors.map((v) => {
+      if (v.id !== vendorId) return v;
+      return { ...v, payments: (v.payments ?? []).map((p) => p.id === paymentId ? { ...p, paid: !p.paid, paidDate: !p.paid ? new Date().toISOString().split("T")[0] : null } : p) };
+    });
+    updateEvent(event!.id, { vendors: updated });
+  }
+
+  function deleteVendorPayment(vendorId: string, paymentId: string) {
+    const updated = vendors.map((v) => v.id === vendorId ? { ...v, payments: (v.payments ?? []).filter((p) => p.id !== paymentId) } : v);
+    updateEvent(event!.id, { vendors: updated });
+  }
 
   return (
     <div className="px-4 py-6 sm:px-6 md:px-8 max-w-4xl mx-auto">
@@ -382,7 +481,7 @@ export default function EventDetailPage() {
       )}
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
         <Link
           href={`/planner/${event.id}/floorplan`}
           className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
@@ -414,6 +513,14 @@ export default function EventDetailPage() {
           <Receipt size={22} className="text-emerald-400 mb-2" />
           <h3 className="font-heading font-semibold text-stone-800 group-hover:text-emerald-500 text-sm">Invoices</h3>
           <p className="text-xs text-stone-400 mt-1">{(event.invoices ?? []).length} invoices</p>
+        </Link>
+        <Link
+          href={`/planner/${event.id}/guests`}
+          className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
+        >
+          <Users size={22} className="text-amber-400 mb-2" />
+          <h3 className="font-heading font-semibold text-stone-800 group-hover:text-amber-500 text-sm">Guests</h3>
+          <p className="text-xs text-stone-400 mt-1">{(event.guests ?? []).length} guests</p>
         </Link>
       </div>
 
@@ -787,9 +894,174 @@ export default function EventDetailPage() {
                   vendor={vendor}
                   onEdit={() => startEditVendor(vendor)}
                   onDelete={() => deleteVendor(vendor.id)}
+                  isExpanded={expandedVendorId === vendor.id}
+                  onToggle={() => setExpandedVendorId(expandedVendorId === vendor.id ? null : vendor.id)}
+                  onAddPayment={() => addPaymentToVendor(vendor.id)}
+                  onTogglePaymentPaid={(paymentId) => toggleVendorPaymentPaid(vendor.id, paymentId)}
+                  onDeletePayment={(paymentId) => deleteVendorPayment(vendor.id, paymentId)}
+                  addingPayment={addingPaymentForVendor === vendor.id}
+                  paymentForm={paymentForm}
+                  setPaymentForm={setPaymentForm}
+                  setAddingPayment={(v) => setAddingPaymentForVendor(v ? vendor.id : null)}
                 />
               )
             )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Budget ── */}
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
+        <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-stone-100">
+          <div className="flex items-center gap-2">
+            <Wallet size={15} className="text-emerald-500" />
+            <h2 className="font-heading font-semibold text-stone-800">Client Budget</h2>
+            {budgetItems.length > 0 && (
+              <span className="text-xs text-stone-400 ml-1">({fmt(totalAllocated)})</span>
+            )}
+          </div>
+          {!addingBudget && !editingBudgetId && (
+            <button onClick={startAddBudget} className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600">
+              <Plus size={13} /> Add
+            </button>
+          )}
+        </div>
+
+        {/* Summary cards */}
+        {budgetItems.length > 0 && (
+          <div className="grid grid-cols-4 gap-3 px-5 py-4 border-b border-stone-100 bg-stone-50/50">
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium">Budget</p>
+              <p className="text-sm font-heading font-bold text-stone-800 mt-0.5">{fmt(totalAllocated)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium">Committed</p>
+              <p className="text-sm font-heading font-bold text-stone-800 mt-0.5">{fmt(totalCommitted)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium">Paid</p>
+              <p className="text-sm font-heading font-bold text-emerald-600 mt-0.5">{fmt(totalPaid)}</p>
+            </div>
+            <div className="text-center">
+              <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium">Remaining</p>
+              <p className={`text-sm font-heading font-bold mt-0.5 ${totalRemaining >= 0 ? "text-emerald-600" : "text-red-500"}`}>{fmt(totalRemaining)}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Add/Edit form */}
+        {(addingBudget || editingBudgetId) && (
+          <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/30 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-stone-500 mb-1">Category</label>
+                <select
+                  value={budgetForm.category}
+                  onChange={(e) => setBudgetForm({ ...budgetForm, category: e.target.value })}
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
+                >
+                  {BUDGET_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-500 mb-1">Allocated ($)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={budgetForm.allocated}
+                  onChange={(e) => setBudgetForm({ ...budgetForm, allocated: e.target.value })}
+                  placeholder="5000"
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-500 mb-1">Notes</label>
+                <input
+                  value={budgetForm.notes}
+                  onChange={(e) => setBudgetForm({ ...budgetForm, notes: e.target.value })}
+                  placeholder="Optional notes..."
+                  className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={saveBudget} disabled={!budgetForm.category || !budgetForm.allocated} className="text-xs font-medium bg-rose-400 text-white px-4 py-2 rounded-xl hover:bg-rose-500 disabled:opacity-50 transition-colors">
+                {editingBudgetId ? "Update" : "Add"}
+              </button>
+              <button onClick={cancelBudget} className="text-xs text-stone-400 hover:text-stone-600 px-3 py-2">Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* Budget items */}
+        {budgetItems.length === 0 && !addingBudget ? (
+          <div className="px-5 py-8 text-center">
+            <Wallet size={20} className="text-stone-300 mx-auto mb-2" />
+            <p className="text-sm text-stone-400">No budget items yet.</p>
+            <p className="text-xs text-stone-300 mt-1">Break down the client&apos;s total budget by category.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-stone-100">
+            {budgetItems.map((item) => {
+              const committed = getCommittedForCategory(item.category);
+              const pct = item.allocated > 0 ? Math.min((committed / item.allocated) * 100, 100) : 0;
+              const over = committed > item.allocated;
+              // Find matching vendors for this budget category
+              const matchingVendors = vendors.filter((v) => VENDOR_TO_BUDGET_CATEGORY[v.category] === item.category && v.contractTotal > 0);
+              return (
+                <div
+                  key={item.id}
+                  className={`px-5 py-3.5 hover:bg-stone-50/50 transition-colors cursor-pointer ${editingBudgetId === item.id ? "bg-rose-50/30" : ""}`}
+                  onClick={() => { if (!addingBudget && !editingBudgetId) startEditBudget(item); }}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-sm font-medium text-stone-700">{item.category}</span>
+                    <div className="flex items-center gap-3 text-xs">
+                      <span className="text-stone-400">{fmt(committed)} / {fmt(item.allocated)}</span>
+                      <span className={`font-semibold ${over ? "text-red-500" : "text-emerald-600"}`}>
+                        {over ? `-${fmt(committed - item.allocated)} over` : fmt(item.allocated - committed) + " left"}
+                      </span>
+                    </div>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${over ? "bg-red-400" : pct > 80 ? "bg-amber-400" : "bg-emerald-400"}`}
+                      style={{ width: `${Math.min(pct, 100)}%` }}
+                    />
+                  </div>
+                  {/* Vendor breakdown */}
+                  {matchingVendors.length > 0 && (
+                    <div className="mt-1.5 space-y-0.5">
+                      {matchingVendors.map((v) => {
+                        const vPaid = (v.payments ?? []).filter((p) => p.paid).reduce((s, p) => s + p.amount, 0);
+                        return (
+                          <div key={v.id} className="flex items-center justify-between text-[10px]">
+                            <span className="text-stone-400">{v.name}</span>
+                            <span className="text-stone-400">
+                              {fmt(vPaid)} paid of {fmt(v.contractTotal)}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {committed === 0 && <p className="text-[10px] text-stone-300 mt-1 italic">No vendors assigned — add a vendor in this category to track spend</p>}
+                  {item.notes && <p className="text-[10px] text-stone-400 mt-1">{item.notes}</p>}
+                  {editingBudgetId === item.id && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); deleteBudget(item.id); }}
+                      className="text-[10px] text-red-400 hover:text-red-600 mt-1"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -923,6 +1195,14 @@ export default function EventDetailPage() {
         )}
       </div>
 
+      {/* ── Messages ── */}
+      <MessageThread
+        messages={event.messages ?? []}
+        senderRole="planner"
+        senderName="Planner"
+        onSend={(msgs: Message[]) => updateEvent(eventId, { messages: msgs })}
+      />
+
       {/* ── Delete Event ── */}
       <div className="flex justify-center pb-8">
         <button
@@ -1036,7 +1316,19 @@ function VendorForm({
             className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
           />
         </div>
-        <div className="col-span-2">
+        <div>
+          <label className="block text-xs font-medium text-stone-500 mb-1">Contract Total ($)</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={form.contractTotal || ""}
+            onChange={(e) => onChange({ ...form, contractTotal: parseFloat(e.target.value) || 0 })}
+            placeholder="0"
+            className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
+          />
+        </div>
+        <div>
           <label className="block text-xs font-medium text-stone-500 mb-1">Notes</label>
           <input
             value={form.notes}
@@ -1071,46 +1363,114 @@ const CATEGORY_COLORS: Record<string, string> = {
   other: "bg-stone-100 text-stone-500",
 };
 
-function VendorRow({ vendor, onEdit, onDelete }: { vendor: Vendor; onEdit: () => void; onDelete: () => void }) {
+function VendorRow({ vendor, onEdit, onDelete, isExpanded, onToggle, onAddPayment, onTogglePaymentPaid, onDeletePayment, addingPayment, paymentForm, setPaymentForm, setAddingPayment }: {
+  vendor: Vendor; onEdit: () => void; onDelete: () => void;
+  isExpanded: boolean; onToggle: () => void;
+  onAddPayment: () => void; onTogglePaymentPaid: (paymentId: string) => void; onDeletePayment: (paymentId: string) => void;
+  addingPayment: boolean; paymentForm: { description: string; amount: string; dueDate: string };
+  setPaymentForm: (f: { description: string; amount: string; dueDate: string }) => void;
+  setAddingPayment: (v: boolean) => void;
+}) {
+  const payments = vendor.payments ?? [];
+  const paidAmt = payments.filter((p) => p.paid).reduce((s, p) => s + p.amount, 0);
+  const hasContract = vendor.contractTotal > 0;
+  const pct = hasContract ? Math.min((paidAmt / vendor.contractTotal) * 100, 100) : 0;
+  const fmt = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 });
+
   return (
-    <div className="group flex items-start gap-3 py-3 px-3 rounded-xl hover:bg-stone-50 transition-colors">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-sm font-medium text-stone-800">{vendor.name}</span>
-          <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${CATEGORY_COLORS[vendor.category] ?? "bg-stone-100 text-stone-500"}`}>
-            {vendor.category}
-          </span>
+    <div className="rounded-xl border border-stone-100 overflow-hidden">
+      <div className="group flex items-start gap-3 py-3 px-3 hover:bg-stone-50 transition-colors cursor-pointer" onClick={onToggle}>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <ChevronRight size={12} className={`text-stone-400 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+            <span className="text-sm font-medium text-stone-800">{vendor.name}</span>
+            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${CATEGORY_COLORS[vendor.category] ?? "bg-stone-100 text-stone-500"}`}>
+              {vendor.category}
+            </span>
+            {hasContract && (
+              <span className="text-[10px] text-stone-400 ml-auto">
+                {fmt(paidAmt)} / {fmt(vendor.contractTotal)}
+                {paidAmt < vendor.contractTotal && <span className="text-amber-600 font-semibold ml-1.5">{fmt(vendor.contractTotal - paidAmt)} due</span>}
+                {paidAmt >= vendor.contractTotal && <span className="text-emerald-600 font-semibold ml-1.5">Paid</span>}
+              </span>
+            )}
+          </div>
+          {hasContract && (
+            <div className="h-1 bg-stone-100 rounded-full overflow-hidden mt-1.5 ml-5">
+              <div className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-emerald-400" : "bg-violet-400"}`} style={{ width: `${pct}%` }} />
+            </div>
+          )}
+          <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 ml-5">
+            {vendor.contact && <span className="flex items-center gap-1 text-xs text-stone-400"><User size={11} />{vendor.contact}</span>}
+            {vendor.phone && <span className="flex items-center gap-1 text-xs text-stone-400"><Phone size={11} />{vendor.phone}</span>}
+            {vendor.email && <span className="flex items-center gap-1 text-xs text-stone-400"><Mail size={11} />{vendor.email}</span>}
+          </div>
+          {vendor.notes && <p className="text-xs text-stone-400 mt-1 ml-5 italic">{vendor.notes}</p>}
         </div>
-        <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1">
-          {vendor.contact && (
-            <span className="flex items-center gap-1 text-xs text-stone-400">
-              <User size={11} />
-              {vendor.contact}
-            </span>
-          )}
-          {vendor.phone && (
-            <span className="flex items-center gap-1 text-xs text-stone-400">
-              <Phone size={11} />
-              {vendor.phone}
-            </span>
-          )}
-          {vendor.email && (
-            <span className="flex items-center gap-1 text-xs text-stone-400">
-              <Mail size={11} />
-              {vendor.email}
-            </span>
-          )}
+        <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+          <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">
+            <Pencil size={13} />
+          </button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+            <Trash2 size={13} />
+          </button>
         </div>
-        {vendor.notes && <p className="text-xs text-stone-400 mt-1 italic">{vendor.notes}</p>}
       </div>
-      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
-        <button onClick={onEdit} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">
-          <Pencil size={13} />
-        </button>
-        <button onClick={onDelete} className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-          <Trash2 size={13} />
-        </button>
-      </div>
+
+      {/* Expanded: Payment schedule */}
+      {isExpanded && (
+        <div className="bg-stone-50/70 px-4 py-3 border-t border-stone-100">
+          <div className="ml-5 space-y-2">
+            <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium">Payment Schedule</p>
+            {payments.length === 0 && !addingPayment && (
+              <p className="text-xs text-stone-400 italic">No payments scheduled yet.</p>
+            )}
+            {payments.map((payment) => (
+              <div key={payment.id} className="flex items-center gap-3 group/pay">
+                <button
+                  onClick={() => onTogglePaymentPaid(payment.id)}
+                  className={`flex-shrink-0 w-4 h-4 rounded border transition-colors ${payment.paid ? "bg-emerald-400 border-emerald-400 text-white" : "border-stone-300 hover:border-rose-400"}`}
+                >
+                  {payment.paid && <Check size={10} className="mx-auto" />}
+                </button>
+                <div className="flex-1 min-w-0">
+                  <span className={`text-xs ${payment.paid ? "text-stone-400 line-through" : "text-stone-700"}`}>{payment.description}</span>
+                  {payment.dueDate && (
+                    <span className={`text-[10px] ml-2 ${payment.paid ? "text-stone-300" : new Date(payment.dueDate) < new Date() && !payment.paid ? "text-red-500 font-semibold" : "text-stone-400"}`}>
+                      {payment.paid ? `Paid ${payment.paidDate}` : `Due ${payment.dueDate}`}
+                    </span>
+                  )}
+                </div>
+                <span className={`text-xs font-medium ${payment.paid ? "text-emerald-600" : "text-stone-600"}`}>{fmt(payment.amount)}</span>
+                <button
+                  onClick={() => onDeletePayment(payment.id)}
+                  className="opacity-0 group-hover/pay:opacity-100 text-stone-300 hover:text-red-400 transition-all"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+
+            {addingPayment ? (
+              <div className="pt-2 border-t border-stone-200 space-y-2">
+                <div className="grid grid-cols-3 gap-2">
+                  <input value={paymentForm.description} onChange={(e) => setPaymentForm({ ...paymentForm, description: e.target.value })} placeholder="e.g. Deposit" className="text-xs border border-stone-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white" />
+                  <input type="number" min="0" step="0.01" value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} placeholder="Amount" className="text-xs border border-stone-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white" />
+                  <input type="date" value={paymentForm.dueDate} onChange={(e) => setPaymentForm({ ...paymentForm, dueDate: e.target.value })} className="text-xs border border-stone-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white" />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={onAddPayment} disabled={!paymentForm.description.trim() || !paymentForm.amount} className="text-xs font-medium bg-rose-400 text-white px-3 py-1.5 rounded-lg hover:bg-rose-500 disabled:opacity-50 transition-colors">Add Payment</button>
+                  <button onClick={() => setAddingPayment(false)} className="text-xs text-stone-400 hover:text-stone-600">Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button onClick={() => { setAddingPayment(true); setPaymentForm({ description: "", amount: "", dueDate: "" }); }} className="text-xs text-rose-500 hover:text-rose-600 font-medium flex items-center gap-1 pt-1">
+                <Plus size={11} /> Add Payment
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

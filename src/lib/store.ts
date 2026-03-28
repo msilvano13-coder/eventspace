@@ -28,12 +28,27 @@ class EventStore {
           if (!evt.floorPlans) {
             evt.floorPlans = DEFAULT_FLOOR_PLANS.map((fp) => ({ ...fp, json: null }));
           }
+          if (!evt.timeline) evt.timeline = [];
           if (!evt.schedule) evt.schedule = [];
+          if (!evt.files) evt.files = [];
           if (!evt.vendors) evt.vendors = [];
+          // Migrate vendors to include payment fields
+          evt.vendors.forEach((v: any) => {
+            if (v.contractTotal === undefined) v.contractTotal = 0;
+            if (!v.payments) v.payments = [];
+          });
           if (!evt.questionnaires) evt.questionnaires = [];
           if (!evt.invoices) evt.invoices = [];
           if (!evt.expenses) evt.expenses = [];
+          if (!evt.guests) evt.guests = [];
           if (!evt.colorPalette) evt.colorPalette = [];
+          if (!evt.budget) evt.budget = [];
+          // Remove deprecated spent field (now derived from vendor contracts)
+          evt.budget.forEach((b: any) => { delete b.spent; });
+          delete (evt as any).vendorContracts;
+          delete (evt as any).comments;
+          delete (evt as any).floorPlanThumbnail;
+          if (!evt.messages) evt.messages = [];
         });
       } catch {
         this.events = this.seedMap();
