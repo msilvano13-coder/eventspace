@@ -23,7 +23,7 @@ import {
   Clock,
   Store,
   ChevronDown,
-  Phone,
+
   ClipboardList,
   Receipt,
   Wallet,
@@ -32,10 +32,13 @@ import {
   ChevronRight,
   Download,
   Image,
+  Archive,
+  RotateCcw,
 } from "lucide-react";
-import { TimelineItem, Vendor, VendorCategory, QuestionnaireAssignment, Expense, Message, BudgetItem, BUDGET_CATEGORIES, VendorPaymentItem, VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
+import { TimelineItem, QuestionnaireAssignment, Expense, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
 import MessageThread from "@/components/event/MessageThread";
 import { exportEventPDF } from "@/lib/export-pdf";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const STATUS_OPTIONS = ["planning", "confirmed", "completed"] as const;
 
@@ -68,13 +71,6 @@ export default function EventDetailPage() {
   const newTodoRef = useRef<HTMLInputElement>(null);
   const editTodoRef = useRef<HTMLInputElement>(null);
 
-  // ── Vendor state ──
-  const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
-  const [addingVendor, setAddingVendor] = useState(false);
-  const [vendorForm, setVendorForm] = useState<Omit<Vendor, "id">>({
-    name: "", category: "other", contact: "", phone: "", email: "", notes: "", mealChoice: "", contractTotal: 0, payments: [],
-  });
-
   // ── Questionnaire assign state ──
   const [showAssignQ, setShowAssignQ] = useState(false);
 
@@ -88,14 +84,12 @@ export default function EventDetailPage() {
   const [editingBudgetId, setEditingBudgetId] = useState<string | null>(null);
   const [budgetForm, setBudgetForm] = useState({ category: "Venue", allocated: "", notes: "" });
 
-  // ── Vendor Payments state ──
-  const [expandedVendorId, setExpandedVendorId] = useState<string | null>(null);
-  const [addingPaymentForVendor, setAddingPaymentForVendor] = useState<string | null>(null);
-  const [paymentForm, setPaymentForm] = useState({ description: "", amount: "", dueDate: "" });
-
   // ── Color palette state ──
   const [addingColor, setAddingColor] = useState(false);
   const [newColor, setNewColor] = useState("#d4a5a5");
+
+  // ── Confirm delete state ──
+  const [confirmAction, setConfirmAction] = useState<{ type: string; id: string; label: string } | null>(null);
 
   useEffect(() => { if (addingTodo) newTodoRef.current?.focus(); }, [addingTodo]);
   useEffect(() => { if (editingTodoId) editTodoRef.current?.focus(); }, [editingTodoId]);
@@ -197,44 +191,6 @@ export default function EventDetailPage() {
 
   function cancelNewTodo() {
     setAddingTodo(false); setNewTodoTitle(""); setNewTodoDate("");
-  }
-
-  // ── Vendor handlers ──
-  function startAddVendor() {
-    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "", mealChoice: "", contractTotal: 0, payments: [] });
-    setEditingVendorId(null);
-    setAddingVendor(true);
-  }
-
-  function startEditVendor(v: Vendor) {
-    setVendorForm({ name: v.name, category: v.category, contact: v.contact, phone: v.phone, email: v.email, notes: v.notes, mealChoice: v.mealChoice ?? "", contractTotal: v.contractTotal ?? 0, payments: v.payments ?? [] });
-    setEditingVendorId(v.id);
-    setAddingVendor(false);
-  }
-
-  function saveVendor() {
-    if (!vendorForm.name.trim()) return;
-    if (editingVendorId) {
-      const updated = vendors.map((v) => v.id === editingVendorId ? { ...v, ...vendorForm } : v);
-      updateEvent(event!.id, { vendors: updated });
-      setEditingVendorId(null);
-    } else {
-      const newVendor: Vendor = { id: crypto.randomUUID(), ...vendorForm };
-      updateEvent(event!.id, { vendors: [...vendors, newVendor] });
-      setAddingVendor(false);
-    }
-    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "", mealChoice: "", contractTotal: 0, payments: [] });
-  }
-
-  function cancelVendor() {
-    setAddingVendor(false);
-    setEditingVendorId(null);
-    setVendorForm({ name: "", category: "other", contact: "", phone: "", email: "", notes: "", mealChoice: "", contractTotal: 0, payments: [] });
-  }
-
-  function deleteVendor(id: string) {
-    updateEvent(event!.id, { vendors: vendors.filter((v) => v.id !== id) });
-    if (editingVendorId === id) cancelVendor();
   }
 
   // ── Questionnaire handlers ──
@@ -364,31 +320,6 @@ export default function EventDetailPage() {
     if (editingBudgetId === id) cancelBudget();
   }
 
-  // ── Vendor Payment handlers ──
-  function addPaymentToVendor(vendorId: string) {
-    if (!paymentForm.description.trim() || !paymentForm.amount) return;
-    const amount = parseFloat(paymentForm.amount);
-    if (isNaN(amount) || amount < 0) return;
-    const newPayment: VendorPaymentItem = { id: crypto.randomUUID(), description: paymentForm.description.trim(), amount, dueDate: paymentForm.dueDate, paid: false, paidDate: null };
-    const updated = vendors.map((v) => v.id === vendorId ? { ...v, payments: [...(v.payments ?? []), newPayment] } : v);
-    updateEvent(event!.id, { vendors: updated });
-    setPaymentForm({ description: "", amount: "", dueDate: "" });
-    setAddingPaymentForVendor(null);
-  }
-
-  function toggleVendorPaymentPaid(vendorId: string, paymentId: string) {
-    const updated = vendors.map((v) => {
-      if (v.id !== vendorId) return v;
-      return { ...v, payments: (v.payments ?? []).map((p) => p.id === paymentId ? { ...p, paid: !p.paid, paidDate: !p.paid ? new Date().toISOString().split("T")[0] : null } : p) };
-    });
-    updateEvent(event!.id, { vendors: updated });
-  }
-
-  function deleteVendorPayment(vendorId: string, paymentId: string) {
-    const updated = vendors.map((v) => v.id === vendorId ? { ...v, payments: (v.payments ?? []).filter((p) => p.id !== paymentId) } : v);
-    updateEvent(event!.id, { vendors: updated });
-  }
-
   return (
     <div className="px-4 py-6 sm:px-6 md:px-8 max-w-4xl mx-auto">
       <div className="mb-6">
@@ -400,6 +331,26 @@ export default function EventDetailPage() {
           All Events
         </Link>
       </div>
+
+      {/* ── Archived Banner ── */}
+      {event.archivedAt && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Archive size={14} className="text-amber-600" />
+            <span className="text-sm font-medium text-amber-700">This event is archived</span>
+            <span className="text-xs text-amber-500 ml-1">
+              ({new Date(event.archivedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})
+            </span>
+          </div>
+          <button
+            onClick={() => updateEvent(event.id, { archivedAt: null })}
+            className="flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-800 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg transition-colors"
+          >
+            <RotateCcw size={12} />
+            Restore
+          </button>
+        </div>
+      )}
 
       {/* ── Event Info ── */}
       {editingInfo ? (
@@ -494,7 +445,7 @@ export default function EventDetailPage() {
       )}
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-8">
         <Link
           href={`/planner/${event.id}/floorplan`}
           className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
@@ -542,6 +493,22 @@ export default function EventDetailPage() {
           <Image size={22} className="text-pink-400 mb-2" />
           <h3 className="font-heading font-semibold text-stone-800 group-hover:text-pink-500 text-sm">Mood Board</h3>
           <p className="text-xs text-stone-400 mt-1">{(event.moodBoard ?? []).length} images</p>
+        </Link>
+        <Link
+          href={`/planner/${event.id}/vendors`}
+          className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
+        >
+          <Store size={22} className="text-orange-400 mb-2" />
+          <h3 className="font-heading font-semibold text-stone-800 group-hover:text-orange-500 text-sm">Vendors</h3>
+          <p className="text-xs text-stone-400 mt-1">{(event.vendors ?? []).length} vendors</p>
+        </Link>
+        <Link
+          href={`/planner/${event.id}/contracts`}
+          className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
+        >
+          <FileText size={22} className="text-teal-400 mb-2" />
+          <h3 className="font-heading font-semibold text-stone-800 group-hover:text-teal-500 text-sm">Contracts</h3>
+          <p className="text-xs text-stone-400 mt-1">{(event.contracts ?? []).length} contracts</p>
         </Link>
       </div>
 
@@ -746,7 +713,7 @@ export default function EventDetailPage() {
                     <button onClick={() => startEditTodo(item)} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">
                       <Pencil size={13} />
                     </button>
-                    <button onClick={() => deleteTodo(item.id)} className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                    <button onClick={() => setConfirmAction({ type: "todo", id: item.id, label: item.title })} className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                       <Trash2 size={13} />
                     </button>
                   </div>
@@ -782,8 +749,11 @@ export default function EventDetailPage() {
       </div>
       </div>{/* end 2-col grid */}
 
+      {/* ── Questionnaires & Vendors (side by side) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+
       {/* ── Questionnaires ── */}
-      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6">
+      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <ClipboardList size={16} className="text-indigo-400" />
@@ -865,7 +835,7 @@ export default function EventDetailPage() {
                   </div>
                   <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
                     <button
-                      onClick={() => removeQuestionnaire(assignment.questionnaireId)}
+                      onClick={() => setConfirmAction({ type: "questionnaire", id: assignment.questionnaireId, label: assignment.questionnaireName })}
                       className="p-1.5 text-stone-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
                     >
                       <Trash2 size={13} />
@@ -878,63 +848,41 @@ export default function EventDetailPage() {
         )}
       </div>
 
-      {/* ── Vendor List ── */}
-      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6">
-        <div className="flex items-center justify-between mb-4">
+      {/* ── Vendors (summary + link) ── */}
+      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Store size={16} className="text-amber-400" />
             <h2 className="font-heading font-semibold text-stone-800">Vendors</h2>
+            {vendors.length > 0 && <span className="text-xs text-stone-400">({vendors.length})</span>}
           </div>
-          {!addingVendor && !editingVendorId && (
-            <button
-              onClick={startAddVendor}
-              className="flex items-center gap-1.5 text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors"
-            >
-              <Plus size={13} />
-              Add vendor
-            </button>
-          )}
+          <Link
+            href={`/planner/${event.id}/vendors`}
+            className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors"
+          >
+            Manage <ChevronRight size={12} />
+          </Link>
         </div>
-
-        {(addingVendor || editingVendorId) && (
-          <VendorForm
-            form={vendorForm}
-            onChange={setVendorForm}
-            onSave={saveVendor}
-            onCancel={cancelVendor}
-            isEdit={!!editingVendorId}
-          />
-        )}
-
-        {vendors.length === 0 && !addingVendor ? (
+        {vendors.length === 0 ? (
           <p className="text-sm text-stone-400">No vendors added yet.</p>
         ) : (
-          <div className="space-y-2 mt-1">
-            {vendors.map((vendor) =>
-              editingVendorId === vendor.id ? null : (
-                <VendorRow
-                  key={vendor.id}
-                  vendor={vendor}
-                  onEdit={() => startEditVendor(vendor)}
-                  onDelete={() => deleteVendor(vendor.id)}
-                  isExpanded={expandedVendorId === vendor.id}
-                  onToggle={() => setExpandedVendorId(expandedVendorId === vendor.id ? null : vendor.id)}
-                  onAddPayment={() => addPaymentToVendor(vendor.id)}
-                  onTogglePaymentPaid={(paymentId) => toggleVendorPaymentPaid(vendor.id, paymentId)}
-                  onDeletePayment={(paymentId) => deleteVendorPayment(vendor.id, paymentId)}
-                  addingPayment={addingPaymentForVendor === vendor.id}
-                  paymentForm={paymentForm}
-                  setPaymentForm={setPaymentForm}
-                  setAddingPayment={(v) => setAddingPaymentForVendor(v ? vendor.id : null)}
-                />
-              )
-            )}
+          <div className="space-y-1.5">
+            {vendors.slice(0, 5).map((vendor) => (
+              <div key={vendor.id} className="flex items-center gap-2 py-1.5">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${CATEGORY_COLORS[vendor.category] ?? "bg-stone-100 text-stone-500"}`}>{vendor.category}</span>
+                <span className="text-sm text-stone-800 truncate">{vendor.name}</span>
+                {vendor.contractTotal > 0 && <span className="text-xs text-stone-400 ml-auto shrink-0">{vendor.contractTotal.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 })}</span>}
+              </div>
+            ))}
+            {vendors.length > 5 && <p className="text-xs text-stone-400">+{vendors.length - 5} more</p>}
           </div>
         )}
       </div>
 
+      </div>{/* end Questionnaires & Vendors grid */}
+
       {/* ── Budget ── */}
-      <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden mb-6">
         <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-stone-100">
           <div className="flex items-center gap-2">
             <Wallet size={15} className="text-emerald-500" />
@@ -1076,7 +1024,7 @@ export default function EventDetailPage() {
                   {item.notes && <p className="text-[10px] text-stone-400 mt-1">{item.notes}</p>}
                   {editingBudgetId === item.id && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); deleteBudget(item.id); }}
+                      onClick={(e) => { e.stopPropagation(); setConfirmAction({ type: "budget", id: item.id, label: item.category }); }}
                       className="text-[10px] text-red-400 hover:text-red-600 mt-1"
                     >
                       Remove
@@ -1089,8 +1037,16 @@ export default function EventDetailPage() {
         )}
       </div>
 
+      {/* ── Messages ── */}
+      <MessageThread
+        messages={event.messages ?? []}
+        senderRole="planner"
+        senderName="Planner"
+        onSend={(msgs: Message[]) => updateEvent(eventId, { messages: msgs })}
+      />
+
       {/* ── Expenses ── */}
-      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6 mt-10">
+      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6 mt-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Wallet size={16} className="text-teal-400" />
@@ -1207,7 +1163,7 @@ export default function EventDetailPage() {
                     <button onClick={() => startEditExpense(exp)} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">
                       <Pencil size={13} />
                     </button>
-                    <button onClick={() => deleteExpense(exp.id)} className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                    <button onClick={() => setConfirmAction({ type: "expense", id: exp.id, label: exp.description })} className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
                       <Trash2 size={13} />
                     </button>
                   </div>
@@ -1218,172 +1174,80 @@ export default function EventDetailPage() {
         )}
       </div>
 
-      {/* ── Messages ── */}
-      <MessageThread
-        messages={event.messages ?? []}
-        senderRole="planner"
-        senderName="Planner"
-        onSend={(msgs: Message[]) => updateEvent(eventId, { messages: msgs })}
-      />
-
-      {/* ── Danger Zone ── */}
+      {/* ── Archive / Danger Zone ── */}
       <div className="mt-20 pt-8 border-t-2 border-dashed border-stone-200 pb-12">
-        <p className="text-center text-[11px] text-stone-300 uppercase tracking-widest font-medium mb-4">Danger Zone</p>
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-3">
+          {event.archivedAt ? (
+            <button
+              onClick={() => { updateEvent(event.id, { archivedAt: null }); }}
+              className="flex items-center gap-1.5 text-xs font-medium text-emerald-600 hover:bg-emerald-50 px-4 py-2.5 rounded-lg transition-colors"
+            >
+              <RotateCcw size={13} />
+              Restore Event
+            </button>
+          ) : (
+            <button
+              onClick={() => { updateEvent(event.id, { archivedAt: new Date().toISOString() }); router.push("/planner"); }}
+              className="flex items-center gap-1.5 text-xs font-medium text-amber-600 hover:bg-amber-50 px-4 py-2.5 rounded-lg transition-colors"
+            >
+              <Archive size={13} />
+              Archive Event
+            </button>
+          )}
+          <p className="text-center text-[11px] text-stone-300 uppercase tracking-widest font-medium mt-4 mb-2">Danger Zone</p>
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="flex items-center gap-1.5 text-xs text-stone-400 hover:text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors"
           >
             <Trash2 size={13} />
-            Delete Event
+            Delete Event Permanently
           </button>
         </div>
       </div>
 
+      {/* ── Generic Confirm Dialog ── */}
+      <ConfirmDialog
+        open={!!confirmAction}
+        title={
+          confirmAction?.type === "todo" ? "Delete To-Do?" :
+          confirmAction?.type === "questionnaire" ? "Remove Questionnaire?" :
+          confirmAction?.type === "budget" ? "Remove Budget Item?" :
+          confirmAction?.type === "expense" ? "Delete Expense?" : "Delete?"
+        }
+        message={
+          confirmAction?.type === "todo" ? `"${confirmAction.label}" will be permanently removed.` :
+          confirmAction?.type === "questionnaire" ? `"${confirmAction?.label}" will be unassigned from this event. Responses will be lost.` :
+          confirmAction?.type === "budget" ? `The ${confirmAction?.label} budget category will be removed.` :
+          confirmAction?.type === "expense" ? `"${confirmAction?.label}" will be permanently deleted.` : "This action cannot be undone."
+        }
+        confirmLabel={confirmAction?.type === "questionnaire" ? "Remove" : "Delete"}
+        onConfirm={() => {
+          if (confirmAction) {
+            if (confirmAction.type === "todo") deleteTodo(confirmAction.id);
+            else if (confirmAction.type === "questionnaire") removeQuestionnaire(confirmAction.id);
+            else if (confirmAction.type === "budget") deleteBudget(confirmAction.id);
+            else if (confirmAction.type === "expense") deleteExpense(confirmAction.id);
+          }
+          setConfirmAction(null);
+        }}
+        onCancel={() => setConfirmAction(null)}
+      />
+
       {/* ── Delete Confirmation Modal ── */}
-      {showDeleteConfirm && (
-        <div
-          className="fixed inset-0 bg-stone-900/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-50"
-          onClick={(e) => e.target === e.currentTarget && setShowDeleteConfirm(false)}
-        >
-          <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-6 shadow-xl">
-            <h2 className="text-base font-heading font-semibold text-stone-800 mb-2">Delete Event?</h2>
-            <p className="text-sm text-stone-500 mb-6">
-              <span className="font-medium text-stone-700">{event.name}</span> and all its data will be permanently deleted. This cannot be undone.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteConfirm(false)}
-                className="flex-1 px-4 py-2.5 text-sm text-stone-600 border border-stone-200 rounded-xl hover:bg-stone-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="flex-1 px-4 py-2.5 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={showDeleteConfirm}
+        title="Delete Event?"
+        message={`${event.name} and all its data will be permanently deleted. This cannot be undone.`}
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
     </div>
   );
 }
 
-// ── Vendor Form ──
-function VendorForm({
-  form,
-  onChange,
-  onSave,
-  onCancel,
-  isEdit,
-}: {
-  form: Omit<Vendor, "id">;
-  onChange: (f: Omit<Vendor, "id">) => void;
-  onSave: () => void;
-  onCancel: () => void;
-  isEdit: boolean;
-}) {
-  return (
-    <div className="bg-stone-50 rounded-xl border border-stone-200 p-4 mb-3 space-y-3">
-      <div className="grid grid-cols-2 gap-3">
-        <div className="col-span-2 sm:col-span-1">
-          <label className="block text-xs font-medium text-stone-500 mb-1">Vendor Name *</label>
-          <input
-            autoFocus
-            value={form.name}
-            onChange={(e) => onChange({ ...form, name: e.target.value })}
-            placeholder="e.g. Golden Hour Photography"
-            className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-          />
-        </div>
-        <div className="col-span-2 sm:col-span-1">
-          <label className="block text-xs font-medium text-stone-500 mb-1">Category</label>
-          <div className="relative">
-            <select
-              value={form.category}
-              onChange={(e) => onChange({ ...form, category: e.target.value as VendorCategory })}
-              className="w-full appearance-none border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-            >
-              {(["catering", "photography", "videography", "music", "flowers", "cake", "venue", "hair & makeup", "transport", "officiant", "other"] as VendorCategory[]).map((c) => (
-                <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
-              ))}
-            </select>
-            <ChevronDown size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 pointer-events-none" />
-          </div>
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-stone-500 mb-1">Contact Name</label>
-          <input
-            value={form.contact}
-            onChange={(e) => onChange({ ...form, contact: e.target.value })}
-            placeholder="Contact person"
-            className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-stone-500 mb-1">Phone</label>
-          <input
-            value={form.phone}
-            onChange={(e) => onChange({ ...form, phone: e.target.value })}
-            placeholder="555-0100"
-            className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-          />
-        </div>
-        <div className="col-span-2">
-          <label className="block text-xs font-medium text-stone-500 mb-1">Email</label>
-          <input
-            type="email"
-            value={form.email}
-            onChange={(e) => onChange({ ...form, email: e.target.value })}
-            placeholder="vendor@email.com"
-            className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-stone-500 mb-1">Contract Total ($)</label>
-          <input
-            type="number"
-            min="0"
-            step="0.01"
-            value={form.contractTotal || ""}
-            onChange={(e) => onChange({ ...form, contractTotal: parseFloat(e.target.value) || 0 })}
-            placeholder="0"
-            className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-          />
-        </div>
-        <div>
-          <label className="block text-xs font-medium text-stone-500 mb-1">Notes</label>
-          <input
-            value={form.notes}
-            onChange={(e) => onChange({ ...form, notes: e.target.value })}
-            placeholder="Package details, special instructions…"
-            className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-          />
-        </div>
-        <div className="col-span-2">
-          <label className="block text-xs font-medium text-stone-500 mb-1">Vendor Meal</label>
-          <input
-            value={form.mealChoice}
-            onChange={(e) => onChange({ ...form, mealChoice: e.target.value })}
-            placeholder="e.g. Chicken, Vegetarian, Fish…"
-            className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-          />
-        </div>
-      </div>
-      <div className="flex gap-2 justify-end">
-        <button onClick={onSave} disabled={!form.name.trim()} className="text-xs font-medium bg-rose-400 text-white px-4 py-2 rounded-xl hover:bg-rose-500 disabled:opacity-50 transition-colors">
-          {isEdit ? "Save" : "Add Vendor"}
-        </button>
-        <button onClick={onCancel} className="text-xs text-stone-400 hover:text-stone-600 px-3 py-2 rounded-xl hover:bg-stone-100 transition-colors">Cancel</button>
-      </div>
-    </div>
-  );
-}
-
-// ── Vendor Row ──
+// ── Vendor Category Colors ──
 const CATEGORY_COLORS: Record<string, string> = {
   catering: "bg-orange-50 text-orange-600",
   photography: "bg-violet-50 text-violet-600",
@@ -1397,120 +1261,3 @@ const CATEGORY_COLORS: Record<string, string> = {
   officiant: "bg-amber-50 text-amber-600",
   other: "bg-stone-100 text-stone-500",
 };
-
-function VendorRow({ vendor, onEdit, onDelete, isExpanded, onToggle, onAddPayment, onTogglePaymentPaid, onDeletePayment, addingPayment, paymentForm, setPaymentForm, setAddingPayment }: {
-  vendor: Vendor; onEdit: () => void; onDelete: () => void;
-  isExpanded: boolean; onToggle: () => void;
-  onAddPayment: () => void; onTogglePaymentPaid: (paymentId: string) => void; onDeletePayment: (paymentId: string) => void;
-  addingPayment: boolean; paymentForm: { description: string; amount: string; dueDate: string };
-  setPaymentForm: (f: { description: string; amount: string; dueDate: string }) => void;
-  setAddingPayment: (v: boolean) => void;
-}) {
-  const payments = vendor.payments ?? [];
-  const paidAmt = payments.filter((p) => p.paid).reduce((s, p) => s + p.amount, 0);
-  const hasContract = vendor.contractTotal > 0;
-  const pct = hasContract ? Math.min((paidAmt / vendor.contractTotal) * 100, 100) : 0;
-  const fmt = (n: number) => n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 });
-
-  return (
-    <div className="rounded-xl border border-stone-100 overflow-hidden">
-      <div className="group flex items-start gap-3 py-3 px-3 hover:bg-stone-50 transition-colors cursor-pointer" onClick={onToggle}>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <ChevronRight size={12} className={`text-stone-400 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
-            <span className="text-sm font-medium text-stone-800">{vendor.name}</span>
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${CATEGORY_COLORS[vendor.category] ?? "bg-stone-100 text-stone-500"}`}>
-              {vendor.category}
-            </span>
-            {hasContract && (
-              <span className="text-[10px] text-stone-400 ml-auto">
-                {fmt(paidAmt)} / {fmt(vendor.contractTotal)}
-                {paidAmt < vendor.contractTotal && <span className="text-amber-600 font-semibold ml-1.5">{fmt(vendor.contractTotal - paidAmt)} due</span>}
-                {paidAmt >= vendor.contractTotal && <span className="text-emerald-600 font-semibold ml-1.5">Paid</span>}
-              </span>
-            )}
-          </div>
-          {hasContract && (
-            <div className="h-1 bg-stone-100 rounded-full overflow-hidden mt-1.5 ml-5">
-              <div className={`h-full rounded-full transition-all ${pct >= 100 ? "bg-emerald-400" : "bg-violet-400"}`} style={{ width: `${pct}%` }} />
-            </div>
-          )}
-          <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1 ml-5">
-            {vendor.contact && <span className="flex items-center gap-1 text-xs text-stone-400"><User size={11} />{vendor.contact}</span>}
-            {vendor.phone && <span className="flex items-center gap-1 text-xs text-stone-400"><Phone size={11} />{vendor.phone}</span>}
-            {vendor.email && <span className="flex items-center gap-1 text-xs text-stone-400"><Mail size={11} />{vendor.email}</span>}
-          </div>
-          {vendor.notes && <p className="text-xs text-stone-400 mt-1 ml-5 italic">{vendor.notes}</p>}
-          {vendor.mealChoice && (
-            <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 mt-1.5 ml-5">
-              🍽 {vendor.mealChoice}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
-          <button onClick={(e) => { e.stopPropagation(); onEdit(); }} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">
-            <Pencil size={13} />
-          </button>
-          <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-            <Trash2 size={13} />
-          </button>
-        </div>
-      </div>
-
-      {/* Expanded: Payment schedule */}
-      {isExpanded && (
-        <div className="bg-stone-50/70 px-4 py-3 border-t border-stone-100">
-          <div className="ml-5 space-y-2">
-            <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium">Payment Schedule</p>
-            {payments.length === 0 && !addingPayment && (
-              <p className="text-xs text-stone-400 italic">No payments scheduled yet.</p>
-            )}
-            {payments.map((payment) => (
-              <div key={payment.id} className="flex items-center gap-3 group/pay">
-                <button
-                  onClick={() => onTogglePaymentPaid(payment.id)}
-                  className={`flex-shrink-0 w-4 h-4 rounded border transition-colors ${payment.paid ? "bg-emerald-400 border-emerald-400 text-white" : "border-stone-300 hover:border-rose-400"}`}
-                >
-                  {payment.paid && <Check size={10} className="mx-auto" />}
-                </button>
-                <div className="flex-1 min-w-0">
-                  <span className={`text-xs ${payment.paid ? "text-stone-400 line-through" : "text-stone-700"}`}>{payment.description}</span>
-                  {payment.dueDate && (
-                    <span className={`text-[10px] ml-2 ${payment.paid ? "text-stone-300" : new Date(payment.dueDate) < new Date() && !payment.paid ? "text-red-500 font-semibold" : "text-stone-400"}`}>
-                      {payment.paid ? `Paid ${payment.paidDate}` : `Due ${payment.dueDate}`}
-                    </span>
-                  )}
-                </div>
-                <span className={`text-xs font-medium ${payment.paid ? "text-emerald-600" : "text-stone-600"}`}>{fmt(payment.amount)}</span>
-                <button
-                  onClick={() => onDeletePayment(payment.id)}
-                  className="opacity-0 group-hover/pay:opacity-100 text-stone-300 hover:text-red-400 transition-all"
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-
-            {addingPayment ? (
-              <div className="pt-2 border-t border-stone-200 space-y-2">
-                <div className="grid grid-cols-3 gap-2">
-                  <input value={paymentForm.description} onChange={(e) => setPaymentForm({ ...paymentForm, description: e.target.value })} placeholder="e.g. Deposit" className="text-xs border border-stone-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white" />
-                  <input type="number" min="0" step="0.01" value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} placeholder="Amount" className="text-xs border border-stone-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white" />
-                  <input type="date" value={paymentForm.dueDate} onChange={(e) => setPaymentForm({ ...paymentForm, dueDate: e.target.value })} className="text-xs border border-stone-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white" />
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={onAddPayment} disabled={!paymentForm.description.trim() || !paymentForm.amount} className="text-xs font-medium bg-rose-400 text-white px-3 py-1.5 rounded-lg hover:bg-rose-500 disabled:opacity-50 transition-colors">Add Payment</button>
-                  <button onClick={() => setAddingPayment(false)} className="text-xs text-stone-400 hover:text-stone-600">Cancel</button>
-                </div>
-              </div>
-            ) : (
-              <button onClick={() => { setAddingPayment(true); setPaymentForm({ description: "", amount: "", dueDate: "" }); }} className="text-xs text-rose-500 hover:text-rose-600 font-medium flex items-center gap-1 pt-1">
-                <Plus size={11} /> Add Payment
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}

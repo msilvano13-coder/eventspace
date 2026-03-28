@@ -2,12 +2,11 @@
 
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
-import { useEvent, useStoreActions } from "@/hooks/useStore";
+import { useEvent } from "@/hooks/useStore";
 import Link from "next/link";
-import { ArrowLeft, Plus, Users, Lightbulb } from "lucide-react";
-import { useCallback, useState } from "react";
-import { FloorPlan, Guest } from "@/lib/types";
-import { v4 as uuid } from "uuid";
+import { ArrowLeft, Users, Lightbulb } from "lucide-react";
+import { useState } from "react";
+
 import SeatingPanel from "@/components/floorplan/SeatingPanel";
 import LightingOverlay from "@/components/floorplan/LightingOverlay";
 
@@ -26,23 +25,10 @@ const FloorPlanEditor = dynamic(
 export default function ClientFloorPlanPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
-  const { updateEvent } = useStoreActions();
   const [activePlanId, setActivePlanId] = useState<string>("ceremony");
-  const [showAddTab, setShowAddTab] = useState(false);
-  const [newTabName, setNewTabName] = useState("");
   const [showSeating, setShowSeating] = useState(false);
   const [showLighting, setShowLighting] = useState(false);
 
-  const handleSave = useCallback(
-    (json: string) => {
-      if (!event) return;
-      const updated = event.floorPlans.map((fp) =>
-        fp.id === activePlanId ? { ...fp, json } : fp
-      );
-      updateEvent(eventId, { floorPlans: updated });
-    },
-    [eventId, activePlanId, updateEvent, event]
-  );
 
   if (!event) {
     return (
@@ -57,14 +43,6 @@ export default function ClientFloorPlanPage() {
   const lightingZones = activePlan?.lightingZones ?? [];
   const hasLighting = lightingZones.length > 0;
 
-  function addTab() {
-    if (!newTabName.trim()) return;
-    const newPlan: FloorPlan = { id: uuid(), name: newTabName.trim(), json: null, lightingZones: [] };
-    updateEvent(eventId, { floorPlans: [...plans, newPlan] });
-    setActivePlanId(newPlan.id);
-    setNewTabName("");
-    setShowAddTab(false);
-  }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-stone-50">
@@ -107,7 +85,7 @@ export default function ClientFloorPlanPage() {
           <Users size={13} />
           <span className="hidden sm:inline">Seating</span>
         </button>
-        <span className="text-xs text-stone-400 hidden sm:inline">Auto-saved</span>
+        <span className="text-xs text-stone-400 hidden sm:inline">View only</span>
       </div>
 
       {/* Floor plan tabs */}
@@ -130,35 +108,6 @@ export default function ClientFloorPlanPage() {
             )}
           </button>
         ))}
-        {showAddTab ? (
-          <div className="flex items-center gap-1 px-2">
-            <input
-              type="text"
-              value={newTabName}
-              onChange={(e) => setNewTabName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addTab()}
-              placeholder="Plan name..."
-              autoFocus
-              className="text-xs border border-stone-200 rounded-lg px-2 py-1.5 w-28 outline-none focus:border-rose-400"
-            />
-            <button onClick={addTab} className="text-rose-500 text-xs font-medium">
-              Add
-            </button>
-            <button
-              onClick={() => setShowAddTab(false)}
-              className="text-stone-400 text-xs"
-            >
-              Cancel
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setShowAddTab(true)}
-            className="px-2 py-2.5 text-stone-300 hover:text-stone-500 transition-colors"
-          >
-            <Plus size={14} />
-          </button>
-        )}
       </div>
 
       {/* Editor + Seating */}
@@ -168,7 +117,7 @@ export default function ClientFloorPlanPage() {
             key={activePlan.id}
             eventId={eventId}
             initialJSON={activePlan.json}
-            onSave={handleSave}
+            onSave={() => {}}
             canvasOverlay={
               showLighting ? (
                 <LightingOverlay
@@ -198,7 +147,7 @@ export default function ClientFloorPlanPage() {
               <SeatingPanel
                 floorPlanJSON={activePlan?.json ?? null}
                 guests={event.guests ?? []}
-                onUpdateGuests={(guests: Guest[]) => updateEvent(eventId, { guests })}
+                onUpdateGuests={() => {}}
               />
             </div>
             {/* Desktop: side panel */}
@@ -206,7 +155,7 @@ export default function ClientFloorPlanPage() {
               <SeatingPanel
                 floorPlanJSON={activePlan?.json ?? null}
                 guests={event.guests ?? []}
-                onUpdateGuests={(guests: Guest[]) => updateEvent(eventId, { guests })}
+                onUpdateGuests={() => {}}
               />
             </div>
           </>

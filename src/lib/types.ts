@@ -60,8 +60,10 @@ export interface Event {
   colorPalette: string[];
   moodBoard: MoodBoardImage[];
   discoveredVendors: DiscoveredVendor[];
+  contracts: EventContract[];
   budget: BudgetItem[];
   messages: Message[];
+  archivedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -241,6 +243,44 @@ export const VENDOR_TO_BUDGET_CATEGORY: Record<VendorCategory, string> = {
   officiant: "Officiant",
   other: "Other",
 };
+
+// ── Contract Templates (planner-level reusable) ──
+
+export interface ContractTemplate {
+  id: string;
+  name: string;
+  description: string;
+  fileData: string;       // base64 data URL
+  fileName: string;
+  fileSize: number;       // bytes
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ── Event Contracts ──
+
+export interface EventContract {
+  id: string;
+  templateId: string | null;
+  name: string;
+  type: "planner" | "vendor";
+  vendorId: string | null;
+  vendorName: string | null;
+  fileData: string;           // base64 data URL
+  fileName: string;
+  fileSize: number;
+  signedFileData: string | null;
+  signedFileName: string | null;
+  signedAt: string | null;
+  assignedAt: string;
+  // E-signature fields
+  plannerSignature: string | null;   // base64 PNG of drawn signature
+  plannerSignedAt: string | null;
+  plannerSignedName: string | null;
+  clientSignature: string | null;    // base64 PNG of drawn signature
+  clientSignedAt: string | null;
+  clientSignedName: string | null;
+}
 
 // ── Preferred Vendors (planner-level saved list) ──
 

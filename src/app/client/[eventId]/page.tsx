@@ -3,10 +3,12 @@
 import { useParams } from "next/navigation";
 import { useEvent, useStoreActions, useQuestionnaires, usePlannerProfile } from "@/hooks/useStore";
 import Link from "next/link";
-import { useState } from "react";
-import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Plus, X, Users, Wallet, Pencil, Trash2, Search, Phone, Globe } from "lucide-react";
-import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, ScheduleItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY, Vendor, VendorCategory } from "@/lib/types";
+import { useState, useRef } from "react";
+import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Users, Wallet, Search, Phone, Globe, Download, Upload, UserCheck, PenTool } from "lucide-react";
+import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, VENDOR_TO_BUDGET_CATEGORY, Vendor, VendorCategory, EventContract } from "@/lib/types";
+import { readPdfAsBase64, downloadBase64File, formatBytes } from "@/lib/pdf-utils";
 import MessageThread from "@/components/event/MessageThread";
+import SignaturePad from "@/components/ui/SignaturePad";
 
 function fmt12(time: string) {
   const [h, m] = time.split(":").map(Number);
@@ -37,56 +39,6 @@ export default function ClientPortalPage() {
   const profile = usePlannerProfile();
   const [openQId, setOpenQId] = useState<string | null>(null);
 
-  // ── Day Timeline editing state ──
-  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null);
-  const [scheduleTime, setScheduleTime] = useState("");
-  const [scheduleTitle, setScheduleTitle] = useState("");
-  const [scheduleNotes, setScheduleNotes] = useState("");
-  const [addingSchedule, setAddingSchedule] = useState(false);
-
-  function startEditSchedule(item: ScheduleItem) {
-    setEditingScheduleId(item.id);
-    setScheduleTime(item.time);
-    setScheduleTitle(item.title);
-    setScheduleNotes(item.notes);
-  }
-
-  function saveScheduleEdit() {
-    if (!editingScheduleId || !scheduleTitle.trim() || !scheduleTime) { cancelScheduleEdit(); return; }
-    const updated = (event?.schedule ?? []).map((s) =>
-      s.id === editingScheduleId ? { ...s, time: scheduleTime, title: scheduleTitle.trim(), notes: scheduleNotes } : s
-    );
-    updateEvent(eventId, { schedule: updated });
-    cancelScheduleEdit();
-  }
-
-  function cancelScheduleEdit() {
-    setEditingScheduleId(null);
-    setScheduleTime("");
-    setScheduleTitle("");
-    setScheduleNotes("");
-  }
-
-  function deleteScheduleItem(id: string) {
-    updateEvent(eventId, { schedule: (event?.schedule ?? []).filter((s) => s.id !== id) });
-    if (editingScheduleId === id) cancelScheduleEdit();
-  }
-
-  function saveNewSchedule() {
-    if (!scheduleTitle.trim() || !scheduleTime) return;
-    const item: ScheduleItem = { id: crypto.randomUUID(), time: scheduleTime, title: scheduleTitle.trim(), notes: scheduleNotes };
-    updateEvent(eventId, { schedule: [...(event?.schedule ?? []), item] });
-    setScheduleTime("");
-    setScheduleTitle("");
-    setScheduleNotes("");
-  }
-
-  function cancelAddSchedule() {
-    setAddingSchedule(false);
-    setScheduleTime("");
-    setScheduleTitle("");
-    setScheduleNotes("");
-  }
 
   if (!event) {
     return (
@@ -187,61 +139,18 @@ export default function ClientPortalPage() {
               <Clock size={15} className="text-violet-400" />
               <h2 className="font-heading font-semibold text-stone-800">Day Timeline</h2>
             </div>
-            {!addingSchedule && (
-              <button
-                onClick={() => setAddingSchedule(true)}
-                className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600"
-              >
-                <Plus size={13} /> Add
-              </button>
-            )}
           </div>
           <div className="px-5 py-4 relative">
-            {schedule.length === 0 && !addingSchedule ? (
+            {schedule.length === 0 ? (
               <div className="text-center py-6">
-                <p className="text-sm text-stone-400 mb-2">No schedule yet.</p>
-                <button onClick={() => setAddingSchedule(true)} className="text-sm text-rose-500 hover:text-rose-600 font-medium">
-                  + Add the first moment
-                </button>
+                <p className="text-sm text-stone-400">No schedule yet.</p>
               </div>
             ) : (
               <>
-                {schedule.length > 0 && (
-                  <div className="absolute left-[calc(1.25rem+80px)] top-4 bottom-4 w-px bg-stone-100" />
-                )}
+                <div className="absolute left-[calc(1.25rem+80px)] top-4 bottom-4 w-px bg-stone-100" />
                 <div className="space-y-1">
-                  {schedule.map((item, idx) =>
-                    editingScheduleId === item.id ? (
-                      <div key={item.id} className="bg-stone-50 rounded-xl border border-stone-200 p-3 space-y-2 my-2">
-                        <div className="flex gap-2 items-center">
-                          <input
-                            type="time"
-                            value={scheduleTime}
-                            onChange={(e) => setScheduleTime(e.target.value)}
-                            className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-rose-300 bg-white font-medium text-stone-700"
-                          />
-                          <input
-                            value={scheduleTitle}
-                            onChange={(e) => setScheduleTitle(e.target.value)}
-                            onKeyDown={(e) => { if (e.key === "Enter") saveScheduleEdit(); if (e.key === "Escape") cancelScheduleEdit(); }}
-                            placeholder="Activity"
-                            autoFocus
-                            className="flex-1 text-sm font-medium text-stone-800 border border-stone-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-rose-300 bg-white"
-                          />
-                        </div>
-                        <input
-                          value={scheduleNotes}
-                          onChange={(e) => setScheduleNotes(e.target.value)}
-                          placeholder="Notes (optional)"
-                          className="w-full text-sm text-stone-500 border border-stone-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-rose-300 bg-white"
-                        />
-                        <div className="flex gap-2 justify-end">
-                          <button onClick={saveScheduleEdit} className="text-xs font-medium bg-rose-400 text-white px-3 py-1.5 rounded-lg hover:bg-rose-500 transition-colors">Save</button>
-                          <button onClick={cancelScheduleEdit} className="text-xs text-stone-400 hover:text-stone-600 px-2 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">Cancel</button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div key={item.id} className="group flex gap-5 py-2.5">
+                  {schedule.map((item, idx) => (
+                      <div key={item.id} className="flex gap-5 py-2.5">
                         <div className="w-20 shrink-0 text-right pt-0.5">
                           <span className="text-xs font-semibold text-stone-400 tracking-wide whitespace-nowrap">
                             {fmt12(item.time)}
@@ -252,59 +161,16 @@ export default function ClientPortalPage() {
                             idx === 0 ? "bg-rose-400 shadow-sm shadow-rose-200" : "bg-stone-300"
                           }`} />
                         </div>
-                        <div className="flex-1 min-w-0 pb-1 flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className={`text-sm font-semibold leading-snug ${idx === 0 ? "text-stone-900" : "text-stone-700"}`}>
-                              {item.title}
-                            </p>
-                            {item.notes && (
-                              <p className="text-xs text-stone-400 mt-0.5 leading-relaxed">{item.notes}</p>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
-                            <button onClick={() => startEditSchedule(item)} className="p-1 text-stone-300 hover:text-stone-500 hover:bg-stone-100 rounded-lg transition-colors">
-                              <Pencil size={12} />
-                            </button>
-                            <button onClick={() => deleteScheduleItem(item.id)} className="p-1 text-stone-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors">
-                              <Trash2 size={12} />
-                            </button>
-                          </div>
+                        <div className="flex-1 min-w-0 pb-1">
+                          <p className={`text-sm font-semibold leading-snug ${idx === 0 ? "text-stone-900" : "text-stone-700"}`}>
+                            {item.title}
+                          </p>
+                          {item.notes && (
+                            <p className="text-xs text-stone-400 mt-0.5 leading-relaxed">{item.notes}</p>
+                          )}
                         </div>
                       </div>
-                    )
-                  )}
-
-                  {/* Add new schedule item form */}
-                  {addingSchedule && (
-                    <div className="bg-stone-50 rounded-xl border border-rose-200 p-3 space-y-2 my-2">
-                      <div className="flex gap-2 items-center">
-                        <input
-                          type="time"
-                          value={scheduleTime}
-                          onChange={(e) => setScheduleTime(e.target.value)}
-                          className="text-sm border border-stone-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-rose-300 bg-white font-medium text-stone-700"
-                        />
-                        <input
-                          value={scheduleTitle}
-                          onChange={(e) => setScheduleTitle(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === "Enter") saveNewSchedule(); if (e.key === "Escape") cancelAddSchedule(); }}
-                          placeholder="Activity…"
-                          autoFocus
-                          className="flex-1 text-sm font-medium text-stone-800 border border-stone-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-rose-300 bg-white"
-                        />
-                      </div>
-                      <input
-                        value={scheduleNotes}
-                        onChange={(e) => setScheduleNotes(e.target.value)}
-                        placeholder="Notes (optional)"
-                        className="w-full text-sm text-stone-500 border border-stone-200 rounded-lg px-2.5 py-1.5 outline-none focus:border-rose-300 bg-white"
-                      />
-                      <div className="flex gap-2 justify-end">
-                        <button onClick={saveNewSchedule} disabled={!scheduleTitle.trim() || !scheduleTime} className="text-xs font-medium bg-rose-400 text-white px-3 py-1.5 rounded-lg hover:bg-rose-500 disabled:opacity-50 transition-colors">Add</button>
-                        <button onClick={cancelAddSchedule} className="text-xs text-stone-400 hover:text-stone-600 px-2 py-1.5 rounded-lg hover:bg-stone-100 transition-colors">Cancel</button>
-                      </div>
-                    </div>
-                  )}
+                  ))}
                 </div>
               </>
             )}
@@ -396,7 +262,7 @@ export default function ClientPortalPage() {
               const isOpen = openQId === assignment.questionnaireId;
               const answeredCount = Object.keys(assignment.answers).length;
               const isComplete = assignment.completedAt !== null;
-              const allAnswered = questions.length > 0 && questions.every((q) => {
+              const allAnswered = questions.length > 0 && questions.filter((q) => q.required).every((q) => {
                 const ans = assignment.answers[q.id];
                 return ans !== undefined && ans !== "" && (!Array.isArray(ans) || ans.length > 0);
               });
@@ -497,18 +363,8 @@ export default function ClientPortalPage() {
             </div>
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(event.discoveredVendors ?? []).map((v) => (
-                <div key={v.id} className="group border border-stone-200 rounded-xl p-4 hover:border-stone-300 transition-colors relative">
-                  <button
-                    onClick={() => {
-                      const updated = (event.discoveredVendors ?? []).filter((dv) => dv.id !== v.id);
-                      updateEvent(event.id, { discoveredVendors: updated });
-                    }}
-                    className="absolute top-2.5 right-2.5 p-1.5 rounded-lg text-stone-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-                    title="Remove vendor"
-                  >
-                    <X size={13} />
-                  </button>
-                  <div className="flex items-start justify-between mb-1.5 pr-6">
+                <div key={v.id} className="border border-stone-200 rounded-xl p-4 hover:border-stone-300 transition-colors relative">
+                  <div className="flex items-start justify-between mb-1.5">
                     <h3 className="text-sm font-semibold text-stone-800 leading-tight">{v.name}</h3>
                     <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-teal-50 text-teal-600 capitalize shrink-0 ml-2">
                       {v.category}
@@ -652,6 +508,11 @@ export default function ClientPortalPage() {
                 })}
             </div>
           </div>
+        )}
+
+        {/* Contracts */}
+        {(event.contracts ?? []).length > 0 && (
+          <ClientContractsSection event={event} updateEvent={updateEvent} />
         )}
 
         {/* Messages */}
@@ -807,9 +668,7 @@ function ClientQuestionField({
 }
 
 // ── Client Color Palette ──
-function ClientColorPalette({ event, onUpdate }: { event: Event; onUpdate: (colors: string[]) => void }) {
-  const [adding, setAdding] = useState(false);
-  const [newColor, setNewColor] = useState("#d4a5a5");
+function ClientColorPalette({ event }: { event: Event; onUpdate?: (colors: string[]) => void }) {
   const colors = event.colorPalette ?? [];
 
   return (
@@ -819,73 +678,21 @@ function ClientColorPalette({ event, onUpdate }: { event: Event; onUpdate: (colo
           <div className="w-3.5 h-3.5 rounded-full bg-gradient-to-br from-rose-300 via-violet-300 to-amber-300" />
           <h2 className="font-heading font-semibold text-stone-800 text-sm">Color Palette</h2>
         </div>
-        {!adding && (
-          <button
-            onClick={() => setAdding(true)}
-            className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600"
-          >
-            <Plus size={13} />
-            Add color
-          </button>
-        )}
       </div>
 
-      {colors.length === 0 && !adding ? (
-        <p className="text-sm text-stone-400">No colors added yet. Add your event colors!</p>
+      {colors.length === 0 ? (
+        <p className="text-sm text-stone-400">No colors added yet.</p>
       ) : (
         <div className="flex flex-wrap gap-2.5 items-center">
           {colors.map((color, i) => (
-            <div key={i} className="group relative text-center">
+            <div key={i} className="text-center">
               <div
                 className="w-10 h-10 rounded-xl ring-1 ring-stone-200 shadow-sm"
                 style={{ backgroundColor: color }}
               />
-              <button
-                onClick={() => onUpdate(colors.filter((_, idx) => idx !== i))}
-                className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-white border border-stone-200 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-              >
-                <X size={8} className="text-stone-400" />
-              </button>
               <p className="text-[9px] text-stone-400 mt-1 font-mono">{color}</p>
             </div>
           ))}
-        </div>
-      )}
-
-      {adding && (
-        <div className="flex items-center gap-3 mt-3 bg-stone-50 rounded-xl border border-stone-200 p-3">
-          <input
-            type="color"
-            value={newColor}
-            onChange={(e) => setNewColor(e.target.value)}
-            className="w-10 h-10 rounded-lg border border-stone-200 cursor-pointer bg-transparent p-0.5"
-          />
-          <div className="flex-1">
-            <input
-              value={newColor}
-              onChange={(e) => setNewColor(e.target.value)}
-              placeholder="#000000"
-              className="w-full border border-stone-200 rounded-lg px-3 py-1.5 text-sm font-mono focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-            />
-          </div>
-          <button
-            onClick={() => {
-              if (newColor) {
-                onUpdate([...colors, newColor]);
-                setNewColor("#d4a5a5");
-                setAdding(false);
-              }
-            }}
-            className="text-xs font-medium bg-rose-400 text-white px-3 py-1.5 rounded-lg hover:bg-rose-500 transition-colors"
-          >
-            Add
-          </button>
-          <button
-            onClick={() => { setAdding(false); setNewColor("#d4a5a5"); }}
-            className="text-xs text-stone-400 hover:text-stone-600 px-2 py-1.5 rounded-lg hover:bg-stone-100 transition-colors"
-          >
-            Cancel
-          </button>
         </div>
       )}
     </div>
@@ -899,12 +706,9 @@ const RSVP_COLORS: Record<RsvpStatus, string> = {
   declined: "bg-red-50 text-red-500 border-red-200",
 };
 
-function ClientBudget({ event, onUpdate }: { event: Event; onUpdate: (budget: BudgetItem[]) => void }) {
+function ClientBudget({ event }: { event: Event; onUpdate?: (budget: BudgetItem[]) => void }) {
   const items = event.budget ?? [];
   const vendorList = event.vendors ?? [];
-  const [adding, setAdding] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState({ category: "Venue", allocated: "", notes: "" });
 
   const totalAlloc = items.reduce((s, b) => s + b.allocated, 0);
   const totalCommitted = vendorList.reduce((s, v) => s + (v.contractTotal ?? 0), 0);
@@ -916,46 +720,6 @@ function ClientBudget({ event, onUpdate }: { event: Event; onUpdate: (budget: Bu
       .reduce((sum, v) => sum + (v.contractTotal ?? 0), 0);
   }
 
-  function startAdd() {
-    const used = items.map((b) => b.category);
-    const next = BUDGET_CATEGORIES.find((c) => !used.includes(c)) || "Other";
-    setForm({ category: next, allocated: "", notes: "" });
-    setEditingId(null);
-    setAdding(true);
-  }
-
-  function startEdit(item: BudgetItem) {
-    setForm({ category: item.category, allocated: String(item.allocated), notes: item.notes });
-    setEditingId(item.id);
-    setAdding(false);
-  }
-
-  function save() {
-    if (!form.category || !form.allocated) return;
-    const allocated = parseFloat(form.allocated);
-    if (isNaN(allocated) || allocated < 0) return;
-    if (editingId) {
-      onUpdate(items.map((b) => b.id === editingId ? { ...b, category: form.category, allocated, notes: form.notes.trim() } : b));
-      setEditingId(null);
-    } else {
-      const newItem: BudgetItem = { id: crypto.randomUUID(), category: form.category, allocated, notes: form.notes.trim() };
-      onUpdate([...items, newItem]);
-      setAdding(false);
-    }
-    setForm({ category: "Venue", allocated: "", notes: "" });
-  }
-
-  function cancel() {
-    setAdding(false);
-    setEditingId(null);
-    setForm({ category: "Venue", allocated: "", notes: "" });
-  }
-
-  function remove(id: string) {
-    onUpdate(items.filter((b) => b.id !== id));
-    if (editingId === id) cancel();
-  }
-
   return (
     <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-stone-100">
@@ -964,11 +728,6 @@ function ClientBudget({ event, onUpdate }: { event: Event; onUpdate: (budget: Bu
           <h2 className="font-heading font-semibold text-stone-800">Budget</h2>
           {items.length > 0 && <span className="text-xs text-stone-400 ml-1">({fmtCurrency(totalAlloc)})</span>}
         </div>
-        {!adding && !editingId && (
-          <button onClick={startAdd} className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600">
-            <Plus size={13} /> Add
-          </button>
-        )}
       </div>
 
       {items.length > 0 && (
@@ -988,38 +747,10 @@ function ClientBudget({ event, onUpdate }: { event: Event; onUpdate: (budget: Bu
         </div>
       )}
 
-      {(adding || editingId) && (
-        <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/30 space-y-3">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-stone-500 mb-1">Category</label>
-              <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white">
-                {BUDGET_CATEGORIES.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-stone-500 mb-1">Allocated ($)</label>
-              <input type="number" min="0" step="0.01" value={form.allocated} onChange={(e) => setForm({ ...form, allocated: e.target.value })} placeholder="5000" className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white" />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="block text-xs font-medium text-stone-500 mb-1">Notes</label>
-              <input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes..." className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white" />
-            </div>
-          </div>
-          <div className="flex gap-2 justify-end">
-            <button onClick={save} disabled={!form.category || !form.allocated} className="text-xs font-medium bg-rose-400 text-white px-4 py-2 rounded-xl hover:bg-rose-500 disabled:opacity-50 transition-colors">
-              {editingId ? "Update" : "Add"}
-            </button>
-            <button onClick={cancel} className="text-xs text-stone-400 hover:text-stone-600 px-3 py-2">Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {items.length === 0 && !adding ? (
+      {items.length === 0 ? (
         <div className="px-5 py-8 text-center">
           <Wallet size={20} className="text-stone-300 mx-auto mb-2" />
           <p className="text-sm text-stone-400">No budget items yet.</p>
-          <button onClick={startAdd} className="text-xs font-medium text-rose-500 hover:text-rose-600 mt-2">Add your first budget category</button>
         </div>
       ) : (
         <div className="divide-y divide-stone-100">
@@ -1030,8 +761,7 @@ function ClientBudget({ event, onUpdate }: { event: Event; onUpdate: (budget: Bu
             return (
               <div
                 key={item.id}
-                className={`px-5 py-3.5 hover:bg-stone-50/50 transition-colors cursor-pointer ${editingId === item.id ? "bg-rose-50/30" : ""}`}
-                onClick={() => { if (!adding && !editingId) startEdit(item); }}
+                className="px-5 py-3.5"
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-sm font-medium text-stone-700">{item.category}</span>
@@ -1046,14 +776,198 @@ function ClientBudget({ event, onUpdate }: { event: Event; onUpdate: (budget: Bu
                   <div className={`h-full rounded-full transition-all ${over ? "bg-red-400" : pct > 80 ? "bg-amber-400" : "bg-emerald-400"}`} style={{ width: `${Math.min(pct, 100)}%` }} />
                 </div>
                 {item.notes && <p className="text-[10px] text-stone-400 mt-1">{item.notes}</p>}
-                {editingId === item.id && (
-                  <button onClick={(e) => { e.stopPropagation(); remove(item.id); }} className="text-[10px] text-red-400 hover:text-red-600 mt-1">Remove</button>
-                )}
               </div>
             );
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Client Contract Card ──
+function ClientContractsSection({ event, updateEvent }: { event: Event; updateEvent: (id: string, data: Partial<Event>) => void }) {
+  const [signingContractId, setSigningContractId] = useState<string | null>(null);
+  const contracts = event.contracts ?? [];
+
+  function handleClientSign(signature: string, signedName: string) {
+    if (!signingContractId) return;
+    const updated = contracts.map((c) =>
+      c.id === signingContractId
+        ? { ...c, clientSignature: signature, clientSignedAt: new Date().toISOString(), clientSignedName: signedName }
+        : c
+    );
+    updateEvent(event.id, { contracts: updated });
+    setSigningContractId(null);
+  }
+
+  async function handleUploadSigned(contractId: string, file: File) {
+    try {
+      const result = await readPdfAsBase64(file);
+      const updated = contracts.map((c) =>
+        c.id === contractId
+          ? { ...c, signedFileData: result.dataUrl, signedFileName: result.fileName, signedAt: new Date().toISOString() }
+          : c
+      );
+      updateEvent(event.id, { contracts: updated });
+    } catch {
+      // silently fail
+    }
+  }
+
+  return (
+    <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6">
+      <div className="flex items-center gap-2 mb-4">
+        <FileText size={18} className="text-teal-500" />
+        <h2 className="font-heading font-semibold text-stone-800">Contracts</h2>
+        <span className="text-xs text-stone-400 ml-1">({contracts.length})</span>
+      </div>
+      <div className="space-y-3">
+        {contracts.map((contract) => (
+          <ClientContractCard
+            key={contract.id}
+            contract={contract}
+            onSign={() => setSigningContractId(contract.id)}
+            onUploadSigned={(file) => handleUploadSigned(contract.id, file)}
+          />
+        ))}
+      </div>
+      <SignaturePad
+        open={!!signingContractId}
+        title="Sign Contract"
+        onSign={handleClientSign}
+        onCancel={() => setSigningContractId(null)}
+      />
+    </div>
+  );
+}
+
+function ClientContractCard({
+  contract,
+  onSign,
+  onUploadSigned,
+}: {
+  contract: EventContract;
+  onSign: () => void;
+  onUploadSigned: (file: File) => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const plannerSigned = !!contract.plannerSignature;
+  const clientSigned = !!contract.clientSignature;
+
+  return (
+    <div className="rounded-xl border border-stone-200 bg-stone-50/30 overflow-hidden">
+      <div className="flex flex-col sm:flex-row sm:items-start gap-3 p-3">
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center shrink-0">
+            <FileText size={14} className="text-teal-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-stone-800">{contract.name}</p>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                contract.type === "planner" ? "bg-rose-50 text-rose-500" : "bg-teal-50 text-teal-600"
+              }`}>
+                {contract.type === "planner" ? "Planner Contract" : contract.vendorName || "Vendor"}
+              </span>
+              <span className="text-[10px] text-stone-400">{formatBytes(contract.fileSize)}</span>
+              {plannerSigned && clientSigned && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-medium flex items-center gap-1">
+                  <Check size={9} /> Fully Signed
+                </span>
+              )}
+              {(plannerSigned || clientSigned) && !(plannerSigned && clientSigned) && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 font-medium flex items-center gap-1">
+                  <PenTool size={9} /> Partially Signed
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0 ml-11 sm:ml-0">
+          <button
+            onClick={() => downloadBase64File(contract.fileData, contract.fileName)}
+            className="flex items-center gap-1 text-[11px] font-medium text-stone-500 hover:text-teal-500 px-2 py-1.5 rounded-lg hover:bg-teal-50 transition-colors"
+          >
+            <Download size={12} />
+            Download
+          </button>
+          {contract.signedFileData && contract.signedFileName ? (
+            <button
+              onClick={() => downloadBase64File(contract.signedFileData!, contract.signedFileName!)}
+              className="flex items-center gap-1 text-[11px] font-medium text-emerald-500 hover:text-emerald-600 px-2 py-1.5 rounded-lg hover:bg-emerald-50 transition-colors"
+            >
+              <UserCheck size={12} />
+              Signed Copy
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1 text-[11px] font-medium text-stone-400 hover:text-stone-600 px-2 py-1.5 rounded-lg hover:bg-stone-100 transition-colors"
+              >
+                <Upload size={12} />
+                Upload PDF
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onUploadSigned(file);
+                }}
+              />
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Signature area */}
+      <div className="border-t border-stone-200 px-3 py-3 bg-white/50">
+        <div className="grid grid-cols-2 gap-3">
+          {/* Planner signature (read-only for client) */}
+          <div className="rounded-lg border border-stone-100 bg-white p-2.5">
+            <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium mb-1.5">Planner</p>
+            {plannerSigned ? (
+              <div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={contract.plannerSignature!} alt="Planner signature" className="h-10 object-contain mb-1" />
+                <p className="text-[11px] font-medium text-stone-600">{contract.plannerSignedName}</p>
+                <p className="text-[10px] text-stone-400">
+                  {new Date(contract.plannerSignedAt!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </p>
+              </div>
+            ) : (
+              <p className="text-[11px] text-stone-300 italic py-2">Not yet signed</p>
+            )}
+          </div>
+
+          {/* Client signature */}
+          <div className="rounded-lg border border-stone-100 bg-white p-2.5">
+            <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium mb-1.5">Client</p>
+            {clientSigned ? (
+              <div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={contract.clientSignature!} alt="Client signature" className="h-10 object-contain mb-1" />
+                <p className="text-[11px] font-medium text-stone-600">{contract.clientSignedName}</p>
+                <p className="text-[10px] text-stone-400">
+                  {new Date(contract.clientSignedAt!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                </p>
+              </div>
+            ) : (
+              <button
+                onClick={onSign}
+                className="flex items-center gap-1.5 text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-lg transition-colors w-full justify-center border border-dashed border-rose-200 mt-1"
+              >
+                <PenTool size={12} />
+                Sign Contract
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1065,13 +979,6 @@ function ClientGuestRSVP({ event, onUpdate }: { event: Event; onUpdate: (guests:
   const [mealVal, setMealVal] = useState("");
   const [dietaryVal, setDietaryVal] = useState("");
   const [plusOneNameVal, setPlusOneNameVal] = useState("");
-  const [adding, setAdding] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newEmail, setNewEmail] = useState("");
-  const [newMeal, setNewMeal] = useState("");
-  const [newDietary, setNewDietary] = useState("");
-  const [newPlusOne, setNewPlusOne] = useState(false);
-  const [newPlusOneName, setNewPlusOneName] = useState("");
 
   const accepted = guests.filter((g) => g.rsvp === "accepted").length;
   const pending = guests.filter((g) => g.rsvp === "pending").length;
@@ -1095,38 +1002,6 @@ function ClientGuestRSVP({ event, onUpdate }: { event: Event; onUpdate: (guests:
     setEditingId(null);
   }
 
-  function addGuest() {
-    if (!newName.trim()) return;
-    const guest: Guest = {
-      id: crypto.randomUUID(),
-      name: newName.trim(),
-      email: newEmail.trim(),
-      rsvp: "accepted",
-      mealChoice: newMeal.trim(),
-      tableAssignment: "",
-      plusOne: newPlusOne,
-      plusOneName: newPlusOneName.trim(),
-      dietaryNotes: newDietary.trim(),
-    };
-    onUpdate([...guests, guest]);
-    cancelAdd();
-  }
-
-  function removeGuest(id: string) {
-    onUpdate(guests.filter((g) => g.id !== id));
-    if (editingId === id) setEditingId(null);
-  }
-
-  function cancelAdd() {
-    setAdding(false);
-    setNewName("");
-    setNewEmail("");
-    setNewMeal("");
-    setNewDietary("");
-    setNewPlusOne(false);
-    setNewPlusOneName("");
-  }
-
   return (
     <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
       <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-stone-100">
@@ -1134,108 +1009,16 @@ function ClientGuestRSVP({ event, onUpdate }: { event: Event; onUpdate: (guests:
           <Users size={15} className="text-amber-400" />
           <h2 className="font-heading font-semibold text-stone-800">Guest List & RSVP</h2>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-3 text-xs text-stone-400">
+        <div className="flex items-center gap-3 text-xs text-stone-400">
             <span><span className="font-semibold text-emerald-600">{accepted}</span> accepted</span>
             <span><span className="font-semibold text-amber-600">{pending}</span> pending</span>
-          </div>
-          {!adding && (
-            <button
-              onClick={() => setAdding(true)}
-              className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600"
-            >
-              <Plus size={13} />
-              Add
-            </button>
-          )}
         </div>
       </div>
 
-      {adding && (
-        <div className="px-5 py-4 border-b border-stone-100 bg-stone-50/50 space-y-3">
-          <p className="text-xs font-medium text-stone-500">Add a guest</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-stone-500 mb-1">Name *</label>
-              <input
-                autoFocus
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                placeholder="Guest name"
-                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-stone-500 mb-1">Email</label>
-              <input
-                type="email"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                placeholder="guest@email.com"
-                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-stone-500 mb-1">Meal Choice</label>
-              <input
-                value={newMeal}
-                onChange={(e) => setNewMeal(e.target.value)}
-                placeholder="e.g. Chicken, Fish"
-                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-stone-500 mb-1">Dietary Notes</label>
-              <input
-                value={newDietary}
-                onChange={(e) => setNewDietary(e.target.value)}
-                placeholder="Allergies, restrictions…"
-                className="w-full border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-              />
-            </div>
-          </div>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={newPlusOne}
-              onChange={(e) => setNewPlusOne(e.target.checked)}
-              className="rounded border-stone-300 text-rose-400 focus:ring-rose-400/30"
-            />
-            <span className="text-sm text-stone-600">Bringing a plus one</span>
-          </label>
-          {newPlusOne && (
-            <input
-              value={newPlusOneName}
-              onChange={(e) => setNewPlusOneName(e.target.value)}
-              placeholder="Plus one name"
-              className="w-full sm:w-1/2 border border-stone-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-            />
-          )}
-          <div className="flex gap-2 justify-end">
-            <button
-              onClick={addGuest}
-              disabled={!newName.trim()}
-              className="text-xs font-medium bg-rose-400 text-white px-4 py-2 rounded-lg hover:bg-rose-500 disabled:opacity-50 transition-colors"
-            >
-              Add Guest
-            </button>
-            <button onClick={cancelAdd} className="text-xs text-stone-400 hover:text-stone-600 px-3 py-2 rounded-lg hover:bg-stone-100 transition-colors">
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {guests.length === 0 && !adding ? (
+      {guests.length === 0 ? (
         <div className="px-5 py-8 text-center">
           <Users size={20} className="text-stone-300 mx-auto mb-2" />
           <p className="text-sm text-stone-400">No guests yet.</p>
-          <button
-            onClick={() => setAdding(true)}
-            className="text-xs font-medium text-rose-500 hover:text-rose-600 mt-2"
-          >
-            Add your first guest
-          </button>
         </div>
       ) : (
       <div className="divide-y divide-stone-100">
@@ -1297,12 +1080,6 @@ function ClientGuestRSVP({ event, onUpdate }: { event: Event; onUpdate: (guests:
                   </div>
                 )}
                 <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={() => removeGuest(guest.id)}
-                    className="text-xs text-red-400 hover:text-red-600 px-3 py-2 rounded-lg hover:bg-red-50 transition-colors mr-auto"
-                  >
-                    Remove
-                  </button>
                   <button onClick={saveEdit} className="text-xs font-medium bg-rose-400 text-white px-4 py-2 rounded-lg hover:bg-rose-500 transition-colors">Save</button>
                   <button onClick={() => setEditingId(null)} className="text-xs text-stone-400 hover:text-stone-600 px-3 py-2 rounded-lg hover:bg-stone-100 transition-colors">Cancel</button>
                 </div>

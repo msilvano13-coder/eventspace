@@ -32,6 +32,7 @@ class PlannerProfileStore {
     } catch {
       this.profile = { ...DEFAULT_PROFILE };
     }
+    this.emit();
   }
 
   getSnapshot = (): PlannerProfile => {

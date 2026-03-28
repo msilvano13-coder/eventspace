@@ -4,6 +4,7 @@ import { useQuestionnaire, useQuestionnaireActions } from "@/hooks/useStore";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import {
   ArrowLeft,
   Plus,
@@ -39,6 +40,7 @@ export default function QuestionnaireEditorPage() {
 
   const [addingQuestion, setAddingQuestion] = useState(false);
   const [editingQId, setEditingQId] = useState<string | null>(null);
+  const [deleteQId, setDeleteQId] = useState<string | null>(null);
 
   // Question form state
   const [qLabel, setQLabel] = useState("");
@@ -282,7 +284,7 @@ export default function QuestionnaireEditorPage() {
                     <button onClick={() => startEditQuestion(q)} className="p-1.5 text-stone-300 hover:text-stone-500 hover:bg-stone-100 rounded-lg transition-colors">
                       <Pencil size={13} />
                     </button>
-                    <button onClick={() => deleteQuestion(q.id)} className="p-1.5 text-stone-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors">
+                    <button onClick={() => setDeleteQId(q.id)} className="p-1.5 text-stone-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors">
                       <Trash2 size={13} />
                     </button>
                   </div>
@@ -309,6 +311,17 @@ export default function QuestionnaireEditorPage() {
           )}
         </div>
       )}
+
+      {/* Delete question confirmation */}
+      <ConfirmDialog
+        open={!!deleteQId}
+        title="Delete Question?"
+        message="This question will be permanently removed from the questionnaire."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => { if (deleteQId) { deleteQuestion(deleteQId); setDeleteQId(null); } }}
+        onCancel={() => setDeleteQId(null)}
+      />
     </div>
   );
 }

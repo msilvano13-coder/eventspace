@@ -4,6 +4,7 @@ import { usePreferredVendors, usePreferredVendorActions, useEvents, useStoreActi
 import { useState, useCallback, useRef } from "react";
 import { Heart, Star, MapPin, Phone, Globe, ExternalLink, Trash2, Plus, ChevronDown, Search, Share2 } from "lucide-react";
 import type { PreferredVendor, Vendor, VendorCategory, DiscoveredVendor } from "@/lib/types";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const CATEGORY_COLORS: Record<string, string> = {
   catering: "bg-orange-50 text-orange-600",
@@ -38,6 +39,7 @@ export default function PreferredVendorsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [openShareDropdown, setOpenShareDropdown] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [editingNotes, setEditingNotes] = useState<string | null>(null);
   const [notesValue, setNotesValue] = useState("");
   const toastTimeout = useRef<ReturnType<typeof setTimeout>>();
@@ -244,10 +246,7 @@ export default function PreferredVendorsPage() {
             >
               {/* Remove button */}
               <button
-                onClick={() => {
-                  removePreferredVendor(vendor.id);
-                  showToast(`Removed ${vendor.name} from preferred vendors`);
-                }}
+                onClick={() => setConfirmDeleteId(vendor.id)}
                 className="absolute top-3 right-3 p-1.5 rounded-lg text-stone-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
                 title="Remove from preferred"
               >
@@ -438,6 +437,22 @@ export default function PreferredVendorsPage() {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Remove Preferred Vendor?"
+        message="This vendor will be removed from your preferred vendors list."
+        confirmLabel="Remove"
+        onConfirm={() => {
+          if (confirmDeleteId) {
+            const v = preferredVendors.find((x) => x.id === confirmDeleteId);
+            removePreferredVendor(confirmDeleteId);
+            if (v) showToast(`Removed ${v.name} from preferred vendors`);
+          }
+          setConfirmDeleteId(null);
+        }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
 
       {/* Toast notification */}
       {toast && (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEvent, useStoreActions } from "@/hooks/useStore";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
@@ -35,6 +36,7 @@ export default function InvoicesPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // Form state
   const [formNumber, setFormNumber] = useState("");
@@ -424,7 +426,7 @@ export default function InvoicesPage() {
                           <Pencil size={13} />
                         </button>
                         <button
-                          onClick={() => deleteInvoice(inv.id)}
+                          onClick={() => setConfirmDeleteId(inv.id)}
                           className="text-xs text-stone-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
                         >
                           <Trash2 size={13} />
@@ -438,6 +440,15 @@ export default function InvoicesPage() {
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Delete Invoice?"
+        message="This invoice will be permanently deleted."
+        confirmLabel="Delete"
+        onConfirm={() => { if (confirmDeleteId) deleteInvoice(confirmDeleteId); setConfirmDeleteId(null); }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

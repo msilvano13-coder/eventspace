@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet, Settings, Inbox, BarChart3, Search, Heart, MoreHorizontal, X } from "lucide-react";
+import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet, Settings, Inbox, BarChart3, Search, Heart, FileText, MoreHorizontal, X } from "lucide-react";
 
 const navItems = [
   { href: "/planner", label: "Dashboard", icon: LayoutDashboard },
   { href: "/planner/inquiries", label: "Inquiries", icon: Inbox },
   { href: "/planner/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/planner/questionnaires", label: "Questionnaires", icon: ClipboardList },
+  { href: "/planner/contracts", label: "Contracts", icon: FileText },
   { href: "/planner/finances", label: "Finances", icon: Wallet },
   { href: "/planner/reports", label: "Reports", icon: BarChart3 },
   { href: "/planner/directory", label: "Directory", icon: BookUser },

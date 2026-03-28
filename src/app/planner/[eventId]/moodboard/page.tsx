@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, Plus, X, Image, Pencil, Check, Loader2, ZoomIn, HardDrive } from "lucide-react";
 import { MoodBoardImage } from "@/lib/types";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { compressImage, base64ByteSize, formatBytes, estimateStorageUsed } from "@/lib/image-compress";
 
 export default function MoodBoardPage() {
@@ -18,6 +19,7 @@ export default function MoodBoardPage() {
   const [uploadCount, setUploadCount] = useState(0);
   const [uploadTotal, setUploadTotal] = useState(0);
   const [lightboxId, setLightboxId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   if (!event) {
     return (
@@ -197,7 +199,7 @@ export default function MoodBoardPage() {
                   <ZoomIn size={12} className="text-stone-500" />
                 </button>
                 <button
-                  onClick={() => removeImage(img.id)}
+                  onClick={() => setConfirmDeleteId(img.id)}
                   className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center shadow-sm hover:bg-white"
                 >
                   <X size={12} className="text-stone-500" />
@@ -272,6 +274,14 @@ export default function MoodBoardPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Remove Image?"
+        message="This image will be removed from the mood board."
+        confirmLabel="Remove"
+        onConfirm={() => { if (confirmDeleteId) removeImage(confirmDeleteId); setConfirmDeleteId(null); }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

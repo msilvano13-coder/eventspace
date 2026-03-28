@@ -4,6 +4,7 @@ import { useQuestionnaires, useQuestionnaireActions } from "@/hooks/useStore";
 import { Plus, ClipboardList, Trash2, Pencil } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export default function QuestionnairesPage() {
   const questionnaires = useQuestionnaires();
@@ -139,21 +140,15 @@ export default function QuestionnairesPage() {
       )}
 
       {/* Delete confirmation */}
-      {deleteId && (
-        <div
-          className="fixed inset-0 bg-stone-900/30 backdrop-blur-sm flex items-end sm:items-center justify-center z-50"
-          onClick={(e) => e.target === e.currentTarget && setDeleteId(null)}
-        >
-          <div className="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl p-6 shadow-xl">
-            <h2 className="text-base font-heading font-semibold text-stone-800 mb-2">Delete Questionnaire?</h2>
-            <p className="text-sm text-stone-500 mb-6">This cannot be undone. Events already assigned this questionnaire will keep their responses.</p>
-            <div className="flex gap-3">
-              <button onClick={() => setDeleteId(null)} className="flex-1 px-4 py-2.5 text-sm text-stone-600 border border-stone-200 rounded-xl hover:bg-stone-50 transition-colors">Cancel</button>
-              <button onClick={confirmDelete} className="flex-1 px-4 py-2.5 text-sm font-medium bg-red-500 hover:bg-red-600 text-white rounded-xl transition-colors">Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!deleteId}
+        title="Delete Questionnaire?"
+        message="This cannot be undone. Events already assigned this questionnaire will keep their responses."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
     </div>
   );
 }

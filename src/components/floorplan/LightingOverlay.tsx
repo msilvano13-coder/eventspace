@@ -25,14 +25,13 @@ export default function LightingOverlay({ zones, onUpdateZones, selectedZoneId, 
   const overlayRef = useRef<HTMLDivElement>(null);
   const [dragging, setDragging] = useState<string | null>(null);
   const dragOffset = useRef({ x: 0, y: 0 });
+  const zonesRef = useRef(zones);
+  const onUpdateZonesRef = useRef(onUpdateZones);
 
-  const handleOverlayClick = useCallback((e: React.MouseEvent) => {
-    if (!enabled) return;
-    // Only deselect if clicking the overlay itself, not a zone
-    if (e.target === overlayRef.current) {
-      onSelectZone(null);
-    }
-  }, [enabled, onSelectZone]);
+  useEffect(() => {
+    zonesRef.current = zones;
+    onUpdateZonesRef.current = onUpdateZones;
+  });
 
   const handleMouseDown = useCallback((e: React.MouseEvent, zoneId: string) => {
     if (!enabled) return;
@@ -51,23 +50,35 @@ export default function LightingOverlay({ zones, onUpdateZones, selectedZoneId, 
     dragOffset.current = { x: e.clientX - zonePixelX, y: e.clientY - zonePixelY };
   }, [enabled, zones, onSelectZone]);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!dragging || !overlayRef.current) return;
-    const rect = overlayRef.current.getBoundingClientRect();
-    const x = Math.max(0, Math.min(100, ((e.clientX - dragOffset.current.x) / rect.width) * 100));
-    const y = Math.max(0, Math.min(100, ((e.clientY - dragOffset.current.y) / rect.height) * 100));
+  // Global mouse move/up to support dragging beyond zone bounds
+  useEffect(() => {
+    if (!dragging) return;
 
-    onUpdateZones(zones.map((z) => z.id === dragging ? { ...z, x, y } : z));
-  }, [dragging, zones, onUpdateZones]);
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      if (!overlayRef.current) return;
+      const rect = overlayRef.current.getBoundingClientRect();
+      const x = Math.max(0, Math.min(100, ((e.clientX - dragOffset.current.x) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((e.clientY - dragOffset.current.y) / rect.height) * 100));
+      onUpdateZonesRef.current(zonesRef.current.map((z) => z.id === dragging ? { ...z, x, y } : z));
+    };
 
-  const handleMouseUp = useCallback(() => {
-    setDragging(null);
-  }, []);
+    const handleGlobalMouseUp = () => {
+      setDragging(null);
+    };
+
+    window.addEventListener("mousemove", handleGlobalMouseMove);
+    window.addEventListener("mouseup", handleGlobalMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleGlobalMouseMove);
+      window.removeEventListener("mouseup", handleGlobalMouseUp);
+    };
+  }, [dragging]);
 
   // Touch handlers for mobile
   const handleTouchStart = useCallback((e: React.TouchEvent, zoneId: string) => {
     if (!enabled) return;
     e.stopPropagation();
+    e.preventDefault();
     onSelectZone(zoneId);
     setDragging(zoneId);
 
@@ -82,16 +93,31 @@ export default function LightingOverlay({ zones, onUpdateZones, selectedZoneId, 
     dragOffset.current = { x: touch.clientX - zonePixelX, y: touch.clientY - zonePixelY };
   }, [enabled, zones, onSelectZone]);
 
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!dragging || !overlayRef.current) return;
-    e.preventDefault();
-    const rect = overlayRef.current.getBoundingClientRect();
-    const touch = e.touches[0];
-    const x = Math.max(0, Math.min(100, ((touch.clientX - dragOffset.current.x) / rect.width) * 100));
-    const y = Math.max(0, Math.min(100, ((touch.clientY - dragOffset.current.y) / rect.height) * 100));
+  // Global touch move/end for zone dragging
+  useEffect(() => {
+    if (!dragging) return;
 
-    onUpdateZones(zones.map((z) => z.id === dragging ? { ...z, x, y } : z));
-  }, [dragging, zones, onUpdateZones]);
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (!overlayRef.current) return;
+      e.preventDefault();
+      const rect = overlayRef.current.getBoundingClientRect();
+      const touch = e.touches[0];
+      const x = Math.max(0, Math.min(100, ((touch.clientX - dragOffset.current.x) / rect.width) * 100));
+      const y = Math.max(0, Math.min(100, ((touch.clientY - dragOffset.current.y) / rect.height) * 100));
+      onUpdateZonesRef.current(zonesRef.current.map((z) => z.id === dragging ? { ...z, x, y } : z));
+    };
+
+    const handleGlobalTouchEnd = () => {
+      setDragging(null);
+    };
+
+    window.addEventListener("touchmove", handleGlobalTouchMove, { passive: false });
+    window.addEventListener("touchend", handleGlobalTouchEnd);
+    return () => {
+      window.removeEventListener("touchmove", handleGlobalTouchMove);
+      window.removeEventListener("touchend", handleGlobalTouchEnd);
+    };
+  }, [dragging]);
 
   // Scroll-wheel resize: when hovering a zone, scroll up/down to resize
   useEffect(() => {
@@ -102,34 +128,36 @@ export default function LightingOverlay({ zones, onUpdateZones, selectedZoneId, 
       if (!selectedZoneId) return;
       e.preventDefault();
       const delta = e.deltaY > 0 ? -2 : 2;
-      const zone = zones.find((z) => z.id === selectedZoneId);
+      const zone = zonesRef.current.find((z) => z.id === selectedZoneId);
       if (!zone) return;
       const newSize = Math.max(10, Math.min(200, zone.size + delta));
-      onUpdateZones(zones.map((z) => z.id === selectedZoneId ? { ...z, size: newSize } : z));
+      onUpdateZonesRef.current(zonesRef.current.map((z) => z.id === selectedZoneId ? { ...z, size: newSize } : z));
     };
 
     el.addEventListener("wheel", handleWheel, { passive: false });
     return () => el.removeEventListener("wheel", handleWheel);
-  }, [enabled, selectedZoneId, zones, onUpdateZones]);
+  }, [enabled, selectedZoneId]);
 
   if (!enabled) return null;
 
+  // The overlay is pointer-events: none so the Fabric.js canvas underneath
+  // remains fully interactive (pan, zoom, select). Only individual zone
+  // elements have pointer-events: auto so they can be dragged.
   return (
     <div
       ref={overlayRef}
       className="absolute inset-0"
-      style={{ background: "rgba(10, 10, 30, 0.55)", cursor: dragging ? "grabbing" : "default", zIndex: 35 }}
-      onClick={handleOverlayClick}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleMouseUp}
+      style={{
+        background: "rgba(10, 10, 30, 0.45)",
+        pointerEvents: "none",
+        zIndex: 35,
+      }}
     >
       {zones.map((zone) => {
         const isSelected = zone.id === selectedZoneId;
-        // Size is now in pixels (10–200px)
-        const sizePx = `${zone.size}px`;
+        // Size is now in pixels (10–200px), with minimum 44px touch target on mobile
+        const visualSize = zone.size;
+        const touchSize = Math.max(44, zone.size);
         const glowBlur = Math.max(4, zone.size * 0.3);
         const opacity = zone.intensity / 100;
         // Dynamic label size based on zone size
@@ -144,10 +172,11 @@ export default function LightingOverlay({ zones, onUpdateZones, selectedZoneId, 
               left: `${zone.x}%`,
               top: `${zone.y}%`,
               transform: "translate(-50%, -50%)",
-              width: sizePx,
-              height: sizePx,
-              cursor: enabled ? "grab" : "default",
+              width: `${touchSize}px`,
+              height: `${touchSize}px`,
+              cursor: enabled ? (dragging === zone.id ? "grabbing" : "grab") : "default",
               zIndex: isSelected ? 30 : 20,
+              pointerEvents: "auto",
             }}
             onMouseDown={(e) => handleMouseDown(e, zone.id)}
             onTouchStart={(e) => handleTouchStart(e, zone.id)}
@@ -156,16 +185,20 @@ export default function LightingOverlay({ zones, onUpdateZones, selectedZoneId, 
             <div
               className="absolute rounded-full"
               style={{
-                inset: "-100%",
+                inset: `${((touchSize - visualSize) / 2) - (visualSize)}px`,
                 background: `radial-gradient(circle, ${zone.color}${Math.round(opacity * 80).toString(16).padStart(2, "0")} 0%, transparent 70%)`,
                 filter: `blur(${glowBlur}px)`,
                 pointerEvents: "none",
               }}
             />
-            {/* Core circle */}
+            {/* Core circle — centered within the touch target */}
             <div
-              className="absolute inset-[10%] rounded-full flex items-center justify-center transition-all"
+              className="absolute rounded-full flex items-center justify-center transition-all"
               style={{
+                left: `${(touchSize - visualSize * 0.8) / 2}px`,
+                top: `${(touchSize - visualSize * 0.8) / 2}px`,
+                width: `${visualSize * 0.8}px`,
+                height: `${visualSize * 0.8}px`,
                 border: `${zone.size < 30 ? 1.5 : 2}px solid ${isSelected ? "#fb7185" : "rgba(255,255,255,0.35)"}`,
                 background: `${zone.color}20`,
                 boxShadow: isSelected ? "0 0 0 3px rgba(251,113,133,0.3)" : "none",

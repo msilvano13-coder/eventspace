@@ -6,7 +6,8 @@ import { questionnaireStore } from "@/lib/questionnaire-store";
 import { plannerStore } from "@/lib/planner-store";
 import { inquiryStore } from "@/lib/inquiry-store";
 import { preferredVendorStore } from "@/lib/preferred-vendor-store";
-import { Event, Questionnaire, PlannerProfile, Inquiry, PreferredVendor } from "@/lib/types";
+import { contractTemplateStore } from "@/lib/contract-template-store";
+import { Event, Questionnaire, PlannerProfile, Inquiry, PreferredVendor, ContractTemplate } from "@/lib/types";
 
 function subscribeAndHydrate(cb: () => void) {
   store.hydrate();
@@ -202,4 +203,35 @@ export function usePreferredVendorActions() {
     []
   );
   return { addPreferredVendor, updatePreferredVendor, removePreferredVendor, isPreferred };
+}
+
+// ── Contract Template hooks ──
+
+function ctSubscribeAndHydrate(cb: () => void) {
+  contractTemplateStore.hydrate();
+  return contractTemplateStore.subscribe(cb);
+}
+
+export function useContractTemplates(): ContractTemplate[] {
+  return useSyncExternalStore(
+    ctSubscribeAndHydrate,
+    contractTemplateStore.getSnapshot,
+    contractTemplateStore.getServerSnapshot
+  );
+}
+
+export function useContractTemplateActions() {
+  const addTemplate = useCallback(
+    (t: ContractTemplate) => contractTemplateStore.add(t),
+    []
+  );
+  const updateTemplate = useCallback(
+    (id: string, partial: Partial<ContractTemplate>) => contractTemplateStore.update(id, partial),
+    []
+  );
+  const removeTemplate = useCallback(
+    (id: string) => contractTemplateStore.remove(id),
+    []
+  );
+  return { addTemplate, updateTemplate, removeTemplate };
 }

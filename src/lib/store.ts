@@ -41,6 +41,13 @@ class EventStore {
           if (!evt.invoices) evt.invoices = [];
           if (!evt.expenses) evt.expenses = [];
           if (!evt.guests) evt.guests = [];
+          evt.guests.forEach((g: any) => {
+            if (g.dietaryNotes === undefined) g.dietaryNotes = "";
+            if (g.plusOneName === undefined) g.plusOneName = "";
+            if (g.tableAssignment === undefined) g.tableAssignment = "";
+            if (g.mealChoice === undefined) g.mealChoice = "";
+            if (g.plusOne === undefined) g.plusOne = false;
+          });
           if (!evt.colorPalette) evt.colorPalette = [];
           if (!evt.budget) evt.budget = [];
           // Remove deprecated spent field (now derived from vendor contracts)
@@ -54,7 +61,18 @@ class EventStore {
           // Add lightingZones to floor plans missing it
           (evt.floorPlans ?? []).forEach((fp: any) => { if (!fp.lightingZones) fp.lightingZones = []; });
           if (!evt.discoveredVendors) evt.discoveredVendors = [];
+          if (!evt.contracts) evt.contracts = [];
           if (!evt.messages) evt.messages = [];
+          if (evt.archivedAt === undefined) evt.archivedAt = null;
+          // Migrate contract e-signature fields
+          (evt.contracts ?? []).forEach((c: any) => {
+            if (c.plannerSignature === undefined) c.plannerSignature = null;
+            if (c.plannerSignedAt === undefined) c.plannerSignedAt = null;
+            if (c.plannerSignedName === undefined) c.plannerSignedName = null;
+            if (c.clientSignature === undefined) c.clientSignature = null;
+            if (c.clientSignedAt === undefined) c.clientSignedAt = null;
+            if (c.clientSignedName === undefined) c.clientSignedName = null;
+          });
           // Add mealChoice to vendors missing it
           (evt.vendors ?? []).forEach((v: any) => { if (!v.mealChoice) v.mealChoice = ""; });
         });

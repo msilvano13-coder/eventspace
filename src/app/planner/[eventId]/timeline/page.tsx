@@ -4,8 +4,9 @@ import { useEvent, useStoreActions } from "@/hooks/useStore";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, Plus, Pencil, Trash2, X, Download } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, X, Download, GripVertical } from "lucide-react";
 import { ScheduleItem } from "@/lib/types";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 function fmt12(time: string) {
   const [h, m] = time.split(":").map(Number);
@@ -24,9 +25,17 @@ export default function TimelinePage() {
   const [editTitle, setEditTitle] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [adding, setAdding] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [newTime, setNewTime] = useState("");
   const [newTitle, setNewTitle] = useState("");
   const [newNotes, setNewNotes] = useState("");
+
+  // ── Drag state ──
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [touchDragId, setTouchDragId] = useState<string | null>(null);
+  const touchStartY = useRef<number>(0);
+  const itemRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const newTitleRef = useRef<HTMLInputElement>(null);
   const editTitleRef = useRef<HTMLInputElement>(null);
@@ -44,6 +53,23 @@ export default function TimelinePage() {
   }
 
   const sorted = [...(event.schedule ?? [])].sort((a, b) => a.time.localeCompare(b.time));
+
+  function reorder(fromId: string, toId: string) {
+    if (fromId === toId) return;
+    const items = [...sorted];
+    const fromIdx = items.findIndex((i) => i.id === fromId);
+    const toIdx = items.findIndex((i) => i.id === toId);
+    if (fromIdx === -1 || toIdx === -1) return;
+
+    // Remove the dragged item and insert at the new position
+    const [moved] = items.splice(fromIdx, 1);
+    items.splice(toIdx, 0, moved);
+
+    // Reassign times from the original sorted order to preserve chronological spacing
+    const originalTimes = sorted.map((s) => s.time);
+    const updated = items.map((item, idx) => ({ ...item, time: originalTimes[idx] }));
+    updateEvent(event!.id, { schedule: updated });
+  }
 
   function startEdit(item: ScheduleItem) {
     setEditingId(item.id); setEditTime(item.time); setEditTitle(item.title); setEditNotes(item.notes);
@@ -102,6 +128,36 @@ export default function TimelinePage() {
     URL.revokeObjectURL(url);
   }
 
+  // ── Touch drag handlers ──
+  function handleTouchStart(id: string, e: React.TouchEvent) {
+    if (editingId) return;
+    touchStartY.current = e.touches[0].clientY;
+    setTouchDragId(id);
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!touchDragId) return;
+    const y = e.touches[0].clientY;
+    // Find which item we're hovering over
+    for (const [id, el] of Array.from(itemRefs.current.entries())) {
+      if (id === touchDragId) continue;
+      const rect = el.getBoundingClientRect();
+      if (y >= rect.top && y <= rect.bottom) {
+        setDragOverId(id);
+        return;
+      }
+    }
+    setDragOverId(null);
+  }
+
+  function handleTouchEnd() {
+    if (touchDragId && dragOverId) {
+      reorder(touchDragId, dragOverId);
+    }
+    setTouchDragId(null);
+    setDragOverId(null);
+  }
+
   return (
     <div className="min-h-screen bg-stone-50">
       {/* Header */}
@@ -141,6 +197,10 @@ export default function TimelinePage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+        {sorted.length > 1 && !editingId && (
+          <p className="text-[11px] text-stone-400 mb-4 text-center">Drag the <GripVertical size={11} className="inline -mt-0.5" /> handle to reorder</p>
+        )}
+
         {sorted.length === 0 && !adding ? (
           <div className="text-center py-16">
             <p className="text-stone-400 text-sm mb-3">No schedule yet.</p>
@@ -151,12 +211,13 @@ export default function TimelinePage() {
         ) : (
           <div className="relative">
             {sorted.length > 0 && (
-              <div className="absolute left-[88px] top-3 bottom-3 w-px bg-stone-200" />
+              <div className="absolute left-[106px] top-3 bottom-3 w-px bg-stone-200" />
             )}
             <div className="space-y-1">
               {sorted.map((item, idx) =>
                 editingId === item.id ? (
-                  <div key={item.id} className="flex gap-6 py-3">
+                  <div key={item.id} className="flex gap-4 py-3">
+                    <div className="w-5 shrink-0" />
                     <div className="w-20 shrink-0" />
                     <div className="flex-1 bg-white rounded-2xl border border-stone-200 shadow-soft p-4 space-y-3">
                       <div className="flex gap-3 items-center">
@@ -183,7 +244,43 @@ export default function TimelinePage() {
                     </div>
                   </div>
                 ) : (
-                  <div key={item.id} className="group flex gap-6 py-3">
+                  <div
+                    key={item.id}
+                    ref={(el) => { if (el) itemRefs.current.set(item.id, el); else itemRefs.current.delete(item.id); }}
+                    className={`group flex gap-4 py-3 transition-all ${
+                      dragId === item.id || touchDragId === item.id ? "opacity-50" : ""
+                    } ${
+                      dragOverId === item.id ? "border-t-2 border-rose-400" : ""
+                    }`}
+                    draggable={!editingId}
+                    onDragStart={(e) => {
+                      setDragId(item.id);
+                      e.dataTransfer.effectAllowed = "move";
+                    }}
+                    onDragEnd={() => { setDragId(null); setDragOverId(null); }}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.dataTransfer.dropEffect = "move";
+                      if (dragId && dragId !== item.id) setDragOverId(item.id);
+                    }}
+                    onDragLeave={() => { if (dragOverId === item.id) setDragOverId(null); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (dragId) reorder(dragId, item.id);
+                      setDragId(null);
+                      setDragOverId(null);
+                    }}
+                  >
+                    {/* Drag handle */}
+                    <div
+                      className="shrink-0 flex items-start pt-1 cursor-grab active:cursor-grabbing touch-none"
+                      onTouchStart={(e) => handleTouchStart(item.id, e)}
+                      onTouchMove={handleTouchMove}
+                      onTouchEnd={handleTouchEnd}
+                    >
+                      <GripVertical size={16} className="text-stone-300 hover:text-stone-400 transition-colors" />
+                    </div>
+
                     <div className="w-20 shrink-0 text-right pt-0.5">
                       <span className="text-xs font-semibold text-stone-400 tracking-wide">{fmt12(item.time)}</span>
                     </div>
@@ -201,7 +298,7 @@ export default function TimelinePage() {
                         <button onClick={() => startEdit(item)} className="p-1.5 text-stone-300 hover:text-stone-500 hover:bg-stone-100 rounded-lg transition-colors">
                           <Pencil size={13} />
                         </button>
-                        <button onClick={() => deleteItem(item.id)} className="p-1.5 text-stone-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors">
+                        <button onClick={() => setConfirmDeleteId(item.id)} className="p-1.5 text-stone-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors">
                           <Trash2 size={13} />
                         </button>
                       </div>
@@ -211,7 +308,8 @@ export default function TimelinePage() {
               )}
 
               {adding && (
-                <div className="flex gap-6 py-3">
+                <div className="flex gap-4 py-3">
+                  <div className="w-5 shrink-0" />
                   <div className="w-20 shrink-0" />
                   <div className="flex-1 bg-white rounded-2xl border border-rose-200 shadow-soft p-4 space-y-3">
                     <div className="flex gap-3 items-center">
@@ -242,6 +340,14 @@ export default function TimelinePage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Delete Timeline Item?"
+        message="This item will be removed from the day-of timeline."
+        confirmLabel="Delete"
+        onConfirm={() => { if (confirmDeleteId) deleteItem(confirmDeleteId); setConfirmDeleteId(null); }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   );
 }

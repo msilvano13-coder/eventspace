@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useEvent, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
-import { ArrowLeft, Plus, Users, Lightbulb } from "lucide-react";
+import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown } from "lucide-react";
 import { useCallback, useState } from "react";
 import { FloorPlan, Guest, LightingZone } from "@/lib/types";
 import { v4 as uuid } from "uuid";
@@ -33,6 +33,7 @@ export default function FloorPlanPage() {
   const [newTabName, setNewTabName] = useState("");
   const [showSeating, setShowSeating] = useState(false);
   const [showLighting, setShowLighting] = useState(false);
+  const [mobileLightingExpanded, setMobileLightingExpanded] = useState(true);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
 
   const handleSave = useCallback(
@@ -122,7 +123,7 @@ export default function FloorPlanPage() {
           }`}
         >
           <Lightbulb size={13} />
-          <span className="hidden sm:inline">Lighting</span>
+          <span>Lighting</span>
         </button>
 
         {/* Seating toggle */}
@@ -225,27 +226,45 @@ export default function FloorPlanPage() {
                 onSelectZone={setSelectedZoneId}
               />
             </div>
-            {/* Mobile: bottom sheet (partial overlay so floor plan stays visible) */}
-            <div className="absolute left-0 right-0 bottom-0 z-40 md:hidden bg-white rounded-t-2xl shadow-2xl border-t border-stone-200 max-h-[45%] overflow-y-auto">
-              <div className="sticky top-0 z-10 bg-white border-b border-stone-100 flex items-center justify-between px-4 py-2.5 rounded-t-2xl">
+            {/* Mobile: collapsible bottom sheet — minimizes to a bar so floor plan stays fully usable */}
+            <div
+              className={`absolute left-0 right-0 bottom-0 z-40 md:hidden bg-white rounded-t-2xl shadow-2xl border-t border-stone-200 transition-all duration-300 ${
+                mobileLightingExpanded ? "max-h-[45%]" : "max-h-[52px]"
+              } overflow-hidden`}
+            >
+              <div
+                className="sticky top-0 z-10 bg-white border-b border-stone-100 flex items-center justify-between px-4 py-3 rounded-t-2xl cursor-pointer"
+                onClick={() => setMobileLightingExpanded(!mobileLightingExpanded)}
+              >
                 <div className="flex items-center gap-2">
-                  <div className="w-8 h-1 bg-stone-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-1.5" />
-                  <Lightbulb size={13} className="text-amber-400 mt-1" />
-                  <h3 className="text-xs font-heading font-semibold text-stone-800 mt-1">Lighting</h3>
+                  <div className="w-10 h-1 bg-stone-300 rounded-full absolute left-1/2 -translate-x-1/2 top-1.5" />
+                  <Lightbulb size={14} className="text-amber-400" />
+                  <h3 className="text-sm font-heading font-semibold text-stone-800">Lighting</h3>
+                  <span className="text-[11px] text-stone-400 font-medium">{lightingZones.length} zone{lightingZones.length !== 1 ? "s" : ""}</span>
                 </div>
-                <button
-                  onClick={() => { setShowLighting(false); setSelectedZoneId(null); }}
-                  className="text-xs text-stone-400 hover:text-stone-600 font-medium mt-1"
-                >
-                  Done
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setMobileLightingExpanded(!mobileLightingExpanded); }}
+                    className="p-1.5 text-stone-400 hover:text-stone-600 rounded-lg"
+                  >
+                    {mobileLightingExpanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setShowLighting(false); setSelectedZoneId(null); }}
+                    className="text-xs text-stone-400 hover:text-stone-600 font-medium px-2 py-1"
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
-              <LightingPanel
-                zones={lightingZones}
-                onUpdateZones={handleUpdateLightingZones}
-                selectedZoneId={selectedZoneId}
-                onSelectZone={setSelectedZoneId}
-              />
+              <div className={`overflow-y-auto ${mobileLightingExpanded ? "max-h-[calc(45vh-52px)]" : "max-h-0"}`}>
+                <LightingPanel
+                  zones={lightingZones}
+                  onUpdateZones={handleUpdateLightingZones}
+                  selectedZoneId={selectedZoneId}
+                  onSelectZone={setSelectedZoneId}
+                />
+              </div>
             </div>
           </>
         )}

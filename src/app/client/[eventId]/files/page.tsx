@@ -34,14 +34,14 @@ export default function ClientFilesPage() {
       </header>
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {event.files.length === 0 ? (
+        {(event.files ?? []).length === 0 ? (
           <div className="bg-white rounded-2xl border border-stone-200 p-12 text-center shadow-soft">
             <File size={40} className="text-stone-300 mx-auto mb-3" />
             <p className="text-sm text-stone-500">No files shared yet.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {event.files.map((file) => {
+            {(event.files ?? []).map((file) => {
               const Icon = typeIcons[file.type] || File;
               return (
                 <div

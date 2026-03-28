@@ -4,6 +4,7 @@ import { useInquiries, useInquiryActions, useStoreActions } from "@/hooks/useSto
 import { useState } from "react";
 import { Plus, Pencil, Trash2, ArrowRight, Phone, Mail, Calendar, DollarSign, StickyNote } from "lucide-react";
 import { Inquiry, InquiryStatus } from "@/lib/types";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export default function InquiriesPage() {
   const inquiries = useInquiries();
@@ -82,8 +83,10 @@ export default function InquiriesPage() {
       colorPalette: [],
       moodBoard: [],
       discoveredVendors: [],
+      contracts: [],
       budget: [],
       messages: [],
+      archivedAt: null,
     });
     deleteInquiry(inq.id);
     setConfirmBookId(null);
@@ -246,28 +249,15 @@ export default function InquiriesPage() {
       )}
 
       {/* Delete confirm */}
-      {confirmDeleteId && (
-        <div
-          className="fixed inset-0 bg-stone-900/30 backdrop-blur-sm flex items-center justify-center z-50"
-          onClick={(e) => e.target === e.currentTarget && setConfirmDeleteId(null)}
-        >
-          <div className="bg-white rounded-2xl p-6 shadow-xl max-w-sm w-full mx-4">
-            <h3 className="font-heading font-semibold text-stone-800 mb-2">Delete Inquiry?</h3>
-            <p className="text-sm text-stone-500 mb-5">This cannot be undone.</p>
-            <div className="flex justify-end gap-3">
-              <button onClick={() => setConfirmDeleteId(null)} className="px-4 py-2 text-sm text-stone-500 rounded-xl">
-                Cancel
-              </button>
-              <button
-                onClick={() => { deleteInquiry(confirmDeleteId); setConfirmDeleteId(null); }}
-                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl text-sm font-medium transition-colors"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={!!confirmDeleteId}
+        title="Delete Inquiry?"
+        message="This cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => { if (confirmDeleteId) { deleteInquiry(confirmDeleteId); setConfirmDeleteId(null); } }}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
 
       {/* Book confirm */}
       {confirmBookId && (() => {
