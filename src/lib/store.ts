@@ -1,94 +1,75 @@
 "use client";
 
-import { Event, DEFAULT_FLOOR_PLANS } from "./types";
-import { v4 as uuid } from "uuid";
-import { getSeedData } from "./seed-data";
+import { Event } from "./types";
+import {
+  getUserId, fetchEvents, fetchEventFull, createEvent as dbCreateEvent,
+  updateEventFields, deleteEvent as dbDeleteEvent,
+  replaceTimeline, replaceSchedule, replaceFloorPlans, replaceVendors,
+  replaceGuests, replaceQuestionnaireAssignments, replaceInvoices,
+  replaceExpenses, replaceBudget, replaceContracts, replaceFiles,
+  replaceMoodBoard, replaceMessages, replaceDiscoveredVendors
+} from "@/lib/supabase/db";
 
 type Listener = () => void;
 
 const EMPTY: Event[] = [];
 
+const SUB_ENTITY_KEYS = new Set<string>([
+  "timeline", "schedule", "floorPlans", "vendors", "guests",
+  "questionnaires", "invoices", "expenses", "budget", "contracts",
+  "files", "moodBoard", "messages", "discoveredVendors",
+]);
+
+const SUB_ENTITY_REPLACERS: Record<string, (eventId: string, data: any) => Promise<void>> = {
+  timeline: replaceTimeline,
+  schedule: replaceSchedule,
+  floorPlans: replaceFloorPlans,
+  vendors: replaceVendors,
+  guests: replaceGuests,
+  questionnaires: replaceQuestionnaireAssignments,
+  invoices: replaceInvoices,
+  expenses: replaceExpenses,
+  budget: replaceBudget,
+  contracts: replaceContracts,
+  files: replaceFiles,
+  moodBoard: replaceMoodBoard,
+  messages: replaceMessages,
+  discoveredVendors: replaceDiscoveredVendors,
+};
+
 class EventStore {
   private events: Map<string, Event> = new Map();
   private listeners: Set<Listener> = new Set();
   private hydrated = false;
+  private hydrating = false;
+  private _loading = true;
   private cachedAll: Event[] = EMPTY;
+  private fullyLoaded: Set<string> = new Set();
+  private loadingFull: Set<string> = new Set();
 
-  hydrate() {
-    if (this.hydrated) return;
-    this.hydrated = true;
-    if (typeof window === "undefined") return;
-    const saved = localStorage.getItem("eventspace-data");
-    if (saved) {
-      try {
-        const entries: [string, Event][] = JSON.parse(saved);
-        this.events = new Map(entries);
-        // Migrate old events
-        Array.from(this.events.values()).forEach((evt) => {
-          if (!evt.floorPlans) {
-            evt.floorPlans = DEFAULT_FLOOR_PLANS.map((fp) => ({ ...fp, json: null, lightingZones: [] }));
-          }
-          if (!evt.timeline) evt.timeline = [];
-          if (!evt.schedule) evt.schedule = [];
-          if (!evt.files) evt.files = [];
-          if (!evt.vendors) evt.vendors = [];
-          // Migrate vendors to include payment fields
-          evt.vendors.forEach((v: any) => {
-            if (v.contractTotal === undefined) v.contractTotal = 0;
-            if (!v.payments) v.payments = [];
-          });
-          if (!evt.questionnaires) evt.questionnaires = [];
-          if (!evt.invoices) evt.invoices = [];
-          if (!evt.expenses) evt.expenses = [];
-          if (!evt.guests) evt.guests = [];
-          evt.guests.forEach((g: any) => {
-            if (g.dietaryNotes === undefined) g.dietaryNotes = "";
-            if (g.plusOneName === undefined) g.plusOneName = "";
-            if (g.tableAssignment === undefined) g.tableAssignment = "";
-            if (g.mealChoice === undefined) g.mealChoice = "";
-            if (g.plusOne === undefined) g.plusOne = false;
-          });
-          if (!evt.colorPalette) evt.colorPalette = [];
-          if (!evt.budget) evt.budget = [];
-          // Remove deprecated spent field (now derived from vendor contracts)
-          evt.budget.forEach((b: any) => { delete b.spent; });
-          delete (evt as any).vendorContracts;
-          delete (evt as any).comments;
-          delete (evt as any).floorPlanThumbnail;
-          if (!evt.moodBoard) evt.moodBoard = [];
-          // Add thumb field to mood board images missing it (use url as fallback)
-          (evt.moodBoard ?? []).forEach((m: any) => { if (!m.thumb) m.thumb = m.url ?? ""; });
-          // Add lightingZones to floor plans missing it
-          (evt.floorPlans ?? []).forEach((fp: any) => { if (!fp.lightingZones) fp.lightingZones = []; });
-          if (!evt.discoveredVendors) evt.discoveredVendors = [];
-          if (!evt.contracts) evt.contracts = [];
-          if (!evt.messages) evt.messages = [];
-          if (evt.archivedAt === undefined) evt.archivedAt = null;
-          // Migrate contract e-signature fields
-          (evt.contracts ?? []).forEach((c: any) => {
-            if (c.plannerSignature === undefined) c.plannerSignature = null;
-            if (c.plannerSignedAt === undefined) c.plannerSignedAt = null;
-            if (c.plannerSignedName === undefined) c.plannerSignedName = null;
-            if (c.clientSignature === undefined) c.clientSignature = null;
-            if (c.clientSignedAt === undefined) c.clientSignedAt = null;
-            if (c.clientSignedName === undefined) c.clientSignedName = null;
-          });
-          // Add mealChoice to vendors missing it
-          (evt.vendors ?? []).forEach((v: any) => { if (!v.mealChoice) v.mealChoice = ""; });
-        });
-      } catch {
-        this.events = this.seedMap();
-      }
-    } else {
-      this.events = this.seedMap();
-    }
-    this.rebuildCache();
-    this.listeners.forEach((l) => l());
+  get isLoading(): boolean {
+    return this._loading;
   }
 
-  private seedMap(): Map<string, Event> {
-    const seed = getSeedData();
-    return new Map(seed.map((e) => [e.id, e]));
+  async hydrate(): Promise<void> {
+    if (this.hydrated || this.hydrating) return;
+    this.hydrating = true;
+    if (typeof window === "undefined") {
+      this.hydrating = false;
+      return;
+    }
+    try {
+      const rows = await fetchEvents();
+      this.events = new Map(rows.map((e: Event) => [e.id, e]));
+    } catch (err) {
+      console.error("[EventStore] hydrate failed:", err);
+      this.events = new Map();
+    }
+    this.hydrated = true;
+    this.hydrating = false;
+    this._loading = false;
+    this.rebuildCache();
+    this.emit();
   }
 
   private rebuildCache() {
@@ -106,32 +87,84 @@ class EventStore {
   }
 
   getById(id: string): Event | undefined {
-    return this.events.get(id);
+    const evt = this.events.get(id);
+    if (evt && !this.fullyLoaded.has(id) && !this.loadingFull.has(id)) {
+      this.loadingFull.add(id);
+      fetchEventFull(id)
+        .then((full) => {
+          if (full) {
+            this.events.set(id, full);
+            this.rebuildCache();
+            this.fullyLoaded.add(id);
+            this.emit();
+          }
+        })
+        .catch((err) => console.error("[EventStore] lazy load failed:", err))
+        .finally(() => this.loadingFull.delete(id));
+    }
+    return evt;
   }
 
-  create(data: Omit<Event, "id" | "createdAt" | "updatedAt">): Event {
-    const event: Event = {
-      ...data,
-      id: uuid(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+  async create(data: Omit<Event, "id" | "createdAt" | "updatedAt">): Promise<Event> {
+    const userId = await getUserId();
+    const event = await dbCreateEvent(data, userId);
     this.events.set(event.id, event);
-    this.persist();
+    this.rebuildCache();
+    this.emit();
     return event;
   }
 
-  update(id: string, partial: Partial<Event>): void {
+  async update(id: string, partial: Partial<Event>): Promise<void> {
     const existing = this.events.get(id);
     if (!existing) return;
+
+    // Optimistic local update
     const updated = { ...existing, ...partial, updatedAt: new Date().toISOString() };
     this.events.set(id, updated);
-    this.persist();
+    this.rebuildCache();
+    this.emit();
+
+    // Separate event-level fields from sub-entity fields
+    const eventFields: Record<string, any> = {};
+    const subEntityUpdates: [string, any][] = [];
+
+    for (const [key, value] of Object.entries(partial)) {
+      if (SUB_ENTITY_KEYS.has(key)) {
+        subEntityUpdates.push([key, value]);
+      } else {
+        eventFields[key] = value;
+      }
+    }
+
+    try {
+      // Update event-level fields
+      if (Object.keys(eventFields).length > 0) {
+        await updateEventFields(id, eventFields);
+      }
+
+      // Update sub-entities in parallel
+      await Promise.all(
+        subEntityUpdates.map(([key, value]) => {
+          const replacer = SUB_ENTITY_REPLACERS[key];
+          if (replacer) return replacer(id, value);
+          return Promise.resolve();
+        })
+      );
+    } catch (err) {
+      console.error("[EventStore] update failed:", err);
+      // Optimistic update stays in cache
+    }
   }
 
-  delete(id: string): void {
+  async delete(id: string): Promise<void> {
     this.events.delete(id);
-    this.persist();
+    this.rebuildCache();
+    this.emit();
+    try {
+      await dbDeleteEvent(id);
+    } catch (err) {
+      console.error("[EventStore] delete failed:", err);
+    }
   }
 
   subscribe(listener: Listener): () => void {
@@ -139,13 +172,7 @@ class EventStore {
     return () => this.listeners.delete(listener);
   }
 
-  private persist() {
-    if (typeof window === "undefined") return;
-    this.rebuildCache();
-    localStorage.setItem(
-      "eventspace-data",
-      JSON.stringify(Array.from(this.events.entries()))
-    );
+  private emit() {
     this.listeners.forEach((l) => l());
   }
 }

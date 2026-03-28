@@ -1,28 +1,46 @@
 "use client";
 
 import { PreferredVendor } from "./types";
+import {
+  getUserId,
+  fetchPreferredVendors,
+  createPreferredVendor as dbCreatePreferredVendor,
+  updatePreferredVendor as dbUpdatePreferredVendor,
+  deletePreferredVendor as dbDeletePreferredVendor,
+} from "@/lib/supabase/db";
 
 type Listener = () => void;
 
-const STORAGE_KEY = "eventspace-preferred-vendors";
 const EMPTY: PreferredVendor[] = [];
 
 class PreferredVendorStore {
   private vendors: PreferredVendor[] = [];
   private listeners = new Set<Listener>();
   private hydrated = false;
+  private hydrating = false;
+  private _loading = true;
 
-  hydrate() {
-    if (this.hydrated || typeof window === "undefined") return;
-    this.hydrated = true;
+  get isLoading(): boolean {
+    return this._loading;
+  }
+
+  async hydrate(): Promise<void> {
+    if (this.hydrated || this.hydrating) return;
+    this.hydrating = true;
+    if (typeof window === "undefined") {
+      this.hydrating = false;
+      return;
+    }
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        this.vendors = JSON.parse(raw);
-      }
-    } catch {
+      this.vendors = await fetchPreferredVendors();
+    } catch (err) {
+      console.error("[PreferredVendorStore] hydrate failed:", err);
       this.vendors = [];
     }
+    this.hydrated = true;
+    this.hydrating = false;
+    this._loading = false;
+    this.emit();
   }
 
   getSnapshot = (): PreferredVendor[] => {
@@ -33,24 +51,37 @@ class PreferredVendorStore {
     return EMPTY;
   };
 
-  add(vendor: PreferredVendor) {
+  async add(vendor: PreferredVendor): Promise<void> {
     this.vendors = [...this.vendors, vendor];
-    this.persist();
     this.emit();
+    try {
+      const userId = await getUserId();
+      await dbCreatePreferredVendor(vendor, userId);
+    } catch (err) {
+      console.error("[PreferredVendorStore] add failed:", err);
+    }
   }
 
-  update(id: string, partial: Partial<PreferredVendor>) {
+  async update(id: string, partial: Partial<PreferredVendor>): Promise<void> {
     this.vendors = this.vendors.map((v) =>
       v.id === id ? { ...v, ...partial } : v
     );
-    this.persist();
     this.emit();
+    try {
+      await dbUpdatePreferredVendor(id, partial);
+    } catch (err) {
+      console.error("[PreferredVendorStore] update failed:", err);
+    }
   }
 
-  remove(id: string) {
+  async remove(id: string): Promise<void> {
     this.vendors = this.vendors.filter((v) => v.id !== id);
-    this.persist();
     this.emit();
+    try {
+      await dbDeletePreferredVendor(id);
+    } catch (err) {
+      console.error("[PreferredVendorStore] remove failed:", err);
+    }
   }
 
   getById(id: string): PreferredVendor | undefined {
@@ -65,14 +96,9 @@ class PreferredVendorStore {
 
   subscribe = (listener: Listener): (() => void) => {
     this.listeners.add(listener);
-    if (!this.hydrated) this.hydrate();
+    if (!this.hydrated && !this.hydrating) this.hydrate();
     return () => this.listeners.delete(listener);
   };
-
-  private persist() {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.vendors));
-  }
 
   private emit() {
     this.listeners.forEach((l) => l());

@@ -89,7 +89,12 @@ function SignInForm() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-stone-600 mb-1.5">Password</label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-medium text-stone-600">Password</label>
+                <Link href="/forgot-password" className="text-xs text-rose-500 hover:text-rose-600">
+                  Forgot password?
+                </Link>
+              </div>
               <input
                 type="password"
                 required

@@ -1,8 +1,9 @@
+"use client";
+
 import { PlannerProfile } from "./types";
+import { fetchProfile, updateProfile as dbUpdateProfile } from "@/lib/supabase/db";
 
 type Listener = () => void;
-
-const STORAGE_KEY = "eventspace-planner-profile";
 
 const DEFAULT_PROFILE: PlannerProfile = {
   businessName: "",
@@ -19,19 +20,32 @@ class PlannerProfileStore {
   private profile: PlannerProfile = { ...DEFAULT_PROFILE };
   private listeners = new Set<Listener>();
   private hydrated = false;
+  private hydrating = false;
+  private _loading = true;
 
-  hydrate() {
-    if (this.hydrated || typeof window === "undefined") return;
-    this.hydrated = true;
+  get isLoading(): boolean {
+    return this._loading;
+  }
+
+  async hydrate(): Promise<void> {
+    if (this.hydrated || this.hydrating) return;
+    this.hydrating = true;
+    if (typeof window === "undefined") {
+      this.hydrating = false;
+      return;
+    }
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        this.profile = { ...DEFAULT_PROFILE, ...parsed };
+      const fetched = await fetchProfile();
+      if (fetched) {
+        this.profile = { ...DEFAULT_PROFILE, ...fetched };
       }
-    } catch {
+    } catch (err) {
+      console.error("[PlannerProfileStore] hydrate failed:", err);
       this.profile = { ...DEFAULT_PROFILE };
     }
+    this.hydrated = true;
+    this.hydrating = false;
+    this._loading = false;
     this.emit();
   }
 
@@ -39,22 +53,21 @@ class PlannerProfileStore {
     return this.profile;
   };
 
-  update(partial: Partial<PlannerProfile>) {
+  async update(partial: Partial<PlannerProfile>): Promise<void> {
     this.profile = { ...this.profile, ...partial };
-    this.persist();
     this.emit();
+    try {
+      await dbUpdateProfile(partial);
+    } catch (err) {
+      console.error("[PlannerProfileStore] update failed:", err);
+    }
   }
 
   subscribe = (listener: Listener): (() => void) => {
     this.listeners.add(listener);
-    if (!this.hydrated) this.hydrate();
+    if (!this.hydrated && !this.hydrating) this.hydrate();
     return () => this.listeners.delete(listener);
   };
-
-  private persist() {
-    if (typeof window === "undefined") return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(this.profile));
-  }
 
   private emit() {
     this.listeners.forEach((l) => l());

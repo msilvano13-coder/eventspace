@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore, useCallback, useRef } from "react";
+import { useSyncExternalStore, useCallback, useRef, useState, useEffect } from "react";
 import { store } from "@/lib/store";
 import { questionnaireStore } from "@/lib/questionnaire-store";
 import { plannerStore } from "@/lib/planner-store";
@@ -8,6 +8,49 @@ import { inquiryStore } from "@/lib/inquiry-store";
 import { preferredVendorStore } from "@/lib/preferred-vendor-store";
 import { contractTemplateStore } from "@/lib/contract-template-store";
 import { Event, Questionnaire, PlannerProfile, Inquiry, PreferredVendor, ContractTemplate } from "@/lib/types";
+
+// ── Loading hook ──
+// Returns true while any store is still fetching from Supabase
+
+export function useStoreLoading(): boolean {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const check = () => {
+      const anyLoading =
+        store.isLoading ||
+        plannerStore.isLoading ||
+        questionnaireStore.isLoading ||
+        inquiryStore.isLoading ||
+        preferredVendorStore.isLoading ||
+        contractTemplateStore.isLoading;
+      setLoading(anyLoading);
+    };
+    check();
+    // Re-check whenever any store emits
+    const unsubs = [
+      store.subscribe(check),
+      plannerStore.subscribe(check),
+      questionnaireStore.subscribe(check),
+      inquiryStore.subscribe(check),
+      preferredVendorStore.subscribe(check),
+      contractTemplateStore.subscribe(check),
+    ];
+    return () => unsubs.forEach((u) => u());
+  }, []);
+
+  return loading;
+}
+
+export function useEventsLoading(): boolean {
+  const [loading, setLoading] = useState(store.isLoading);
+  useEffect(() => {
+    const check = () => setLoading(store.isLoading);
+    check();
+    return store.subscribe(check);
+  }, []);
+  return loading;
+}
 
 function subscribeAndHydrate(cb: () => void) {
   store.hydrate();

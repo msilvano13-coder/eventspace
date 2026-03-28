@@ -1,7 +1,13 @@
 "use client";
 
 import { Questionnaire } from "./types";
-import { v4 as uuid } from "uuid";
+import {
+  getUserId,
+  fetchQuestionnaires,
+  createQuestionnaire as dbCreateQuestionnaire,
+  updateQuestionnaire as dbUpdateQuestionnaire,
+  deleteQuestionnaire as dbDeleteQuestionnaire,
+} from "@/lib/supabase/db";
 
 type Listener = () => void;
 
@@ -11,23 +17,33 @@ class QuestionnaireStore {
   private items: Map<string, Questionnaire> = new Map();
   private listeners: Set<Listener> = new Set();
   private hydrated = false;
+  private hydrating = false;
+  private _loading = true;
   private cachedAll: Questionnaire[] = EMPTY;
 
-  hydrate() {
-    if (this.hydrated) return;
-    this.hydrated = true;
-    if (typeof window === "undefined") return;
-    const saved = localStorage.getItem("eventspace-questionnaires");
-    if (saved) {
-      try {
-        const entries: [string, Questionnaire][] = JSON.parse(saved);
-        this.items = new Map(entries);
-      } catch {
-        this.items = new Map();
-      }
+  get isLoading(): boolean {
+    return this._loading;
+  }
+
+  async hydrate(): Promise<void> {
+    if (this.hydrated || this.hydrating) return;
+    this.hydrating = true;
+    if (typeof window === "undefined") {
+      this.hydrating = false;
+      return;
     }
+    try {
+      const rows = await fetchQuestionnaires();
+      this.items = new Map(rows.map((q: Questionnaire) => [q.id, q]));
+    } catch (err) {
+      console.error("[QuestionnaireStore] hydrate failed:", err);
+      this.items = new Map();
+    }
+    this.hydrated = true;
+    this.hydrating = false;
+    this._loading = false;
     this.rebuildCache();
-    this.listeners.forEach((l) => l());
+    this.emit();
   }
 
   private rebuildCache() {
@@ -48,29 +64,38 @@ class QuestionnaireStore {
     return this.items.get(id);
   }
 
-  create(data: Omit<Questionnaire, "id" | "createdAt" | "updatedAt">): Questionnaire {
-    const q: Questionnaire = {
-      ...data,
-      id: uuid(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+  async create(data: Omit<Questionnaire, "id" | "createdAt" | "updatedAt">): Promise<Questionnaire> {
+    const userId = await getUserId();
+    const q = await dbCreateQuestionnaire(data, userId);
     this.items.set(q.id, q);
-    this.persist();
+    this.rebuildCache();
+    this.emit();
     return q;
   }
 
-  update(id: string, partial: Partial<Questionnaire>): void {
+  async update(id: string, partial: Partial<Questionnaire>): Promise<void> {
     const existing = this.items.get(id);
     if (!existing) return;
     const updated = { ...existing, ...partial, updatedAt: new Date().toISOString() };
     this.items.set(id, updated);
-    this.persist();
+    this.rebuildCache();
+    this.emit();
+    try {
+      await dbUpdateQuestionnaire(id, partial);
+    } catch (err) {
+      console.error("[QuestionnaireStore] update failed:", err);
+    }
   }
 
-  delete(id: string): void {
+  async delete(id: string): Promise<void> {
     this.items.delete(id);
-    this.persist();
+    this.rebuildCache();
+    this.emit();
+    try {
+      await dbDeleteQuestionnaire(id);
+    } catch (err) {
+      console.error("[QuestionnaireStore] delete failed:", err);
+    }
   }
 
   subscribe(listener: Listener): () => void {
@@ -78,13 +103,7 @@ class QuestionnaireStore {
     return () => this.listeners.delete(listener);
   }
 
-  private persist() {
-    if (typeof window === "undefined") return;
-    this.rebuildCache();
-    localStorage.setItem(
-      "eventspace-questionnaires",
-      JSON.stringify(Array.from(this.items.entries()))
-    );
+  private emit() {
     this.listeners.forEach((l) => l());
   }
 }
