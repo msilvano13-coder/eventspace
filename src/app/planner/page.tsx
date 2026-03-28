@@ -279,33 +279,32 @@ export default function PlannerDashboard() {
                 <span>
                   {event.timeline.filter((t) => t.completed).length}/{event.timeline.length} to-dos · {(event.schedule ?? []).length} timeline moments
                 </span>
-                <ChevronRight
-                  size={14}
-                  className="group-hover:translate-x-1 transition-transform text-stone-300"
-                />
+                <div className="flex items-center gap-1">
+                  {tab === "active" ? (
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); archiveEvent(event.id); }}
+                      className="p-1.5 text-stone-300 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors sm:opacity-0 sm:group-hover:opacity-100"
+                      title="Archive event"
+                    >
+                      <Archive size={14} />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); restoreEvent(event.id); }}
+                      className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                      title="Restore event"
+                    >
+                      <RotateCcw size={14} />
+                    </button>
+                  )}
+                  <ChevronRight
+                    size={14}
+                    className="group-hover:translate-x-1 transition-transform text-stone-300"
+                  />
+                </div>
               </div>
             </Link>
 
-            {/* Archive / Restore button */}
-            <div className="absolute top-3 right-14">
-              {tab === "active" ? (
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); archiveEvent(event.id); }}
-                  className="p-1.5 text-stone-300 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-                  title="Archive event"
-                >
-                  <Archive size={14} />
-                </button>
-              ) : (
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); restoreEvent(event.id); }}
-                  className="p-1.5 text-stone-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                  title="Restore event"
-                >
-                  <RotateCcw size={14} />
-                </button>
-              )}
-            </div>
           </div>
         ))}
         {displayed.length === 0 && (

@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet, Settings, Inbox, BarChart3, Search, Heart, FileText, MoreHorizontal, X } from "lucide-react";
+import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet, Settings, Inbox, BarChart3, Search, Heart, FileText, MoreHorizontal, X, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 const navItems = [
   { href: "/planner", label: "Dashboard", icon: LayoutDashboard },
@@ -28,6 +30,14 @@ const mobileMoreItems = [
 export default function Sidebar() {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
+  const router = useRouter();
+
+  async function handleSignOut() {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/sign-in");
+    router.refresh();
+  }
 
   const moreActive = mobileMoreItems.some(
     (item) => pathname === item.href || pathname.startsWith(item.href + "/")
@@ -79,6 +89,13 @@ export default function Sidebar() {
             <Settings size={18} />
             Settings
           </Link>
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors text-stone-400 hover:text-red-600 hover:bg-red-50 w-full"
+          >
+            <LogOut size={18} />
+            Sign Out
+          </button>
         </div>
       </aside>
 
