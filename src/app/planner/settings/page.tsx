@@ -3,7 +3,7 @@
 import { usePlannerProfile, usePlannerProfileActions } from "@/hooks/useStore";
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Camera, Save, X, CreditCard, ExternalLink, CheckCircle2, Loader2, Mail, Shield, Calendar } from "lucide-react";
+import { Camera, Save, X, CreditCard, ExternalLink, CheckCircle2, Loader2, Mail, Shield, Calendar, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -24,6 +24,9 @@ function SettingsContent() {
   const searchParams = useSearchParams();
   const [showSuccess, setShowSuccess] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [cancelLoading, setCancelLoading] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelSuccess, setCancelSuccess] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string>("");
 
   useEffect(() => {
@@ -81,6 +84,23 @@ function SettingsContent() {
       alert("Something went wrong. Please try again.");
       setPortalLoading(false);
     }
+  }
+
+  async function handleCancelPlan() {
+    setCancelLoading(true);
+    try {
+      const res = await fetch("/api/stripe/cancel", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        setCancelSuccess(true);
+        setShowCancelConfirm(false);
+      } else {
+        alert(data.error || "Something went wrong");
+      }
+    } catch {
+      alert("Something went wrong. Please try again.");
+    }
+    setCancelLoading(false);
   }
 
   // Sync form when profile loads from localStorage
@@ -400,6 +420,65 @@ function SettingsContent() {
                 </button>
               )}
             </div>
+
+            {/* Cancel Plan */}
+            {showManageBilling && !cancelSuccess && (
+              <div className="border-t border-stone-100 pt-4">
+                {!showCancelConfirm ? (
+                  <button
+                    onClick={() => setShowCancelConfirm(true)}
+                    className="text-xs text-stone-400 hover:text-red-500 transition-colors"
+                  >
+                    Cancel plan
+                  </button>
+                ) : (
+                  <div className="p-4 bg-red-50 rounded-xl space-y-3">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle size={16} className="text-red-500 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-red-700">Are you sure you want to cancel?</p>
+                        <p className="text-xs text-red-600 mt-1">
+                          {profile.plan === "professional"
+                            ? "Your subscription will remain active until the end of your current billing period, then your account will be downgraded."
+                            : "Your plan will be downgraded and you'll lose access to paid features."}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleCancelPlan}
+                        disabled={cancelLoading}
+                        className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-xl text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+                      >
+                        {cancelLoading ? (
+                          <>
+                            <Loader2 size={12} className="animate-spin" />
+                            Cancelling...
+                          </>
+                        ) : (
+                          "Yes, cancel my plan"
+                        )}
+                      </button>
+                      <button
+                        onClick={() => setShowCancelConfirm(false)}
+                        className="px-4 py-2 rounded-xl text-xs font-medium text-stone-600 hover:bg-stone-100 transition-colors"
+                      >
+                        Keep my plan
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {cancelSuccess && (
+              <div className="border-t border-stone-100 pt-4">
+                <div className="flex items-center gap-2 bg-amber-50 text-amber-700 px-4 py-3 rounded-xl text-sm font-medium">
+                  <CheckCircle2 size={16} />
+                  Your plan has been cancelled. You&apos;ll have access until the end of your billing period.
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
