@@ -97,12 +97,7 @@ export default function PlannerDashboard() {
             <Plus size={16} />
             New Event
           </button>
-        ) : profile.plan === "diy" ? (
-          <span className="flex items-center gap-2 bg-stone-100 text-stone-400 px-4 py-2.5 rounded-xl text-sm font-medium">
-            <Lock size={16} />
-            1 Event Limit (DIY)
-          </span>
-        ) : (
+        ) : profile.plan === "trial" ? (
           <Link
             href="/planner/upgrade"
             className="flex items-center gap-2 bg-stone-200 text-stone-500 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
@@ -110,7 +105,7 @@ export default function PlannerDashboard() {
             <Lock size={16} />
             Upgrade for More Events
           </Link>
-        )}
+        ) : null}
       </div>
 
       {/* Tabs */}
