@@ -5,7 +5,8 @@
 EventSpace is a SaaS web app for wedding/event planners to manage events, clients, vendors, budgets, floor plans, and more. Clients get a branded portal to collaborate on their event details.
 
 **Repo:** `github.com/msilvano13-coder/eventspace`
-**Stack:** Next.js 14 (App Router) · TypeScript · Tailwind CSS · Fabric.js · localStorage
+**Live:** `eventspace-nine.vercel.app`
+**Stack:** Next.js 14 (App Router) · TypeScript · Tailwind CSS · Fabric.js · jsPDF · localStorage
 
 ---
 
@@ -30,6 +31,7 @@ No `.env` file needed — all data lives in browser localStorage.
 | Language | TypeScript 5 |
 | Styling | Tailwind CSS 3.4 + custom config |
 | Canvas | Fabric.js 6.9 (floor plan editor) |
+| PDF | jsPDF (client-side PDF generation) |
 | Icons | Lucide React 1.7 |
 | State | localStorage + `useSyncExternalStore` |
 | Fonts | Playfair Display (headings) + Inter (body) |
@@ -58,8 +60,9 @@ src/
 │   │   ├── directory/page.tsx             # Vendor directory (contact + events)
 │   │   ├── settings/page.tsx              # Planner profile & branding
 │   │   └── [eventId]/
-│   │       ├── page.tsx                   # Event detail (all sections in tabs)
-│   │       ├── timeline/page.tsx          # To-do checklist
+│   │       ├── page.tsx                   # Event detail (all sections)
+│   │       ├── moodboard/page.tsx         # Pinterest-style mood board
+│   │       ├── timeline/page.tsx          # Day-of timeline
 │   │       ├── guests/page.tsx            # Guest list, RSVP, seating
 │   │       ├── invoices/page.tsx          # Invoice CRUD
 │   │       ├── files/page.tsx             # File sharing
@@ -91,6 +94,7 @@ src/
     ├── questionnaire-store.ts             # QuestionnaireStore
     ├── planner-store.ts                   # PlannerProfileStore
     ├── inquiry-store.ts                   # InquiryStore
+    ├── export-pdf.ts                      # PDF export (event summary generator)
     └── seed-data.ts                       # 3 demo events
 ```
 
@@ -118,6 +122,7 @@ src/
 | **BudgetItem** | Category allocation — spent derived from vendors |
 | **Invoice** | Line items, status (draft/sent/paid), due date |
 | **Expense** | Planner business expenses (for taxes) |
+| **MoodBoardImage** | Base64 image, caption, timestamp |
 | **TimelineItem** | To-do checklist with due dates |
 | **ScheduleItem** | Day-of timeline (time + title) |
 | **Message** | Planner ↔ client chat thread |
@@ -176,8 +181,22 @@ All 7 nav items + Settings at bottom.
 - Furniture palette with 25+ items (tables, chairs, stages, bars, etc.)
 - Room shape presets (Rectangle, L-Shape, T-Shape, Ballroom, Gallery)
 - Properties panel for editing selected objects
-- Seating panel for table/guest assignment
+- Seating panel for table/guest assignment (mobile: full-screen overlay; desktop: side panel)
 - Canvas state serialized to JSON in `event.floorPlans[].json`
+
+### Mood Board (`/planner/[eventId]/moodboard`)
+- Pinterest-style masonry grid (2-col mobile, 3-col tablet, 4-col desktop)
+- Image upload via base64 data URLs (2MB per image limit)
+- Editable captions with hover-to-reveal UI
+- Delete with hover X button
+- Also visible (read-only) in client portal
+
+### PDF Export (`lib/export-pdf.ts`)
+- Client-side PDF generation using jsPDF
+- "Export PDF" button on event detail page header
+- Includes: event details, client info, guest summary, vendors, budget, to-do list, day-of schedule, color palette
+- Uses planner business name for "Prepared by" line
+- Auto-paginated with page numbers and footer
 
 ### Budget ↔ Vendor Integration
 - Client creates budget categories with allocated amounts
@@ -189,6 +208,7 @@ All 7 nav items + Settings at bottom.
 ### Client Portal (`/client/[eventId]`)
 - Branded with planner's logo, business name, brand color
 - Clients can view/edit: questionnaires, color palette, guest RSVPs, budget, floor plans, messages
+- Mood board visible when images exist
 - Shareable link — no auth required
 
 ### Reports (`/planner/reports`)
@@ -196,6 +216,23 @@ All 7 nav items + Settings at bottom.
 - Events by status (stacked bar + breakdown)
 - Busiest months (12-month bar chart)
 - Summary cards: Total Invoiced, Collected, Expenses, Avg/Event
+
+---
+
+## Event Detail Page Layout
+
+The event detail page (`/planner/[eventId]`) uses a sectioned layout:
+
+1. **Header** — Event name, date, venue, edit button, Export PDF, Copy Client Link
+2. **Quick Actions** — 6-card grid: Floor Plan, Files, Timeline, Invoices, Guests, Mood Board
+3. **Client Details** — Name + email (editable)
+4. **Color Palette + To Do List** — Side-by-side 2-column grid on desktop
+5. **Questionnaires** — Assigned templates with completion tracking
+6. **Vendors** — Full vendor management with payment schedules
+7. **Client Budget** — Category allocations with auto-derived vendor totals
+8. **Expenses** — Business expense tracking (visually separated from budget)
+9. **Messages** — Planner ↔ client chat thread
+10. **Danger Zone** — Delete Event (separated with divider)
 
 ---
 
@@ -219,23 +256,29 @@ Custom Tailwind shadows in `tailwind.config.ts`:
 |------|--------------|-------------|
 | **Auth** | None — open access | Add Clerk/NextAuth for planner login + client invite links |
 | **Storage** | localStorage only | Migrate to Supabase/Postgres for persistence |
-| **File uploads** | Base64 data URLs (logo), URL strings (files) | Cloud storage (S3/Cloudflare R2) |
+| **File uploads** | Base64 data URLs (logo, mood board) | Cloud storage (S3/Cloudflare R2) |
+| **Mood board** | Base64 in localStorage | Could get large with many images; consider cloud storage |
 | **Floor plans** | Canvas JSON in localStorage | Could get large; consider separate storage |
 | **Client portal** | No auth gate | Magic links or password protection |
 | **Real-time** | No sync between tabs/devices | WebSocket or polling for multi-user |
 | **Email** | Not implemented | Send invoices, questionnaire links, reminders |
 | **Search** | Basic text filtering on some pages | Full-text search across events |
-| **Dev warning** | `getServerSnapshot` React warning on inquiries page | Cosmetic only, dev-mode strict mode artifact |
 
 ---
 
 ## Deployment
 
-**Current:** Pushed to GitHub at `msilvano13-coder/eventspace`
+**Live:** `eventspace-nine.vercel.app`
+**Repo:** `github.com/msilvano13-coder/eventspace`
+**Host:** Vercel (zero-config for Next.js)
 
-**Recommended:** Vercel (zero-config for Next.js)
-1. Connect repo at vercel.com
-2. Auto-detects Next.js — deploy with defaults
-3. No environment variables needed
+To redeploy:
+```bash
+vercel --prod
+```
 
-**Build:** `npm run build` passes cleanly. Output is static + dynamic pages (~90-113KB first-load JS).
+Or push to `main` — Vercel auto-deploys on push if Git integration is connected.
+
+No environment variables needed.
+
+**Build:** `npm run build` passes cleanly. Output is static + dynamic pages (~88-143KB first-load JS).
