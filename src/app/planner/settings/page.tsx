@@ -1,12 +1,21 @@
 "use client";
 
 import { usePlannerProfile, usePlannerProfileActions } from "@/hooks/useStore";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Camera, Save, X, CreditCard, ExternalLink, CheckCircle2, Loader2 } from "lucide-react";
+import { Camera, Save, X, CreditCard, ExternalLink, CheckCircle2, Loader2, Mail, Shield, Calendar } from "lucide-react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SettingsPage() {
+  return (
+    <Suspense>
+      <SettingsContent />
+    </Suspense>
+  );
+}
+
+function SettingsContent() {
   const profile = usePlannerProfile();
   const { updateProfile } = usePlannerProfileActions();
   const [form, setForm] = useState(profile);
@@ -15,6 +24,14 @@ export default function SettingsPage() {
   const searchParams = useSearchParams();
   const [showSuccess, setShowSuccess] = useState(false);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [accountEmail, setAccountEmail] = useState<string>("");
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user?.email) setAccountEmail(data.user.email);
+    });
+  }, []);
 
   // Show success message after Stripe checkout redirect
   useEffect(() => {
@@ -278,11 +295,11 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Billing & Plan */}
+        {/* Account & Billing */}
         <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft">
           <h2 className="font-heading font-semibold text-stone-800 mb-4 flex items-center gap-2">
             <CreditCard size={16} className="text-stone-400" />
-            Billing & Plan
+            Account & Billing
           </h2>
 
           {showSuccess && (
@@ -292,41 +309,74 @@ export default function SettingsPage() {
             </div>
           )}
 
-          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-            <div className="flex-1">
-              <p className="text-sm text-stone-600">
-                Current plan:{" "}
-                <span className="font-semibold text-stone-900">
-                  {planLabel}
-                </span>
-              </p>
-              {profile.plan === "trial" && trialDaysLeft > 0 && (
-                <p className="text-xs text-stone-400 mt-1">
-                  <span className="text-rose-500 font-medium">
-                    {trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""}
-                  </span>{" "}
-                  remaining on your trial
-                </p>
-              )}
-              {profile.plan === "trial" && trialDaysLeft <= 0 && (
-                <p className="text-xs text-rose-500 font-medium mt-1">
-                  Your trial has expired
-                </p>
-              )}
-              {profile.plan === "expired" && (
-                <p className="text-xs text-rose-500 font-medium mt-1">
-                  Upgrade to regain access
-                </p>
-              )}
+          <div className="space-y-4">
+            {/* Account Email */}
+            <div className="flex items-start gap-3 p-3 bg-stone-50 rounded-xl">
+              <Mail size={16} className="text-stone-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-xs font-medium text-stone-500">Account Email</p>
+                <p className="text-sm text-stone-800">{accountEmail || "Loading..."}</p>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            {/* Current Plan */}
+            <div className="flex items-start gap-3 p-3 bg-stone-50 rounded-xl">
+              <Shield size={16} className="text-stone-400 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-xs font-medium text-stone-500">Current Plan</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-sm font-semibold text-stone-800">{planLabel}</span>
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                    profile.plan === "professional"
+                      ? "bg-rose-100 text-rose-600"
+                      : profile.plan === "diy"
+                        ? "bg-amber-100 text-amber-600"
+                        : profile.plan === "trial"
+                          ? "bg-blue-100 text-blue-600"
+                          : "bg-red-100 text-red-600"
+                  }`}>
+                    {profile.plan === "professional" ? "Pro" : profile.plan === "diy" ? "DIY" : profile.plan === "trial" ? "Free Trial" : "Expired"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Trial / Expiry Info */}
+            {profile.plan === "trial" && (
+              <div className="flex items-start gap-3 p-3 bg-stone-50 rounded-xl">
+                <Calendar size={16} className="text-stone-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-medium text-stone-500">Trial Status</p>
+                  {trialDaysLeft > 0 ? (
+                    <p className="text-sm text-stone-800">
+                      <span className="text-rose-500 font-semibold">{trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""}</span> remaining
+                      {profile.trialEndsAt && (
+                        <span className="text-stone-400 text-xs ml-2">
+                          (expires {new Date(profile.trialEndsAt).toLocaleDateString()})
+                        </span>
+                      )}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-rose-500 font-medium">Your trial has expired</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {profile.plan === "expired" && (
+              <div className="p-3 bg-red-50 rounded-xl">
+                <p className="text-sm text-red-600 font-medium">Your trial has expired. Upgrade to continue using EventSpace.</p>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-2 pt-2">
               {showUpgrade && (
                 <Link
                   href="/planner/upgrade"
-                  className="flex items-center gap-2 bg-rose-400 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-rose-500 transition-colors"
+                  className="flex items-center gap-2 bg-rose-400 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-rose-500 transition-colors"
                 >
-                  Upgrade
+                  Upgrade Plan
                   <ExternalLink size={12} />
                 </Link>
               )}
@@ -334,7 +384,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleManageBilling}
                   disabled={portalLoading}
-                  className="flex items-center gap-2 bg-stone-100 text-stone-700 px-4 py-2 rounded-xl text-sm font-medium hover:bg-stone-200 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 bg-stone-100 text-stone-700 px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-stone-200 transition-colors disabled:opacity-50"
                 >
                   {portalLoading ? (
                     <>
