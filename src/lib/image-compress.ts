@@ -64,6 +64,81 @@ export function compressImage(file: File): Promise<CompressedImage> {
   });
 }
 
+interface CompressedImageBlob {
+  full: Blob;   // max 1200px wide, JPEG 0.7
+  thumb: Blob;  // max 400px wide, JPEG 0.6
+}
+
+function resizeToBlob(
+  img: HTMLImageElement,
+  maxWidth: number,
+  quality: number
+): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    let { width, height } = img;
+
+    if (width > maxWidth) {
+      height = Math.round((height * maxWidth) / width);
+      width = maxWidth;
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) {
+      reject(new Error("Could not get canvas context"));
+      return;
+    }
+
+    // Use better quality resampling
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(img, 0, 0, width, height);
+
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("Canvas toBlob returned null"));
+        }
+      },
+      "image/jpeg",
+      quality
+    );
+  });
+}
+
+export function compressImageToBlob(file: File): Promise<CompressedImageBlob> {
+  return new Promise((resolve, reject) => {
+    // Hard limit: skip files over 10MB even before processing
+    if (file.size > 10 * 1024 * 1024) {
+      reject(new Error("File too large (max 10MB)"));
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read file"));
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Failed to load image"));
+      img.onload = async () => {
+        try {
+          const full = await resizeToBlob(img, 1200, 0.7);
+          const thumb = await resizeToBlob(img, 400, 0.6);
+          resolve({ full, thumb });
+        } catch (err) {
+          reject(err);
+        }
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 /**
  * Estimate the byte size of a base64 data URL string.
  * Useful for showing users how much storage each image consumes.

@@ -4,9 +4,11 @@ import { usePlannerProfile, usePlannerProfileActions } from "@/hooks/useStore";
 import { plannerStore } from "@/lib/planner-store";
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Camera, Save, X, CreditCard, ExternalLink, CheckCircle2, Loader2, Mail, Shield, Calendar, AlertTriangle } from "lucide-react";
+import { Camera, Save, X, CreditCard, ExternalLink, CheckCircle2, Loader2, Mail, Shield, Calendar, AlertTriangle, Trash2, ShieldOff } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { uploadToStorage, getPublicUrl, deleteFromStorage } from "@/lib/supabase/storage";
+import { getUserId } from "@/lib/supabase/db";
 
 export default function SettingsPage() {
   return (
@@ -29,6 +31,9 @@ function SettingsContent() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelSuccess, setCancelSuccess] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string>("");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
@@ -125,23 +130,60 @@ function SettingsContent() {
     setTimeout(() => setSaved(false), 2000);
   }
 
-  function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 500_000) {
       alert("Logo must be under 500KB");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const dataUrl = reader.result as string;
-      setForm({ ...form, logoUrl: dataUrl });
-    };
-    reader.readAsDataURL(file);
+    try {
+      const userId = await getUserId();
+      const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+      const path = `${userId}/logo.${ext}`;
+      await uploadToStorage("brand-assets", path, file);
+      const publicUrl = getPublicUrl("brand-assets", path);
+      setForm({ ...form, logoUrl: publicUrl });
+    } catch (err) {
+      console.error("Logo upload failed:", err);
+      alert("Failed to upload logo. Please try again.");
+    }
   }
 
-  function removeLogo() {
+  async function removeLogo() {
+    // Try to delete from storage if it's a storage URL
+    if (form.logoUrl && !form.logoUrl.startsWith("data:")) {
+      try {
+        const userId = await getUserId();
+        // Try common extensions
+        for (const ext of ["png", "jpg", "jpeg", "webp"]) {
+          deleteFromStorage("brand-assets", `${userId}/logo.${ext}`).catch(() => {});
+        }
+      } catch {
+        // Ignore cleanup errors
+      }
+    }
     setForm({ ...form, logoUrl: "" });
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteConfirmText !== "DELETE") return;
+    setDeleteLoading(true);
+    try {
+      const res = await fetch("/api/account/delete", { method: "POST" });
+      const data = await res.json();
+      if (data.success) {
+        // Sign out and redirect to home
+        const supabase = createClient();
+        await supabase.auth.signOut();
+        window.location.href = "/";
+      } else {
+        alert(data.error || "Failed to delete account. Please contact support.");
+      }
+    } catch {
+      alert("Something went wrong. Please contact support.");
+    }
+    setDeleteLoading(false);
   }
 
   return (
@@ -488,6 +530,91 @@ function SettingsContent() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Privacy & Data */}
+        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft">
+          <h2 className="font-heading font-semibold text-stone-800 mb-4 flex items-center gap-2">
+            <ShieldOff size={16} className="text-stone-400" />
+            Privacy & Data
+          </h2>
+
+          <div className="space-y-4">
+            <div className="p-3 bg-stone-50 rounded-xl">
+              <p className="text-sm font-medium text-stone-700">Do Not Sell My Information</p>
+              <p className="text-xs text-stone-400 mt-1">
+                EventSpace does not sell, rent, or trade your personal information to third parties. Your data is only used to provide the service.
+              </p>
+            </div>
+
+            <div className="border-t border-stone-100 pt-4">
+              <p className="text-sm font-medium text-stone-700">Delete My Account & Data</p>
+              <p className="text-xs text-stone-400 mt-1 mb-3">
+                Permanently delete your account and all associated data including events, guests, vendors, files, and billing information. This action cannot be undone.
+              </p>
+
+              {!showDeleteConfirm ? (
+                <button
+                  onClick={() => setShowDeleteConfirm(true)}
+                  className="flex items-center gap-2 text-xs text-stone-400 hover:text-red-500 transition-colors"
+                >
+                  <Trash2 size={12} />
+                  Delete my account
+                </button>
+              ) : (
+                <div className="p-4 bg-red-50 rounded-xl space-y-3">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle size={16} className="text-red-500 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-sm font-medium text-red-700">This is permanent and irreversible</p>
+                      <p className="text-xs text-red-600 mt-1">
+                        All your events, client data, contracts, files, and account information will be permanently deleted. Any active subscriptions will be cancelled.
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-red-600 mb-1">
+                      Type DELETE to confirm
+                    </label>
+                    <input
+                      value={deleteConfirmText}
+                      onChange={(e) => setDeleteConfirmText(e.target.value)}
+                      placeholder="DELETE"
+                      className="w-full border border-red-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-red-400/30 focus:border-red-400 outline-none"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleDeleteAccount}
+                      disabled={deleteLoading || deleteConfirmText !== "DELETE"}
+                      className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-xl text-xs font-medium hover:bg-red-600 transition-colors disabled:opacity-50"
+                    >
+                      {deleteLoading ? (
+                        <>
+                          <Loader2 size={12} className="animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 size={12} />
+                          Permanently delete my account
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowDeleteConfirm(false);
+                        setDeleteConfirmText("");
+                      }}
+                      className="px-4 py-2 rounded-xl text-xs font-medium text-stone-600 hover:bg-stone-100 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

@@ -3,14 +3,16 @@
 import { useEvent, useStoreActions, useContractTemplates } from "@/hooks/useStore";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import SignaturePad from "@/components/ui/SignaturePad";
 import {
   ArrowLeft, FileText, Plus, Download, Trash2, Upload, X, Check,
   UserCheck, Building2, PenTool,
 } from "lucide-react";
-import { readPdfAsBase64, downloadBase64File, formatBytes, PDF_MAX_SIZE } from "@/lib/pdf-utils";
+import { downloadBase64File, formatBytes, PDF_MAX_SIZE, validatePdfFile, downloadFromUrl } from "@/lib/pdf-utils";
+import { uploadToStorage, getSignedUrl, deleteFromStorage, uploadBase64ToStorage } from "@/lib/supabase/storage";
+import { getUserId } from "@/lib/supabase/db";
 import type { EventContract } from "@/lib/types";
 
 export default function EventContractsPage() {
@@ -23,12 +25,38 @@ export default function EventContractsPage() {
   const [selectedVendorId, setSelectedVendorId] = useState<string>("");
   const [uploadMode, setUploadMode] = useState(false);
   const [uploadName, setUploadName] = useState("");
-  const [uploadFile, setUploadFile] = useState<{ dataUrl: string; fileName: string; fileSize: number } | null>(null);
+  const [uploadFile, setUploadFile] = useState<{ file: File; fileName: string; fileSize: number } | null>(null);
   const [uploadError, setUploadError] = useState("");
   const [toast, setToast] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [signingContractId, setSigningContractId] = useState<string | null>(null);
   const toastTimeout = useRef<ReturnType<typeof setTimeout>>();
+  const [sigUrls, setSigUrls] = useState<Record<string, string>>({});
+
+  // Fetch signed URLs for signatures stored in Supabase Storage
+  useEffect(() => {
+    if (!event) return;
+    const contracts = event.contracts ?? [];
+    let cancelled = false;
+    async function fetchSigUrls() {
+      const urls: Record<string, string> = {};
+      for (const c of contracts) {
+        if (c.storagePlannerSig) {
+          try {
+            urls[`${c.id}-planner`] = await getSignedUrl("event-files", c.storagePlannerSig);
+          } catch { /* ignore */ }
+        }
+        if (c.storageClientSig) {
+          try {
+            urls[`${c.id}-client`] = await getSignedUrl("event-files", c.storageClientSig);
+          } catch { /* ignore */ }
+        }
+      }
+      if (!cancelled) setSigUrls(urls);
+    }
+    fetchSigUrls();
+    return () => { cancelled = true; };
+  }, [event]);
 
   const showToast = useCallback((msg: string) => {
     setToast(msg);
@@ -81,6 +109,10 @@ export default function EventContractsPage() {
       clientSignature: null,
       clientSignedAt: null,
       clientSignedName: null,
+      storagePath: null,
+      storageSignedPath: null,
+      storagePlannerSig: null,
+      storageClientSig: null,
       ...overrides,
     };
   }
@@ -104,49 +136,90 @@ export default function EventContractsPage() {
   async function handleUploadFile(file: File) {
     setUploadError("");
     try {
-      const result = await readPdfAsBase64(file);
-      setUploadFile(result);
+      validatePdfFile(file);
+      setUploadFile({ file, fileName: file.name, fileSize: file.size });
       if (!uploadName) setUploadName(file.name.replace(/\.pdf$/i, ""));
     } catch (err: unknown) {
       setUploadError(err instanceof Error ? err.message : "Failed to read file.");
     }
   }
 
-  function saveUpload() {
+  async function saveUpload() {
     if (!uploadFile || !uploadName.trim()) return;
     const vendor = vendors.find((v) => v.id === selectedVendorId);
-    const contract = makeContract({
-      name: uploadName.trim(),
-      fileData: uploadFile.dataUrl,
-      fileName: uploadFile.fileName,
-      fileSize: uploadFile.fileSize,
-    });
-    updateEvent(event!.id, { contracts: [...contracts, contract] });
-    showToast(`Added "${uploadName}"${vendor ? ` for ${vendor.name}` : ""}`);
-    resetModal();
+    const contractId = crypto.randomUUID();
+    try {
+      const userId = await getUserId();
+      const storagePath = await uploadToStorage(
+        "event-files",
+        `${userId}/${eventId}/contracts/${contractId}/original.pdf`,
+        uploadFile.file
+      );
+      const contract = makeContract({
+        id: contractId,
+        name: uploadName.trim(),
+        fileData: "",
+        fileName: uploadFile.fileName,
+        fileSize: uploadFile.fileSize,
+        storagePath,
+      });
+      updateEvent(event!.id, { contracts: [...contracts, contract] });
+      showToast(`Added "${uploadName}"${vendor ? ` for ${vendor.name}` : ""}`);
+      resetModal();
+    } catch (err: unknown) {
+      setUploadError(err instanceof Error ? err.message : "Upload failed.");
+    }
   }
 
   function removeContract(contractId: string) {
+    const contract = contracts.find((c) => c.id === contractId);
+    if (contract) {
+      if (contract.storagePath) deleteFromStorage("event-files", contract.storagePath).catch(console.error);
+      if (contract.storageSignedPath) deleteFromStorage("event-files", contract.storageSignedPath).catch(console.error);
+      if (contract.storagePlannerSig) deleteFromStorage("event-files", contract.storagePlannerSig).catch(console.error);
+      if (contract.storageClientSig) deleteFromStorage("event-files", contract.storageClientSig).catch(console.error);
+    }
     updateEvent(event!.id, { contracts: contracts.filter((c) => c.id !== contractId) });
     showToast("Contract removed");
   }
 
-  function handlePlannerSign(signature: string, signedName: string) {
+  async function handlePlannerSign(signature: string, signedName: string) {
     if (!signingContractId) return;
-    const updated = contracts.map((c) =>
-      c.id === signingContractId
-        ? { ...c, plannerSignature: signature, plannerSignedAt: new Date().toISOString(), plannerSignedName: signedName }
-        : c
-    );
-    updateEvent(event!.id, { contracts: updated });
-    showToast("Planner signature applied");
+    try {
+      const userId = await getUserId();
+      const path = await uploadBase64ToStorage(
+        "event-files",
+        `${userId}/${eventId}/contracts/${signingContractId}/planner_sig.png`,
+        signature
+      );
+      const updated = contracts.map((c) =>
+        c.id === signingContractId
+          ? { ...c, plannerSignature: "", plannerSignedAt: new Date().toISOString(), plannerSignedName: signedName, storagePlannerSig: path }
+          : c
+      );
+      updateEvent(event!.id, { contracts: updated });
+      showToast("Planner signature applied");
+    } catch {
+      // Fallback: store base64 directly if Storage upload fails
+      const updated = contracts.map((c) =>
+        c.id === signingContractId
+          ? { ...c, plannerSignature: signature, plannerSignedAt: new Date().toISOString(), plannerSignedName: signedName }
+          : c
+      );
+      updateEvent(event!.id, { contracts: updated });
+      showToast("Planner signature applied (stored locally)");
+    }
     setSigningContractId(null);
   }
 
   function removePlannerSignature(contractId: string) {
+    const contract = contracts.find((c) => c.id === contractId);
+    if (contract?.storagePlannerSig) {
+      deleteFromStorage("event-files", contract.storagePlannerSig).catch(console.error);
+    }
     const updated = contracts.map((c) =>
       c.id === contractId
-        ? { ...c, plannerSignature: null, plannerSignedAt: null, plannerSignedName: null }
+        ? { ...c, plannerSignature: null, plannerSignedAt: null, plannerSignedName: null, storagePlannerSig: null }
         : c
     );
     updateEvent(event!.id, { contracts: updated });
@@ -154,8 +227,8 @@ export default function EventContractsPage() {
   }
 
   function getSignatureStatus(contract: EventContract) {
-    const plannerSigned = !!contract.plannerSignature;
-    const clientSigned = !!contract.clientSignature;
+    const plannerSigned = !!contract.storagePlannerSig || !!contract.plannerSignature;
+    const clientSigned = !!contract.storageClientSig || !!contract.clientSignature;
     if (plannerSigned && clientSigned) return "fully-signed";
     if (plannerSigned || clientSigned) return "partially-signed";
     return "unsigned";
@@ -181,7 +254,7 @@ export default function EventContractsPage() {
               )}
               {status === "partially-signed" && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 font-medium flex items-center gap-1">
-                  <PenTool size={10} /> Awaiting {!contract.plannerSignature ? "Planner" : "Client"}
+                  <PenTool size={10} /> Awaiting {!(contract.storagePlannerSig || contract.plannerSignature) ? "Planner" : "Client"}
                 </span>
               )}
               {status === "unsigned" && (
@@ -198,15 +271,37 @@ export default function EventContractsPage() {
           </div>
           <div className="flex items-center gap-1">
             <button
-              onClick={() => downloadBase64File(contract.fileData, contract.fileName)}
+              onClick={async () => {
+                if (contract.storagePath) {
+                  try {
+                    const url = await getSignedUrl("event-files", contract.storagePath);
+                    downloadFromUrl(url, contract.fileName);
+                  } catch {
+                    showToast("Download failed");
+                  }
+                } else {
+                  downloadBase64File(contract.fileData, contract.fileName);
+                }
+              }}
               className="p-1.5 text-stone-400 hover:text-teal-500 hover:bg-teal-50 rounded-lg transition-colors"
               title="Download"
             >
               <Download size={14} />
             </button>
-            {contract.signedFileData && contract.signedFileName && (
+            {(contract.storageSignedPath || (contract.signedFileData && contract.signedFileName)) && (
               <button
-                onClick={() => downloadBase64File(contract.signedFileData!, contract.signedFileName!)}
+                onClick={async () => {
+                  if (contract.storageSignedPath) {
+                    try {
+                      const url = await getSignedUrl("event-files", contract.storageSignedPath);
+                      downloadFromUrl(url, contract.signedFileName || "signed-contract.pdf");
+                    } catch {
+                      showToast("Download failed");
+                    }
+                  } else if (contract.signedFileData && contract.signedFileName) {
+                    downloadBase64File(contract.signedFileData, contract.signedFileName);
+                  }
+                }}
                 className="p-1.5 text-emerald-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
                 title="Download signed copy"
               >
@@ -229,11 +324,11 @@ export default function EventContractsPage() {
             {/* Planner signature */}
             <div className="rounded-lg border border-stone-200 bg-white p-3">
               <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium mb-2">Planner</p>
-              {contract.plannerSignature ? (
+              {(contract.storagePlannerSig || contract.plannerSignature) ? (
                 <div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={contract.plannerSignature}
+                    src={sigUrls[`${contract.id}-planner`] || contract.plannerSignature || ""}
                     alt="Planner signature"
                     className="h-12 object-contain mb-1.5"
                   />
@@ -262,11 +357,11 @@ export default function EventContractsPage() {
             {/* Client signature */}
             <div className="rounded-lg border border-stone-200 bg-white p-3">
               <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium mb-2">Client</p>
-              {contract.clientSignature ? (
+              {(contract.storageClientSig || contract.clientSignature) ? (
                 <div>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={contract.clientSignature}
+                    src={sigUrls[`${contract.id}-client`] || contract.clientSignature || ""}
                     alt="Client signature"
                     className="h-12 object-contain mb-1.5"
                   />

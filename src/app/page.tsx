@@ -567,6 +567,7 @@ export default function HomePage() {
               <ul className="space-y-2 text-sm">
                 <li><Link href="/sign-in" className="hover:text-white transition-colors">Sign In</Link></li>
                 <li><Link href="/sign-up" className="hover:text-white transition-colors">Get Started</Link></li>
+                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
               </ul>
             </div>
           </div>
@@ -574,8 +575,8 @@ export default function HomePage() {
           <div className="mt-12 pt-8 border-t border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
             <p>&copy; {new Date().getFullYear()} EventSpace. All rights reserved.</p>
             <div className="flex gap-6">
-              <span className="hover:text-white transition-colors cursor-default">Privacy</span>
-              <span className="hover:text-white transition-colors cursor-default">Terms</span>
+              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
             </div>
           </div>
         </div>

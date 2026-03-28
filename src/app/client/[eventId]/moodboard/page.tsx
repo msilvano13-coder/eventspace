@@ -50,6 +50,8 @@ export default function ClientMoodBoardPage() {
           thumb,
           caption: fileArr[i].name.replace(/\.[^.]+$/, ""),
           addedAt: new Date().toISOString(),
+          storagePath: null,
+          storageThumb: null,
         };
         currentImages = [...currentImages, newImg];
         updateEvent(eventId, { moodBoard: currentImages });

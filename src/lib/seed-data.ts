@@ -23,6 +23,7 @@ export function getSeedData(): Event[] {
           name: "Wedding Contract.pdf",
           type: "contract",
           url: "#",
+          storagePath: null,
           uploadedAt: "2026-01-10T00:00:00Z",
         },
         {
@@ -30,6 +31,7 @@ export function getSeedData(): Event[] {
           name: "Mood Board - Rustic Elegance.jpg",
           type: "moodboard",
           url: "#",
+          storagePath: null,
           uploadedAt: "2026-01-15T00:00:00Z",
         },
       ],
@@ -137,6 +139,7 @@ export function getSeedData(): Event[] {
           name: "Anniversary Photos.zip",
           type: "photo",
           url: "#",
+          storagePath: null,
           uploadedAt: "2026-02-01T00:00:00Z",
         },
       ],

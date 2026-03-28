@@ -141,15 +141,32 @@ export async function POST(request: Request) {
       }
 
       case "invoice.payment_failed": {
-        const invoice = event.data.object as Stripe.Invoice;
-        const customerId =
-          typeof invoice.customer === "string"
-            ? invoice.customer
-            : invoice.customer?.id;
+        const failedInvoice = event.data.object as Stripe.Invoice;
+        const failedInvCustomerId =
+          typeof failedInvoice.customer === "string"
+            ? failedInvoice.customer
+            : failedInvoice.customer?.id;
 
-        console.warn(
-          `invoice.payment_failed for customer ${customerId}. Stripe will retry; not expiring plan yet.`
-        );
+        // Check attempt count — Stripe default is 3 retries
+        const attemptCount = failedInvoice.attempt_count ?? 0;
+
+        if (attemptCount >= 8) {
+          // Final retry failed — expire the plan as a safety net (matches Stripe Smart Retry: 8 attempts)
+          console.error(
+            `invoice.payment_failed: final attempt (${attemptCount}) for customer ${failedInvCustomerId}. Expiring plan.`
+          );
+          if (failedInvCustomerId) {
+            const { error } = await supabaseAdmin
+              .from("profiles")
+              .update({ plan: "expired" })
+              .eq("stripe_customer_id", failedInvCustomerId);
+            if (error) console.error("invoice.payment_failed expiry update failed:", error);
+          }
+        } else {
+          console.warn(
+            `invoice.payment_failed: attempt ${attemptCount} for customer ${failedInvCustomerId}. Stripe will retry.`
+          );
+        }
 
         break;
       }

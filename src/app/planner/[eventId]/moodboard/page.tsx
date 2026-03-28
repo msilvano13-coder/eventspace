@@ -3,11 +3,13 @@
 import { useParams } from "next/navigation";
 import { useEvent, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
-import { useState } from "react";
-import { ArrowLeft, Plus, X, Image, Pencil, Check, Loader2, ZoomIn, HardDrive } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowLeft, Plus, X, Image, Pencil, Check, Loader2, ZoomIn } from "lucide-react";
 import { MoodBoardImage } from "@/lib/types";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
-import { compressImage, base64ByteSize, formatBytes, estimateStorageUsed } from "@/lib/image-compress";
+import { compressImageToBlob } from "@/lib/image-compress";
+import { uploadToStorage, getSignedUrl, deleteFromStorage } from "@/lib/supabase/storage";
+import { getUserId } from "@/lib/supabase/db";
 
 export default function MoodBoardPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -21,6 +23,31 @@ export default function MoodBoardPage() {
   const [lightboxId, setLightboxId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  const images = event?.moodBoard ?? [];
+  const lightboxImg = lightboxId ? images.find((m) => m.id === lightboxId) : null;
+
+  // Refresh signed URLs for storage-backed images on load
+  useEffect(() => {
+    if (!event) return;
+    async function refreshUrls() {
+      const needsRefresh = images.filter(img => img.storagePath);
+      if (needsRefresh.length === 0) return;
+      const updated = await Promise.all(images.map(async (img) => {
+        if (!img.storagePath) return img;
+        try {
+          const url = await getSignedUrl("event-files", img.storagePath);
+          const thumb = img.storageThumb ? await getSignedUrl("event-files", img.storageThumb) : img.thumb;
+          return { ...img, url, thumb };
+        } catch {
+          return img;
+        }
+      }));
+      updateEvent(eventId, { moodBoard: updated });
+    }
+    refreshUrls();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [images.length]);
+
   if (!event) {
     return (
       <div className="px-4 py-6 sm:px-6 md:px-8">
@@ -32,17 +59,6 @@ export default function MoodBoardPage() {
     );
   }
 
-  const images = event.moodBoard ?? [];
-  const lightboxImg = lightboxId ? images.find((m) => m.id === lightboxId) : null;
-
-  // Calculate storage stats
-  const boardBytes = images.reduce(
-    (sum, img) => sum + base64ByteSize(img.url) + base64ByteSize(img.thumb || ""),
-    0
-  );
-  const totalStorage = estimateStorageUsed();
-  const STORAGE_WARN = 3.5 * 1024 * 1024; // warn at 3.5MB
-
   async function addImages(files: FileList) {
     const fileArr = Array.from(files);
     if (fileArr.length === 0) return;
@@ -52,22 +68,40 @@ export default function MoodBoardPage() {
     setUploadTotal(fileArr.length);
 
     let currentImages = [...images];
+    let userId: string;
+
+    try {
+      userId = await getUserId();
+    } catch {
+      setUploading(false);
+      return;
+    }
 
     for (let i = 0; i < fileArr.length; i++) {
       setUploadCount(i + 1);
       try {
-        const { full, thumb } = await compressImage(fileArr[i]);
+        const { full, thumb } = await compressImageToBlob(fileArr[i]);
+        const imgId = crypto.randomUUID();
+
+        const fullPath = await uploadToStorage("event-files", `${userId}/${eventId}/moodboard/${imgId}.jpg`, full);
+        const thumbPath = await uploadToStorage("event-files", `${userId}/${eventId}/moodboard/${imgId}_thumb.jpg`, thumb);
+
+        const fullUrl = await getSignedUrl("event-files", fullPath);
+        const thumbUrl = await getSignedUrl("event-files", thumbPath);
+
         const newImg: MoodBoardImage = {
-          id: crypto.randomUUID(),
-          url: full,
-          thumb,
+          id: imgId,
+          url: fullUrl,
+          thumb: thumbUrl,
           caption: fileArr[i].name.replace(/\.[^.]+$/, ""),
           addedAt: new Date().toISOString(),
+          storagePath: fullPath,
+          storageThumb: thumbPath,
         };
         currentImages = [...currentImages, newImg];
         updateEvent(eventId, { moodBoard: currentImages });
       } catch {
-        // Skip files that fail (too large, corrupt, etc.)
+        // Skip files that fail (too large, corrupt, upload error, etc.)
       }
     }
 
@@ -75,6 +109,11 @@ export default function MoodBoardPage() {
   }
 
   function removeImage(id: string) {
+    const img = images.find((m) => m.id === id);
+    if (img?.storagePath) {
+      deleteFromStorage("event-files", img.storagePath).catch(console.error);
+      if (img.storageThumb) deleteFromStorage("event-files", img.storageThumb).catch(console.error);
+    }
     updateEvent(eventId, { moodBoard: images.filter((m) => m.id !== id) });
     if (lightboxId === id) setLightboxId(null);
   }
@@ -129,23 +168,6 @@ export default function MoodBoardPage() {
           />
         </label>
       </div>
-
-      {/* Storage indicator */}
-      {images.length > 0 && (
-        <div className={`flex items-center gap-2 text-xs mb-6 px-3 py-2 rounded-lg ${
-          totalStorage > STORAGE_WARN
-            ? "bg-amber-50 text-amber-600 border border-amber-200"
-            : "bg-stone-50 text-stone-400"
-        }`}>
-          <HardDrive size={12} />
-          <span>
-            Board: {formatBytes(boardBytes)} · Total storage: ~{formatBytes(totalStorage)}
-          </span>
-          {totalStorage > STORAGE_WARN && (
-            <span className="font-medium ml-1">— Storage getting full. Consider removing unused images.</span>
-          )}
-        </div>
-      )}
 
       {images.length === 0 ? (
         <div className="text-center py-20">
@@ -204,13 +226,6 @@ export default function MoodBoardPage() {
                 >
                   <X size={12} className="text-stone-500" />
                 </button>
-              </div>
-
-              {/* Size badge */}
-              <div className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="text-[9px] bg-black/50 text-white/80 px-1.5 py-0.5 rounded-full">
-                  {formatBytes(base64ByteSize(img.url))}
-                </span>
               </div>
 
               {/* Caption */}

@@ -3,11 +3,11 @@
 import { useParams } from "next/navigation";
 import { useEvent, useStoreActions, useQuestionnaires, usePlannerProfile } from "@/hooks/useStore";
 import Link from "next/link";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Users, Wallet, Search, Phone, Globe, Download, Upload, UserCheck, PenTool, Plus, Trash2, Pencil, X, UtensilsCrossed, AlertTriangle, Image, Loader2 } from "lucide-react";
 import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY, Vendor, VendorCategory, EventContract, ScheduleItem, MoodBoardImage } from "@/lib/types";
 import { readPdfAsBase64, downloadBase64File, formatBytes } from "@/lib/pdf-utils";
-import { compressImage } from "@/lib/image-compress";
+import { compressImage, compressImageToBlob } from "@/lib/image-compress";
 import MessageThread from "@/components/event/MessageThread";
 import SignaturePad from "@/components/ui/SignaturePad";
 
@@ -24,6 +24,31 @@ function fmtCurrency(n: number) {
 
 function invoiceTotal(inv: Invoice) {
   return inv.lineItems.reduce((sum, li) => sum + li.quantity * li.unitPrice, 0);
+}
+
+// ── Client Storage helpers (uses API routes, no auth session needed) ──
+
+async function getClientSignedUrl(shareToken: string, bucket: string, path: string): Promise<string> {
+  const res = await fetch("/api/storage/signed-url", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ shareToken, bucket, path }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to get signed URL");
+  return data.url;
+}
+
+async function uploadClientFile(shareToken: string, bucket: string, path: string, file: Blob | File): Promise<string> {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("shareToken", shareToken);
+  formData.append("bucket", bucket);
+  formData.append("path", path);
+  const res = await fetch("/api/storage/upload", { method: "POST", body: formData });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || "Failed to upload file");
+  return data.path;
 }
 
 const INV_STATUS_COLORS: Record<string, string> = {
@@ -870,6 +895,33 @@ function ClientMoodBoard({ event, onUpdate }: { event: Event; onUpdate: (moodBoa
   const [lightboxId, setLightboxId] = useState<string | null>(null);
   const lightboxImg = lightboxId ? images.find((m) => m.id === lightboxId) : null;
 
+  // Refresh signed URLs for storage-backed images on load
+  const refreshUrls = useCallback(async () => {
+    const needsRefresh = images.filter(img => img.storagePath);
+    if (needsRefresh.length === 0 || !event.shareToken) return;
+    const updated = await Promise.all(images.map(async (img) => {
+      if (!img.storagePath) return img;
+      try {
+        const url = await getClientSignedUrl(event.shareToken, "event-files", img.storagePath);
+        const thumb = img.storageThumb
+          ? await getClientSignedUrl(event.shareToken, "event-files", img.storageThumb)
+          : img.thumb;
+        return { ...img, url, thumb };
+      } catch {
+        return img; // keep existing URLs if refresh fails
+      }
+    }));
+    // Only update if URLs actually changed
+    if (updated.some((img, i) => img.url !== images[i].url || img.thumb !== images[i].thumb)) {
+      onUpdate(updated);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [event.shareToken, images.length]);
+
+  useEffect(() => {
+    refreshUrls();
+  }, [refreshUrls]);
+
   async function addImages(files: FileList) {
     const fileArr = Array.from(files);
     if (fileArr.length === 0) return;
@@ -880,6 +932,41 @@ function ClientMoodBoard({ event, onUpdate }: { event: Event; onUpdate: (moodBoa
     for (let i = 0; i < fileArr.length; i++) {
       setUploadCount(i + 1);
       try {
+        // Try Storage upload via API first, fall back to base64
+        if (event.shareToken) {
+          const { full: fullBlob, thumb: thumbBlob } = await compressImageToBlob(fileArr[i]);
+          const imgId = crypto.randomUUID();
+          const ext = "jpg";
+          // We use the event id as path prefix; the API validates against shareToken -> planner user_id
+          // The path must start with the planner's user_id, which we don't know client-side.
+          // Instead, we upload via the API which resolves the correct user_id from the shareToken.
+          // Build path with a placeholder that the API will validate.
+          const basePath = `${event.id}/moodboard/${imgId}`;
+          const fullPath = `${basePath}.${ext}`;
+          const thumbPath = `${basePath}_thumb.${ext}`;
+          try {
+            // uploadClientFile returns the resolved path (with planner user_id prefix)
+            const resolvedFullPath = await uploadClientFile(event.shareToken, "event-files", fullPath, fullBlob);
+            const resolvedThumbPath = await uploadClientFile(event.shareToken, "event-files", thumbPath, thumbBlob);
+            const fullUrl = await getClientSignedUrl(event.shareToken, "event-files", resolvedFullPath);
+            const thumbUrl = await getClientSignedUrl(event.shareToken, "event-files", resolvedThumbPath);
+            const newImg: MoodBoardImage = {
+              id: imgId,
+              url: fullUrl,
+              thumb: thumbUrl,
+              caption: fileArr[i].name.replace(/\.[^.]+$/, ""),
+              addedAt: new Date().toISOString(),
+              storagePath: resolvedFullPath,
+              storageThumb: resolvedThumbPath,
+            };
+            currentImages = [...currentImages, newImg];
+            onUpdate(currentImages);
+            continue;
+          } catch {
+            // Fall through to base64 fallback
+          }
+        }
+        // Fallback: base64 (legacy behavior)
         const { full, thumb } = await compressImage(fileArr[i]);
         const newImg: MoodBoardImage = {
           id: crypto.randomUUID(),
@@ -887,6 +974,8 @@ function ClientMoodBoard({ event, onUpdate }: { event: Event; onUpdate: (moodBoa
           thumb,
           caption: fileArr[i].name.replace(/\.[^.]+$/, ""),
           addedAt: new Date().toISOString(),
+          storagePath: null,
+          storageThumb: null,
         };
         currentImages = [...currentImages, newImg];
         onUpdate(currentImages);
@@ -1194,11 +1283,28 @@ function ClientContractsSection({ event, updateEvent }: { event: Event; updateEv
   const [signingContractId, setSigningContractId] = useState<string | null>(null);
   const contracts = event.contracts ?? [];
 
-  function handleClientSign(signature: string, signedName: string) {
+  async function handleClientSign(signature: string, signedName: string) {
     if (!signingContractId) return;
+    let storageClientSigPath: string | null = null;
+    // Try to upload signature PNG to Storage via API
+    if (event.shareToken) {
+      try {
+        const sigBlob = await (await fetch(signature)).blob();
+        const sigPath = `${event.id}/contracts/${signingContractId}/client-signature.png`;
+        storageClientSigPath = await uploadClientFile(event.shareToken, "event-files", sigPath, sigBlob);
+      } catch {
+        // Fall through — keep base64 signature as fallback
+      }
+    }
     const updated = contracts.map((c) =>
       c.id === signingContractId
-        ? { ...c, clientSignature: signature, clientSignedAt: new Date().toISOString(), clientSignedName: signedName }
+        ? {
+            ...c,
+            clientSignature: signature,
+            clientSignedAt: new Date().toISOString(),
+            clientSignedName: signedName,
+            ...(storageClientSigPath ? { storageClientSig: storageClientSigPath } : {}),
+          }
         : c
     );
     updateEvent(event.id, { contracts: updated });
@@ -1207,6 +1313,30 @@ function ClientContractsSection({ event, updateEvent }: { event: Event; updateEv
 
   async function handleUploadSigned(contractId: string, file: File) {
     try {
+      // Try Storage upload via API first
+      if (event.shareToken) {
+        try {
+          const sigPath = `${event.id}/contracts/${contractId}/signed-${file.name}`;
+          const resolvedSigPath = await uploadClientFile(event.shareToken, "event-files", sigPath, file);
+          const signedUrl = await getClientSignedUrl(event.shareToken, "event-files", resolvedSigPath);
+          const updated = contracts.map((c) =>
+            c.id === contractId
+              ? {
+                  ...c,
+                  signedFileData: signedUrl,
+                  signedFileName: file.name,
+                  signedAt: new Date().toISOString(),
+                  storageSignedPath: resolvedSigPath,
+                }
+              : c
+          );
+          updateEvent(event.id, { contracts: updated });
+          return;
+        } catch {
+          // Fall through to base64 fallback
+        }
+      }
+      // Fallback: base64 (legacy behavior)
       const result = await readPdfAsBase64(file);
       const updated = contracts.map((c) =>
         c.id === contractId
@@ -1231,6 +1361,7 @@ function ClientContractsSection({ event, updateEvent }: { event: Event; updateEv
           <ClientContractCard
             key={contract.id}
             contract={contract}
+            shareToken={event.shareToken}
             onSign={() => setSigningContractId(contract.id)}
             onUploadSigned={(file) => handleUploadSigned(contract.id, file)}
           />
@@ -1248,16 +1379,52 @@ function ClientContractsSection({ event, updateEvent }: { event: Event; updateEv
 
 function ClientContractCard({
   contract,
+  shareToken,
   onSign,
   onUploadSigned,
 }: {
   contract: EventContract;
+  shareToken: string;
   onSign: () => void;
   onUploadSigned: (file: File) => void;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const plannerSigned = !!contract.plannerSignature;
   const clientSigned = !!contract.clientSignature;
+
+  // Resolve signed URLs for storage-backed signatures
+  const [plannerSigUrl, setPlannerSigUrl] = useState<string | null>(null);
+  const [clientSigUrl, setClientSigUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (contract.storagePlannerSig && shareToken) {
+      getClientSignedUrl(shareToken, "event-files", contract.storagePlannerSig)
+        .then(setPlannerSigUrl)
+        .catch(() => {}); // fall back to inline data
+    }
+    if (contract.storageClientSig && shareToken) {
+      getClientSignedUrl(shareToken, "event-files", contract.storageClientSig)
+        .then(setClientSigUrl)
+        .catch(() => {}); // fall back to inline data
+    }
+  }, [contract.storagePlannerSig, contract.storageClientSig, shareToken]);
+
+  async function handleStorageDownload(storagePath: string, fileName: string) {
+    try {
+      const url = await getClientSignedUrl(shareToken, "event-files", storagePath);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.click();
+    } catch {
+      // If signed URL fails and we have base64 data, fall back
+      if (contract.fileData && contract.fileData.startsWith("data:")) {
+        downloadBase64File(contract.fileData, fileName);
+      }
+    }
+  }
 
   return (
     <div className="rounded-xl border border-stone-200 bg-stone-50/30 overflow-hidden">
@@ -1290,7 +1457,13 @@ function ClientContractCard({
         </div>
         <div className="flex items-center gap-1 shrink-0 ml-11 sm:ml-0">
           <button
-            onClick={() => downloadBase64File(contract.fileData, contract.fileName)}
+            onClick={() => {
+              if (contract.storagePath) {
+                handleStorageDownload(contract.storagePath, contract.fileName);
+              } else {
+                downloadBase64File(contract.fileData, contract.fileName);
+              }
+            }}
             className="flex items-center gap-1 text-[11px] font-medium text-stone-500 hover:text-teal-500 px-2 py-1.5 rounded-lg hover:bg-teal-50 transition-colors"
           >
             <Download size={12} />
@@ -1298,7 +1471,13 @@ function ClientContractCard({
           </button>
           {contract.signedFileData && contract.signedFileName ? (
             <button
-              onClick={() => downloadBase64File(contract.signedFileData!, contract.signedFileName!)}
+              onClick={() => {
+                if (contract.storageSignedPath) {
+                  handleStorageDownload(contract.storageSignedPath, contract.signedFileName!);
+                } else {
+                  downloadBase64File(contract.signedFileData!, contract.signedFileName!);
+                }
+              }}
               className="flex items-center gap-1 text-[11px] font-medium text-emerald-500 hover:text-emerald-600 px-2 py-1.5 rounded-lg hover:bg-emerald-50 transition-colors"
             >
               <UserCheck size={12} />
@@ -1337,7 +1516,7 @@ function ClientContractCard({
             {plannerSigned ? (
               <div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={contract.plannerSignature!} alt="Planner signature" className="h-10 object-contain mb-1" />
+                <img src={plannerSigUrl || contract.plannerSignature!} alt="Planner signature" className="h-10 object-contain mb-1" />
                 <p className="text-[11px] font-medium text-stone-600">{contract.plannerSignedName}</p>
                 <p className="text-[10px] text-stone-400">
                   {new Date(contract.plannerSignedAt!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
@@ -1354,7 +1533,7 @@ function ClientContractCard({
             {clientSigned ? (
               <div>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={contract.clientSignature!} alt="Client signature" className="h-10 object-contain mb-1" />
+                <img src={clientSigUrl || contract.clientSignature!} alt="Client signature" className="h-10 object-contain mb-1" />
                 <p className="text-[11px] font-medium text-stone-600">{contract.clientSignedName}</p>
                 <p className="text-[10px] text-stone-400">
                   {new Date(contract.clientSignedAt!).toLocaleDateString("en-US", { month: "short", day: "numeric" })}

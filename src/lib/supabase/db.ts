@@ -478,6 +478,10 @@ function eventContractToRow(c: EventContract, eventId: string) {
     client_signature: c.clientSignature ?? null,
     client_signed_at: c.clientSignedAt ?? null,
     client_signed_name: c.clientSignedName ?? null,
+    storage_path: c.storagePath ?? null,
+    storage_signed_path: c.storageSignedPath ?? null,
+    storage_planner_sig: c.storagePlannerSig ?? null,
+    storage_client_sig: c.storageClientSig ?? null,
   };
 }
 
@@ -503,6 +507,10 @@ function eventContractFromRow(r: any): EventContract {
     clientSignature: r.client_signature ?? null,
     clientSignedAt: r.client_signed_at ?? null,
     clientSignedName: r.client_signed_name ?? null,
+    storagePath: r.storage_path ?? null,
+    storageSignedPath: r.storage_signed_path ?? null,
+    storagePlannerSig: r.storage_planner_sig ?? null,
+    storageClientSig: r.storage_client_sig ?? null,
   };
 }
 
@@ -515,6 +523,7 @@ function sharedFileToRow(f: SharedFile, eventId: string) {
     name: f.name,
     type: f.type,
     url: f.url,
+    storage_path: f.storagePath ?? null,
     uploaded_at: f.uploadedAt,
   };
 }
@@ -525,7 +534,8 @@ function sharedFileFromRow(r: any): SharedFile {
     id: r.id,
     name: r.name,
     type: r.type,
-    url: r.url,
+    url: r.storage_path || r.url,
+    storagePath: r.storage_path ?? null,
     uploadedAt: r.uploaded_at,
   };
 }
@@ -540,6 +550,8 @@ function moodBoardImageToRow(img: MoodBoardImage, eventId: string) {
     thumb: img.thumb,
     caption: img.caption,
     added_at: img.addedAt,
+    storage_path: img.storagePath ?? null,
+    storage_thumb: img.storageThumb ?? null,
   };
 }
 
@@ -551,6 +563,8 @@ function moodBoardImageFromRow(r: any): MoodBoardImage {
     thumb: r.thumb,
     caption: r.caption,
     addedAt: r.added_at,
+    storagePath: r.storage_path ?? null,
+    storageThumb: r.storage_thumb ?? null,
   };
 }
 
@@ -812,6 +826,7 @@ function contractTemplateToRow(t: ContractTemplate, userId: string) {
     file_data: t.fileData,
     file_name: t.fileName,
     file_size: t.fileSize,
+    storage_path: t.storagePath ?? null,
     created_at: t.createdAt,
     updated_at: t.updatedAt,
   };
@@ -826,6 +841,7 @@ function contractTemplateFieldsToRow(
   if (fields.fileData !== undefined) row.file_data = fields.fileData;
   if (fields.fileName !== undefined) row.file_name = fields.fileName;
   if (fields.fileSize !== undefined) row.file_size = fields.fileSize;
+  if (fields.storagePath !== undefined) row.storage_path = fields.storagePath;
   return row;
 }
 
@@ -838,6 +854,7 @@ function contractTemplateFromRow(r: any): ContractTemplate {
     fileData: r.file_data,
     fileName: r.file_name,
     fileSize: r.file_size,
+    storagePath: r.storage_path ?? null,
     createdAt: r.created_at,
     updatedAt: r.updated_at,
   };
@@ -1763,12 +1780,16 @@ function clientEventFromRow(r: any): Event {
       plannerSignedName: c.planner_signed_name,
       clientSignature: c.client_signature, clientSignedAt: c.client_signed_at,
       clientSignedName: c.client_signed_name,
+      storagePath: c.storage_path ?? null, storageSignedPath: c.storage_signed_path ?? null,
+      storagePlannerSig: c.storage_planner_sig ?? null, storageClientSig: c.storage_client_sig ?? null,
     })),
     files: (r.shared_files ?? []).map((f: any) => ({
-      id: f.id, name: f.name, type: f.type, url: f.url, uploadedAt: f.uploaded_at,
+      id: f.id, name: f.name, type: f.type, url: f.storage_path || f.url,
+      storagePath: f.storage_path ?? null, uploadedAt: f.uploaded_at,
     })),
     moodBoard: (r.mood_board_images ?? []).map((m: any) => ({
       id: m.id, url: m.url, thumb: m.thumb, caption: m.caption, addedAt: m.added_at,
+      storagePath: m.storage_path ?? null, storageThumb: m.storage_thumb ?? null,
     })),
     messages: (r.messages ?? []).map((msg: any) => ({
       id: msg.id, sender: msg.sender, senderName: msg.sender_name,
@@ -1830,6 +1851,8 @@ export async function clientUpdateContracts(shareToken: string, contracts: Event
     planner_signed_name: c.plannerSignedName,
     client_signature: c.clientSignature, client_signed_at: c.clientSignedAt,
     client_signed_name: c.clientSignedName,
+    storage_path: c.storagePath ?? null, storage_signed_path: c.storageSignedPath ?? null,
+    storage_planner_sig: c.storagePlannerSig ?? null, storage_client_sig: c.storageClientSig ?? null,
   }));
   const { error } = await supabase.rpc('client_update_contracts', { p_share_token: shareToken, p_contracts: rows });
   if (error) throw new Error(`clientUpdateContracts: ${error.message}`);
@@ -1838,7 +1861,8 @@ export async function clientUpdateContracts(shareToken: string, contracts: Event
 export async function clientUpdateFiles(shareToken: string, files: SharedFile[]): Promise<void> {
   const supabase = createClient();
   const rows = files.map(f => ({
-    id: f.id, name: f.name, type: f.type, url: f.url, uploaded_at: f.uploadedAt,
+    id: f.id, name: f.name, type: f.type, url: f.url,
+    storage_path: f.storagePath ?? null, uploaded_at: f.uploadedAt,
   }));
   const { error } = await supabase.rpc('client_update_files', { p_share_token: shareToken, p_files: rows });
   if (error) throw new Error(`clientUpdateFiles: ${error.message}`);
@@ -1848,6 +1872,7 @@ export async function clientUpdateMoodBoard(shareToken: string, images: MoodBoar
   const supabase = createClient();
   const rows = images.map(m => ({
     id: m.id, url: m.url, thumb: m.thumb, caption: m.caption, added_at: m.addedAt,
+    storage_path: m.storagePath ?? null, storage_thumb: m.storageThumb ?? null,
   }));
   const { error } = await supabase.rpc('client_update_mood_board', { p_share_token: shareToken, p_images: rows });
   if (error) throw new Error(`clientUpdateMoodBoard: ${error.message}`);

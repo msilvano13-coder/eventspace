@@ -3,8 +3,11 @@
 import { useParams } from "next/navigation";
 import { useEvent, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
-import { ArrowLeft, FileText, Image, Palette, File, Upload } from "lucide-react";
+import { useState } from "react";
+import { ArrowLeft, FileText, Image, Palette, File, Upload, Download, X, Loader2 } from "lucide-react";
 import { v4 as uuid } from "uuid";
+import { uploadToStorage, getSignedUrl, deleteFromStorage } from "@/lib/supabase/storage";
+import { getUserId } from "@/lib/supabase/db";
 
 const typeIcons: Record<string, any> = {
   contract: FileText,
@@ -13,30 +16,86 @@ const typeIcons: Record<string, any> = {
   other: File,
 };
 
+function getFileType(file: File): "contract" | "photo" | "moodboard" | "other" {
+  if (file.type === "application/pdf") return "contract";
+  if (file.type.startsWith("image/")) return "photo";
+  return "other";
+}
+
 export default function FilesPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
   const { updateEvent } = useStoreActions();
+  const [uploading, setUploading] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
 
   if (!event) return <div className="px-4 py-6 text-stone-500">Event not found.</div>;
 
-  function handleUpload() {
+  async function handleUpload() {
     const input = document.createElement("input");
     input.type = "file";
     input.multiple = true;
-    input.onchange = () => {
+    input.onchange = async () => {
       const fileList = input.files;
       if (!fileList || !event) return;
-      const newFiles = Array.from(fileList).map((f) => ({
-        id: uuid(),
-        name: f.name,
-        type: "other" as const,
-        url: "#",
-        uploadedAt: new Date().toISOString(),
-      }));
-      updateEvent(eventId, { files: [...event.files, ...newFiles] });
+
+      setUploading(true);
+      try {
+        const userId = await getUserId();
+        const newFiles = [];
+
+        for (const file of Array.from(fileList)) {
+          const fileId = uuid();
+          const storagePath = `${userId}/${eventId}/files/${fileId}/${file.name}`;
+
+          await uploadToStorage("event-files", storagePath, file);
+
+          newFiles.push({
+            id: fileId,
+            name: file.name,
+            type: getFileType(file),
+            url: storagePath,
+            storagePath,
+            uploadedAt: new Date().toISOString(),
+          });
+        }
+
+        updateEvent(eventId, { files: [...event.files, ...newFiles] });
+      } catch (err) {
+        console.error("File upload failed:", err);
+        alert("Failed to upload files. Please try again.");
+      }
+      setUploading(false);
     };
     input.click();
+  }
+
+  async function handleDownload(file: { storagePath: string | null; url: string; name: string; id: string }) {
+    if (!file.storagePath) return;
+    setDownloading(file.id);
+    try {
+      const url = await getSignedUrl("event-files", file.storagePath);
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = objectUrl;
+      a.download = file.name;
+      a.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      console.error("Download failed:", err);
+      alert("Failed to download file.");
+    }
+    setDownloading(null);
+  }
+
+  function handleRemove(fileId: string) {
+    const file = event!.files.find(f => f.id === fileId);
+    if (file?.storagePath) {
+      deleteFromStorage("event-files", file.storagePath).catch(console.error);
+    }
+    updateEvent(eventId, { files: event!.files.filter(f => f.id !== fileId) });
   }
 
   return (
@@ -53,10 +112,20 @@ export default function FilesPage() {
         <h1 className="text-xl font-heading font-bold text-stone-800">Shared Files</h1>
         <button
           onClick={handleUpload}
-          className="flex items-center gap-2 bg-rose-400 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
+          disabled={uploading}
+          className="flex items-center gap-2 bg-rose-400 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
         >
-          <Upload size={14} />
-          Upload
+          {uploading ? (
+            <>
+              <Loader2 size={14} className="animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            <>
+              <Upload size={14} />
+              Upload
+            </>
+          )}
         </button>
       </div>
 
@@ -72,7 +141,7 @@ export default function FilesPage() {
             return (
               <div
                 key={file.id}
-                className="bg-white rounded-2xl border border-stone-200 p-4 flex items-center gap-3 shadow-soft"
+                className="bg-white rounded-2xl border border-stone-200 p-4 flex items-center gap-3 shadow-soft group"
               >
                 <Icon size={20} className="text-stone-400 shrink-0" />
                 <div className="flex-1 min-w-0">
@@ -80,6 +149,27 @@ export default function FilesPage() {
                   <p className="text-xs text-stone-400">
                     {new Date(file.uploadedAt).toLocaleDateString()}
                   </p>
+                </div>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {file.storagePath && (
+                    <button
+                      onClick={() => handleDownload(file)}
+                      disabled={downloading === file.id}
+                      className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-stone-100 transition-colors"
+                    >
+                      {downloading === file.id ? (
+                        <Loader2 size={14} className="text-stone-400 animate-spin" />
+                      ) : (
+                        <Download size={14} className="text-stone-400" />
+                      )}
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleRemove(file.id)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-50 transition-colors"
+                  >
+                    <X size={14} className="text-stone-400 hover:text-red-500" />
+                  </button>
                 </div>
               </div>
             );

@@ -3,7 +3,9 @@
 import { useContractTemplates, useContractTemplateActions } from "@/hooks/useStore";
 import { useState, useCallback, useRef } from "react";
 import { FileText, Plus, Trash2, Download, Upload, X, Search } from "lucide-react";
-import { readPdfAsBase64, downloadBase64File, formatBytes, PDF_MAX_SIZE } from "@/lib/pdf-utils";
+import { downloadBase64File, formatBytes, PDF_MAX_SIZE, validatePdfFile, downloadFromUrl } from "@/lib/pdf-utils";
+import { uploadToStorage, getSignedUrl, deleteFromStorage } from "@/lib/supabase/storage";
+import { getUserId } from "@/lib/supabase/db";
 import type { ContractTemplate } from "@/lib/types";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
@@ -15,6 +17,8 @@ export default function ContractsPage() {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [fileData, setFileData] = useState<{ dataUrl: string; fileName: string; fileSize: number } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [toast, setToast] = useState<string | null>(null);
@@ -30,29 +34,46 @@ export default function ContractsPage() {
   const handleFile = async (file: File) => {
     setError("");
     try {
-      const result = await readPdfAsBase64(file);
-      setFileData(result);
+      validatePdfFile(file);
+      setSelectedFile(file);
+      setFileData({ dataUrl: "", fileName: file.name, fileSize: file.size });
       if (!name) setName(file.name.replace(/\.pdf$/i, ""));
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to read file.");
     }
   };
 
-  const handleSave = () => {
-    if (!name.trim() || !fileData) return;
-    const template: ContractTemplate = {
-      id: crypto.randomUUID(),
-      name: name.trim(),
-      description: description.trim(),
-      fileData: fileData.dataUrl,
-      fileName: fileData.fileName,
-      fileSize: fileData.fileSize,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    addTemplate(template);
-    showToast(`Saved "${template.name}" template`);
-    resetForm();
+  const handleSave = async () => {
+    if (!name.trim() || !fileData || !selectedFile || uploading) return;
+    setUploading(true);
+    setError("");
+    try {
+      const userId = await getUserId();
+      const templateId = crypto.randomUUID();
+      const storagePath = await uploadToStorage(
+        "contract-templates",
+        `${userId}/${templateId}/${selectedFile.name}`,
+        selectedFile,
+      );
+      const template: ContractTemplate = {
+        id: templateId,
+        name: name.trim(),
+        description: description.trim(),
+        fileData: "",
+        fileName: fileData.fileName,
+        fileSize: fileData.fileSize,
+        storagePath,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      addTemplate(template);
+      showToast(`Saved "${template.name}" template`);
+      resetForm();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to upload file.");
+    } finally {
+      setUploading(false);
+    }
   };
 
   const resetForm = () => {
@@ -60,6 +81,7 @@ export default function ContractsPage() {
     setName("");
     setDescription("");
     setFileData(null);
+    setSelectedFile(null);
     setError("");
   };
 
@@ -180,10 +202,10 @@ export default function ContractsPage() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={!name.trim() || !fileData}
+                disabled={!name.trim() || !fileData || uploading}
                 className="text-xs font-medium bg-rose-400 text-white px-5 py-2.5 rounded-xl hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
-                Save Template
+                {uploading ? "Uploading..." : "Save Template"}
               </button>
             </div>
           </div>
@@ -236,7 +258,14 @@ export default function ContractsPage() {
               </div>
               <div className="flex items-center gap-1">
                 <button
-                  onClick={() => downloadBase64File(template.fileData, template.fileName)}
+                  onClick={async () => {
+                    if (template.storagePath) {
+                      const url = await getSignedUrl("contract-templates", template.storagePath);
+                      downloadFromUrl(url, template.fileName);
+                    } else {
+                      downloadBase64File(template.fileData, template.fileName);
+                    }
+                  }}
                   className="p-2 text-stone-400 hover:text-teal-500 hover:bg-teal-50 rounded-lg transition-colors"
                   title="Download"
                 >
@@ -273,7 +302,16 @@ export default function ContractsPage() {
         title="Delete Template?"
         message="This contract template will be permanently deleted. Contracts already assigned to events will not be affected."
         confirmLabel="Delete"
-        onConfirm={() => { if (confirmDeleteId) removeTemplate(confirmDeleteId); setConfirmDeleteId(null); }}
+        onConfirm={() => {
+          if (confirmDeleteId) {
+            const template = templates.find((t) => t.id === confirmDeleteId);
+            if (template?.storagePath) {
+              deleteFromStorage("contract-templates", template.storagePath).catch(console.error);
+            }
+            removeTemplate(confirmDeleteId);
+          }
+          setConfirmDeleteId(null);
+        }}
         onCancel={() => setConfirmDeleteId(null)}
       />
     </div>

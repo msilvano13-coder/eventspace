@@ -40,6 +40,7 @@ export default function ClientFilesPage() {
         name: f.name,
         type: "other" as const,
         url: "#",
+        storagePath: null,
         uploadedAt: new Date().toISOString(),
       }));
       updateEvent(eventId, { files: [...files, ...newFiles] });

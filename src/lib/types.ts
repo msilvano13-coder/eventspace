@@ -8,7 +8,7 @@ export interface PlannerProfile {
   email: string;
   phone: string;
   website: string;
-  logoUrl: string;          // base64 data URL or empty
+  logoUrl: string;          // Storage public URL, base64 data URL, or empty
   brandColor: string;       // hex color
   tagline: string;
   plan: PlanType;
@@ -87,7 +87,8 @@ export interface SharedFile {
   id: string;
   name: string;
   type: "contract" | "photo" | "moodboard" | "other";
-  url: string;
+  url: string;              // Storage path or legacy base64/placeholder
+  storagePath: string | null; // Supabase Storage path (when migrated)
   uploadedAt: string;
 }
 
@@ -258,9 +259,10 @@ export interface ContractTemplate {
   id: string;
   name: string;
   description: string;
-  fileData: string;       // base64 data URL
+  fileData: string;       // Storage path or legacy base64 data URL
   fileName: string;
   fileSize: number;       // bytes
+  storagePath: string | null; // Supabase Storage path (when migrated)
   createdAt: string;
   updatedAt: string;
 }
@@ -274,7 +276,7 @@ export interface EventContract {
   type: "planner" | "vendor";
   vendorId: string | null;
   vendorName: string | null;
-  fileData: string;           // base64 data URL
+  fileData: string;           // Storage path or legacy base64 data URL
   fileName: string;
   fileSize: number;
   signedFileData: string | null;
@@ -282,12 +284,17 @@ export interface EventContract {
   signedAt: string | null;
   assignedAt: string;
   // E-signature fields
-  plannerSignature: string | null;   // base64 PNG of drawn signature
+  plannerSignature: string | null;   // Storage path or legacy base64 PNG
   plannerSignedAt: string | null;
   plannerSignedName: string | null;
-  clientSignature: string | null;    // base64 PNG of drawn signature
+  clientSignature: string | null;    // Storage path or legacy base64 PNG
   clientSignedAt: string | null;
   clientSignedName: string | null;
+  // Storage paths (when migrated)
+  storagePath: string | null;
+  storageSignedPath: string | null;
+  storagePlannerSig: string | null;
+  storageClientSig: string | null;
 }
 
 // ── Preferred Vendors (planner-level saved list) ──
@@ -327,10 +334,12 @@ export interface DiscoveredVendor {
 
 export interface MoodBoardImage {
   id: string;
-  url: string;        // compressed base64 data URL (max 1200px wide, JPEG 0.7)
-  thumb: string;      // thumbnail base64 (max 400px wide, JPEG 0.6) for grid view
+  url: string;        // Storage signed URL or legacy base64 data URL
+  thumb: string;      // Storage signed URL or legacy thumbnail base64
   caption: string;
   addedAt: string;
+  storagePath: string | null;  // Supabase Storage path for full image
+  storageThumb: string | null; // Supabase Storage path for thumbnail
 }
 
 // ── Messages ──
