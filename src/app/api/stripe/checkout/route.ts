@@ -51,7 +51,6 @@ export async function POST(request: Request) {
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: "payment",
-        payment_method_types: ["card"],
         line_items: [
           {
             price: process.env.STRIPE_PRICE_DIY!,
@@ -73,7 +72,7 @@ export async function POST(request: Request) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
-      payment_method_types: ["card"],
+      payment_method_configuration: undefined,
       line_items: [
         {
           price: process.env.STRIPE_PRICE_PROFESSIONAL!,
