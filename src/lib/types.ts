@@ -11,13 +11,28 @@ export interface PlannerProfile {
   tagline: string;
 }
 
+export type LightingType = "uplight" | "spotlight" | "pinspot" | "gobo" | "wash" | "string" | "candles";
+
+export interface LightingZone {
+  id: string;
+  name: string;
+  type: LightingType;
+  color: string;          // hex color
+  intensity: number;      // 0–100
+  x: number;              // percentage position (0–100)
+  y: number;              // percentage position (0–100)
+  size: number;           // radius in percentage (2–20)
+  notes: string;
+}
+
 export interface FloorPlan {
   id: string;
   name: string;
   json: string | null;
+  lightingZones: LightingZone[];
 }
 
-export const DEFAULT_FLOOR_PLANS: Omit<FloorPlan, "json">[] = [
+export const DEFAULT_FLOOR_PLANS: Omit<FloorPlan, "json" | "lightingZones">[] = [
   { id: "ceremony", name: "Ceremony" },
   { id: "cocktail", name: "Cocktail Hour" },
   { id: "reception", name: "Reception" },

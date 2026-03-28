@@ -26,7 +26,7 @@ class EventStore {
         // Migrate old events
         Array.from(this.events.values()).forEach((evt) => {
           if (!evt.floorPlans) {
-            evt.floorPlans = DEFAULT_FLOOR_PLANS.map((fp) => ({ ...fp, json: null }));
+            evt.floorPlans = DEFAULT_FLOOR_PLANS.map((fp) => ({ ...fp, json: null, lightingZones: [] }));
           }
           if (!evt.timeline) evt.timeline = [];
           if (!evt.schedule) evt.schedule = [];
@@ -51,6 +51,8 @@ class EventStore {
           if (!evt.moodBoard) evt.moodBoard = [];
           // Add thumb field to mood board images missing it (use url as fallback)
           (evt.moodBoard ?? []).forEach((m: any) => { if (!m.thumb) m.thumb = m.url ?? ""; });
+          // Add lightingZones to floor plans missing it
+          (evt.floorPlans ?? []).forEach((fp: any) => { if (!fp.lightingZones) fp.lightingZones = []; });
           if (!evt.messages) evt.messages = [];
           // Add mealChoice to vendors missing it
           (evt.vendors ?? []).forEach((v: any) => { if (!v.mealChoice) v.mealChoice = ""; });

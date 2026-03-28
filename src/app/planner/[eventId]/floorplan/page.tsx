@@ -4,11 +4,13 @@ import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useEvent, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
-import { ArrowLeft, Plus, Users } from "lucide-react";
+import { ArrowLeft, Plus, Users, Lightbulb } from "lucide-react";
 import { useCallback, useState } from "react";
-import { FloorPlan, Guest } from "@/lib/types";
+import { FloorPlan, Guest, LightingZone } from "@/lib/types";
 import { v4 as uuid } from "uuid";
 import SeatingPanel from "@/components/floorplan/SeatingPanel";
+import LightingOverlay from "@/components/floorplan/LightingOverlay";
+import LightingPanel from "@/components/floorplan/LightingPanel";
 
 const FloorPlanEditor = dynamic(
   () => import("@/components/floorplan/FloorPlanEditor"),
@@ -30,6 +32,8 @@ export default function FloorPlanPage() {
   const [showAddTab, setShowAddTab] = useState(false);
   const [newTabName, setNewTabName] = useState("");
   const [showSeating, setShowSeating] = useState(false);
+  const [showLighting, setShowLighting] = useState(false);
+  const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
 
   const handleSave = useCallback(
     (json: string) => {
@@ -52,10 +56,39 @@ export default function FloorPlanPage() {
 
   const plans = event.floorPlans || [];
   const activePlan = plans.find((p) => p.id === activePlanId) || plans[0];
+  const lightingZones = activePlan?.lightingZones ?? [];
+
+  function handleUpdateLightingZones(zones: LightingZone[]) {
+    if (!activePlan) return;
+    const updatedPlans = plans.map((fp) =>
+      fp.id === activePlan.id ? { ...fp, lightingZones: zones } : fp
+    );
+    updateEvent(eventId, { floorPlans: updatedPlans });
+  }
+
+  function toggleLighting() {
+    if (showLighting) {
+      setShowLighting(false);
+      setSelectedZoneId(null);
+    } else {
+      setShowLighting(true);
+      setShowSeating(false); // close seating when opening lighting
+    }
+  }
+
+  function toggleSeating() {
+    if (showSeating) {
+      setShowSeating(false);
+    } else {
+      setShowSeating(true);
+      setShowLighting(false); // close lighting when opening seating
+      setSelectedZoneId(null);
+    }
+  }
 
   function addTab() {
     if (!newTabName.trim()) return;
-    const newPlan: FloorPlan = { id: uuid(), name: newTabName.trim(), json: null };
+    const newPlan: FloorPlan = { id: uuid(), name: newTabName.trim(), json: null, lightingZones: [] };
     updateEvent(eventId, { floorPlans: [...plans, newPlan] });
     setActivePlanId(newPlan.id);
     setNewTabName("");
@@ -78,8 +111,23 @@ export default function FloorPlanPage() {
           {event.name}
         </h2>
         <div className="flex-1" />
+
+        {/* Lighting toggle */}
         <button
-          onClick={() => setShowSeating(!showSeating)}
+          onClick={toggleLighting}
+          className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+            showLighting
+              ? "bg-amber-50 text-amber-600 border border-amber-200"
+              : "text-stone-400 hover:text-stone-600 hover:bg-stone-50 border border-transparent"
+          }`}
+        >
+          <Lightbulb size={13} />
+          <span className="hidden sm:inline">Lighting</span>
+        </button>
+
+        {/* Seating toggle */}
+        <button
+          onClick={toggleSeating}
           className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
             showSeating
               ? "bg-rose-50 text-rose-600 border border-rose-200"
@@ -97,7 +145,7 @@ export default function FloorPlanPage() {
         {plans.map((plan) => (
           <button
             key={plan.id}
-            onClick={() => setActivePlanId(plan.id)}
+            onClick={() => { setActivePlanId(plan.id); setSelectedZoneId(null); }}
             className={`px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
               plan.id === activePlan?.id
                 ? "border-rose-400 text-rose-600"
@@ -105,6 +153,11 @@ export default function FloorPlanPage() {
             }`}
           >
             {plan.name}
+            {(plan.lightingZones ?? []).length > 0 && showLighting && (
+              <span className="ml-1.5 text-[9px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-semibold">
+                {plan.lightingZones.length}
+              </span>
+            )}
           </button>
         ))}
         {showAddTab ? (
@@ -138,16 +191,62 @@ export default function FloorPlanPage() {
         )}
       </div>
 
-      {/* Editor + Seating */}
-      <div className="flex-1 relative overflow-hidden">
-        {activePlan && (
-          <FloorPlanEditor
-            key={activePlan.id}
-            eventId={eventId}
-            initialJSON={activePlan.json}
-            onSave={handleSave}
+      {/* Editor + Overlays */}
+      <div className="flex-1 relative overflow-hidden flex">
+        <div className="flex-1 relative">
+          {activePlan && (
+            <FloorPlanEditor
+              key={activePlan.id}
+              eventId={eventId}
+              initialJSON={activePlan.json}
+              onSave={handleSave}
+            />
+          )}
+
+          {/* Lighting overlay on top of canvas */}
+          <LightingOverlay
+            zones={lightingZones}
+            onUpdateZones={handleUpdateLightingZones}
+            selectedZoneId={selectedZoneId}
+            onSelectZone={setSelectedZoneId}
+            enabled={showLighting}
           />
+        </div>
+
+        {/* Lighting Panel — Desktop: side panel */}
+        {showLighting && (
+          <>
+            <div className="hidden md:block">
+              <LightingPanel
+                zones={lightingZones}
+                onUpdateZones={handleUpdateLightingZones}
+                selectedZoneId={selectedZoneId}
+                onSelectZone={setSelectedZoneId}
+              />
+            </div>
+            {/* Mobile: bottom sheet */}
+            <div className="md:hidden fixed inset-x-0 bottom-0 z-50 bg-white rounded-t-2xl shadow-xl max-h-[55vh] overflow-y-auto">
+              <div className="sticky top-0 bg-white border-b border-stone-100 px-4 py-3 flex items-center justify-between rounded-t-2xl z-10">
+                <div className="w-10 h-1 bg-stone-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-2" />
+                <h3 className="text-sm font-heading font-semibold text-stone-800 pt-2">Lighting Design</h3>
+                <button
+                  onClick={() => { setShowLighting(false); setSelectedZoneId(null); }}
+                  className="text-xs text-stone-400 hover:text-stone-600 font-medium pt-2"
+                >
+                  Done
+                </button>
+              </div>
+              <LightingPanel
+                zones={lightingZones}
+                onUpdateZones={handleUpdateLightingZones}
+                selectedZoneId={selectedZoneId}
+                onSelectZone={setSelectedZoneId}
+              />
+            </div>
+          </>
         )}
+
+        {/* Seating panels */}
         {showSeating && (
           <>
             {/* Mobile: full-screen overlay */}

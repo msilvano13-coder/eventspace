@@ -12,10 +12,10 @@ export function getSeedData(): Event[] {
       status: "confirmed",
       floorPlanJSON: null,
       floorPlans: [
-        { id: "ceremony", name: "Ceremony", json: null },
-        { id: "cocktail", name: "Cocktail Hour", json: null },
-        { id: "reception", name: "Reception", json: null },
-        { id: "dancefloor", name: "Dance Floor", json: null },
+        { id: "ceremony", name: "Ceremony", json: null, lightingZones: [] },
+        { id: "cocktail", name: "Cocktail Hour", json: null, lightingZones: [] },
+        { id: "reception", name: "Reception", json: null, lightingZones: [] },
+        { id: "dancefloor", name: "Dance Floor", json: null, lightingZones: [] },
       ],
       files: [
         {
@@ -77,10 +77,10 @@ export function getSeedData(): Event[] {
       status: "planning",
       floorPlanJSON: null,
       floorPlans: [
-        { id: "ceremony", name: "Ceremony", json: null },
-        { id: "cocktail", name: "Cocktail Hour", json: null },
-        { id: "reception", name: "Reception", json: null },
-        { id: "dancefloor", name: "Dance Floor", json: null },
+        { id: "ceremony", name: "Ceremony", json: null, lightingZones: [] },
+        { id: "cocktail", name: "Cocktail Hour", json: null, lightingZones: [] },
+        { id: "reception", name: "Reception", json: null, lightingZones: [] },
+        { id: "dancefloor", name: "Dance Floor", json: null, lightingZones: [] },
       ],
       files: [],
       timeline: [
@@ -118,10 +118,10 @@ export function getSeedData(): Event[] {
       status: "confirmed",
       floorPlanJSON: null,
       floorPlans: [
-        { id: "ceremony", name: "Ceremony", json: null },
-        { id: "cocktail", name: "Cocktail Hour", json: null },
-        { id: "reception", name: "Reception", json: null },
-        { id: "dancefloor", name: "Dance Floor", json: null },
+        { id: "ceremony", name: "Ceremony", json: null, lightingZones: [] },
+        { id: "cocktail", name: "Cocktail Hour", json: null, lightingZones: [] },
+        { id: "reception", name: "Reception", json: null, lightingZones: [] },
+        { id: "dancefloor", name: "Dance Floor", json: null, lightingZones: [] },
       ],
       files: [
         {
