@@ -50,6 +50,7 @@ export function getSeedData(): Event[] {
       guests: [],
       colorPalette: [],
       moodBoard: [],
+      discoveredVendors: [],
       budget: [],
       messages: [],
       schedule: [
@@ -95,6 +96,7 @@ export function getSeedData(): Event[] {
       guests: [],
       colorPalette: [],
       moodBoard: [],
+      discoveredVendors: [],
       budget: [],
       messages: [],
       schedule: [
@@ -143,6 +145,7 @@ export function getSeedData(): Event[] {
       guests: [],
       colorPalette: [],
       moodBoard: [],
+      discoveredVendors: [],
       budget: [],
       messages: [],
       schedule: [

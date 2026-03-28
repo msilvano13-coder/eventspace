@@ -59,6 +59,7 @@ export interface Event {
   guests: Guest[];
   colorPalette: string[];
   moodBoard: MoodBoardImage[];
+  discoveredVendors: DiscoveredVendor[];
   budget: BudgetItem[];
   messages: Message[];
   createdAt: string;
@@ -240,6 +241,39 @@ export const VENDOR_TO_BUDGET_CATEGORY: Record<VendorCategory, string> = {
   officiant: "Officiant",
   other: "Other",
 };
+
+// ── Preferred Vendors (planner-level saved list) ──
+
+export interface PreferredVendor {
+  id: string;
+  name: string;
+  category: string;
+  rating: number;
+  reviewCount: number;
+  phone: string;
+  website: string;
+  address: string;
+  priceLevel: number;
+  googleMapsUrl: string;
+  notes: string;
+  addedAt: string;
+}
+
+// ── Discovered Vendors (shared to client portal) ──
+
+export interface DiscoveredVendor {
+  id: string;
+  name: string;
+  category: string;
+  rating: number;
+  reviewCount: number;
+  phone: string;
+  website: string;
+  address: string;
+  priceLevel: number;
+  googleMapsUrl: string;
+  sharedAt: string;
+}
 
 // ── Mood Board ──
 

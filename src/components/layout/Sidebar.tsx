@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet, Settings, Inbox, BarChart3, MoreHorizontal, X } from "lucide-react";
+import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet, Settings, Inbox, BarChart3, Search, Heart, MoreHorizontal, X } from "lucide-react";
 
 const navItems = [
   { href: "/planner", label: "Dashboard", icon: LayoutDashboard },
@@ -13,6 +13,8 @@ const navItems = [
   { href: "/planner/finances", label: "Finances", icon: Wallet },
   { href: "/planner/reports", label: "Reports", icon: BarChart3 },
   { href: "/planner/directory", label: "Directory", icon: BookUser },
+  { href: "/planner/discover", label: "Vendor Search", icon: Search },
+  { href: "/planner/preferred", label: "Preferred Vendors", icon: Heart },
 ];
 
 // First 4 items + "More" button for mobile bottom nav

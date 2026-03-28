@@ -53,6 +53,7 @@ class EventStore {
           (evt.moodBoard ?? []).forEach((m: any) => { if (!m.thumb) m.thumb = m.url ?? ""; });
           // Add lightingZones to floor plans missing it
           (evt.floorPlans ?? []).forEach((fp: any) => { if (!fp.lightingZones) fp.lightingZones = []; });
+          if (!evt.discoveredVendors) evt.discoveredVendors = [];
           if (!evt.messages) evt.messages = [];
           // Add mealChoice to vendors missing it
           (evt.vendors ?? []).forEach((v: any) => { if (!v.mealChoice) v.mealChoice = ""; });

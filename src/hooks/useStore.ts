@@ -5,7 +5,8 @@ import { store } from "@/lib/store";
 import { questionnaireStore } from "@/lib/questionnaire-store";
 import { plannerStore } from "@/lib/planner-store";
 import { inquiryStore } from "@/lib/inquiry-store";
-import { Event, Questionnaire, PlannerProfile, Inquiry } from "@/lib/types";
+import { preferredVendorStore } from "@/lib/preferred-vendor-store";
+import { Event, Questionnaire, PlannerProfile, Inquiry, PreferredVendor } from "@/lib/types";
 
 function subscribeAndHydrate(cb: () => void) {
   store.hydrate();
@@ -166,4 +167,39 @@ export function usePlannerProfileActions() {
     []
   );
   return { updateProfile };
+}
+
+// ── Preferred Vendor hooks ──
+
+function prefSubscribeAndHydrate(cb: () => void) {
+  preferredVendorStore.hydrate();
+  return preferredVendorStore.subscribe(cb);
+}
+
+export function usePreferredVendors(): PreferredVendor[] {
+  return useSyncExternalStore(
+    prefSubscribeAndHydrate,
+    preferredVendorStore.getSnapshot,
+    preferredVendorStore.getServerSnapshot
+  );
+}
+
+export function usePreferredVendorActions() {
+  const addPreferredVendor = useCallback(
+    (vendor: PreferredVendor) => preferredVendorStore.add(vendor),
+    []
+  );
+  const updatePreferredVendor = useCallback(
+    (id: string, partial: Partial<PreferredVendor>) => preferredVendorStore.update(id, partial),
+    []
+  );
+  const removePreferredVendor = useCallback(
+    (id: string) => preferredVendorStore.remove(id),
+    []
+  );
+  const isPreferred = useCallback(
+    (name: string, phone: string) => preferredVendorStore.exists(name, phone),
+    []
+  );
+  return { addPreferredVendor, updatePreferredVendor, removePreferredVendor, isPreferred };
 }

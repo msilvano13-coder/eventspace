@@ -4,8 +4,8 @@ import { useParams } from "next/navigation";
 import { useEvent, useStoreActions, useQuestionnaires, usePlannerProfile } from "@/hooks/useStore";
 import Link from "next/link";
 import { useState } from "react";
-import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Plus, X, Users, Wallet, Pencil, Trash2 } from "lucide-react";
-import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, ScheduleItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
+import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Plus, X, Users, Wallet, Pencil, Trash2, Search, Phone, Globe } from "lucide-react";
+import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, ScheduleItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY, Vendor, VendorCategory } from "@/lib/types";
 import MessageThread from "@/components/event/MessageThread";
 
 function fmt12(time: string) {
@@ -486,6 +486,127 @@ export default function ClientPortalPage() {
           event={event}
           onUpdate={(budget) => updateEvent(event.id, { budget })}
         />
+
+        {/* Discovered Vendors */}
+        {(event.discoveredVendors ?? []).length > 0 && (
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
+            <div className="flex items-center gap-2 px-5 pt-5 pb-4 border-b border-stone-100">
+              <Search size={15} className="text-teal-400" />
+              <h2 className="font-heading font-semibold text-stone-800">Discovered Vendors</h2>
+              <span className="text-xs text-stone-400 ml-1">({(event.discoveredVendors ?? []).length})</span>
+            </div>
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {(event.discoveredVendors ?? []).map((v) => (
+                <div key={v.id} className="group border border-stone-200 rounded-xl p-4 hover:border-stone-300 transition-colors relative">
+                  <button
+                    onClick={() => {
+                      const updated = (event.discoveredVendors ?? []).filter((dv) => dv.id !== v.id);
+                      updateEvent(event.id, { discoveredVendors: updated });
+                    }}
+                    className="absolute top-2.5 right-2.5 p-1.5 rounded-lg text-stone-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                    title="Remove vendor"
+                  >
+                    <X size={13} />
+                  </button>
+                  <div className="flex items-start justify-between mb-1.5 pr-6">
+                    <h3 className="text-sm font-semibold text-stone-800 leading-tight">{v.name}</h3>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-teal-50 text-teal-600 capitalize shrink-0 ml-2">
+                      {v.category}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <span className="flex items-center gap-0.5">
+                      {Array.from({ length: 5 }).map((_, i) => {
+                        const full = Math.floor(v.rating);
+                        return (
+                          <svg key={i} xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill={i < full ? "#fbbf24" : "none"} stroke={i < full ? "#fbbf24" : "#d6d3d1"} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                        );
+                      })}
+                    </span>
+                    <span className="text-xs text-stone-600 font-medium">{v.rating.toFixed(1)}</span>
+                    <span className="text-xs text-stone-400">({v.reviewCount})</span>
+                  </div>
+                  <div className="space-y-1">
+                    {v.address && (
+                      <p className="flex items-start gap-1.5 text-xs text-stone-500">
+                        <MapPin size={11} className="text-stone-400 mt-0.5 shrink-0" />
+                        <span>{v.address}</span>
+                      </p>
+                    )}
+                    {v.phone && (
+                      <p className="flex items-center gap-1.5 text-xs text-stone-500">
+                        <Phone size={11} className="text-stone-400 shrink-0" />
+                        <a href={`tel:${v.phone}`} className="hover:text-rose-500 transition-colors">{v.phone}</a>
+                      </p>
+                    )}
+                    {v.website && (
+                      <p className="flex items-center gap-1.5 text-xs text-stone-500 min-w-0">
+                        <Globe size={11} className="text-stone-400 shrink-0" />
+                        <a href={v.website} target="_blank" rel="noopener noreferrer" className="hover:text-rose-500 transition-colors truncate">
+                          {v.website.replace(/^https?:\/\//, "")}
+                        </a>
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-stone-100">
+                    {/* Check if already accepted (exists in vendors list) */}
+                    {(event.vendors ?? []).some((ev) => ev.name === v.name && ev.phone === v.phone) ? (
+                      <span className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-600">
+                        <CheckCircle2 size={13} />
+                        Accepted
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => {
+                          const validCategories: VendorCategory[] = [
+                            "catering", "photography", "videography", "music", "flowers",
+                            "cake", "venue", "hair & makeup", "transport", "officiant", "other",
+                          ];
+                          const mappedCategory = validCategories.includes(v.category as VendorCategory)
+                            ? (v.category as VendorCategory)
+                            : "other";
+
+                          const newVendor: Vendor = {
+                            id: crypto.randomUUID(),
+                            name: v.name,
+                            category: mappedCategory,
+                            contact: v.name,
+                            phone: v.phone || "",
+                            email: "",
+                            notes: "",
+                            mealChoice: "",
+                            contractTotal: 0,
+                            payments: [],
+                          };
+
+                          updateEvent(event.id, {
+                            vendors: [...(event.vendors || []), newVendor],
+                          });
+                        }}
+                        className="flex items-center gap-1.5 text-[11px] font-medium text-teal-600 hover:text-teal-700 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        <Check size={12} />
+                        Accept Vendor
+                      </button>
+                    )}
+                    <div className="flex-1" />
+                    {v.googleMapsUrl && (
+                      <a
+                        href={v.googleMapsUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] font-medium text-stone-400 hover:text-stone-600 transition-colors"
+                      >
+                        Maps
+                        <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Invoices */}
         {(event.invoices ?? []).filter((inv) => inv.status !== "draft").length > 0 && (
