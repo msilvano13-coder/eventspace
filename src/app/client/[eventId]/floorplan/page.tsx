@@ -4,11 +4,12 @@ import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useEvent, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
-import { ArrowLeft, Plus, Users } from "lucide-react";
+import { ArrowLeft, Plus, Users, Lightbulb } from "lucide-react";
 import { useCallback, useState } from "react";
 import { FloorPlan, Guest } from "@/lib/types";
 import { v4 as uuid } from "uuid";
 import SeatingPanel from "@/components/floorplan/SeatingPanel";
+import LightingOverlay from "@/components/floorplan/LightingOverlay";
 
 const FloorPlanEditor = dynamic(
   () => import("@/components/floorplan/FloorPlanEditor"),
@@ -30,6 +31,7 @@ export default function ClientFloorPlanPage() {
   const [showAddTab, setShowAddTab] = useState(false);
   const [newTabName, setNewTabName] = useState("");
   const [showSeating, setShowSeating] = useState(false);
+  const [showLighting, setShowLighting] = useState(false);
 
   const handleSave = useCallback(
     (json: string) => {
@@ -52,6 +54,8 @@ export default function ClientFloorPlanPage() {
 
   const plans = event.floorPlans || [];
   const activePlan = plans.find((p) => p.id === activePlanId) || plans[0];
+  const lightingZones = activePlan?.lightingZones ?? [];
+  const hasLighting = lightingZones.length > 0;
 
   function addTab() {
     if (!newTabName.trim()) return;
@@ -78,8 +82,22 @@ export default function ClientFloorPlanPage() {
           {event.name} — Floor Plan
         </h2>
         <div className="flex-1" />
+        {/* Lighting toggle — only show if planner has designed lighting */}
+        {hasLighting && (
+          <button
+            onClick={() => { setShowLighting(!showLighting); if (!showLighting) setShowSeating(false); }}
+            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+              showLighting
+                ? "bg-amber-50 text-amber-600 border border-amber-200"
+                : "text-stone-400 hover:text-stone-600 hover:bg-stone-50 border border-transparent"
+            }`}
+          >
+            <Lightbulb size={13} />
+            <span className="hidden sm:inline">Lighting</span>
+          </button>
+        )}
         <button
-          onClick={() => setShowSeating(!showSeating)}
+          onClick={() => { setShowSeating(!showSeating); if (!showSeating) setShowLighting(false); }}
           className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
             showSeating
               ? "bg-rose-50 text-rose-600 border border-rose-200"
@@ -105,6 +123,11 @@ export default function ClientFloorPlanPage() {
             }`}
           >
             {plan.name}
+            {(plan.lightingZones ?? []).length > 0 && showLighting && (
+              <span className="ml-1.5 text-[9px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-semibold">
+                {plan.lightingZones.length}
+              </span>
+            )}
           </button>
         ))}
         {showAddTab ? (
@@ -146,6 +169,17 @@ export default function ClientFloorPlanPage() {
             eventId={eventId}
             initialJSON={activePlan.json}
             onSave={handleSave}
+            canvasOverlay={
+              showLighting ? (
+                <LightingOverlay
+                  zones={lightingZones}
+                  onUpdateZones={() => {}} // read-only for client
+                  selectedZoneId={null}
+                  onSelectZone={() => {}}
+                  enabled={showLighting}
+                />
+              ) : undefined
+            }
           />
         )}
         {showSeating && (
