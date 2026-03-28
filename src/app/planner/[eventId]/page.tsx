@@ -1089,6 +1089,14 @@ export default function EventDetailPage() {
         )}
       </div>
 
+      {/* ── Messages ── */}
+      <MessageThread
+        messages={event.messages ?? []}
+        senderRole="planner"
+        senderName="Planner"
+        onSend={(msgs: Message[]) => updateEvent(eventId, { messages: msgs })}
+      />
+
       {/* ── Expenses ── */}
       <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6 mt-10">
         <div className="flex items-center justify-between mb-4">
@@ -1217,14 +1225,6 @@ export default function EventDetailPage() {
           </div>
         )}
       </div>
-
-      {/* ── Messages ── */}
-      <MessageThread
-        messages={event.messages ?? []}
-        senderRole="planner"
-        senderName="Planner"
-        onSend={(msgs: Message[]) => updateEvent(eventId, { messages: msgs })}
-      />
 
       {/* ── Danger Zone ── */}
       <div className="mt-20 pt-8 border-t-2 border-dashed border-stone-200 pb-12">

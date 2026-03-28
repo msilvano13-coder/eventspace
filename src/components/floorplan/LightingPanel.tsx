@@ -266,16 +266,21 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
           {/* Size */}
           <div className="mb-3">
             <label className="block text-[10px] font-medium text-stone-400 uppercase tracking-wider mb-1">
-              Size — {selectedZone.size}
+              Size — {selectedZone.size}px
             </label>
             <input
               type="range"
-              min="2"
-              max="20"
+              min="10"
+              max="200"
+              step="1"
               value={selectedZone.size}
               onChange={(e) => updateZone(selectedZone.id, { size: parseInt(e.target.value) })}
               className="w-full accent-rose-400"
             />
+            <div className="flex justify-between text-[9px] text-stone-400 mt-0.5">
+              <span>Small</span>
+              <span>Large</span>
+            </div>
           </div>
 
           {/* Notes */}

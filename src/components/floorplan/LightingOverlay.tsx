@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { LightingZone, LightingType } from "@/lib/types";
 
 interface Props {
@@ -12,13 +12,13 @@ interface Props {
 }
 
 const TYPE_DEFAULTS: Record<LightingType, { name: string; color: string; size: number; intensity: number }> = {
-  uplight:   { name: "Uplight",     color: "#c084fc", size: 8,  intensity: 80 },
-  spotlight: { name: "Spotlight",   color: "#fbbf24", size: 10, intensity: 70 },
-  pinspot:   { name: "Pin Spot",    color: "#f5f5f4", size: 5,  intensity: 60 },
-  gobo:      { name: "Gobo",        color: "#fb7185", size: 7,  intensity: 50 },
-  wash:      { name: "Wash Light",  color: "#60a5fa", size: 12, intensity: 65 },
-  string:    { name: "String Light", color: "#fde68a", size: 6,  intensity: 75 },
-  candles:   { name: "Candles",     color: "#f59e0b", size: 4,  intensity: 40 },
+  uplight:   { name: "Uplight",      color: "#c084fc", size: 50,  intensity: 80 },
+  spotlight: { name: "Spotlight",    color: "#fbbf24", size: 60,  intensity: 70 },
+  pinspot:   { name: "Pin Spot",     color: "#f5f5f4", size: 30,  intensity: 60 },
+  gobo:      { name: "Gobo",         color: "#fb7185", size: 45,  intensity: 50 },
+  wash:      { name: "Wash Light",   color: "#60a5fa", size: 80,  intensity: 65 },
+  string:    { name: "String Light", color: "#fde68a", size: 40,  intensity: 75 },
+  candles:   { name: "Candles",      color: "#f59e0b", size: 20,  intensity: 40 },
 };
 
 export default function LightingOverlay({ zones, onUpdateZones, selectedZoneId, onSelectZone, enabled }: Props) {
@@ -93,6 +93,25 @@ export default function LightingOverlay({ zones, onUpdateZones, selectedZoneId, 
     onUpdateZones(zones.map((z) => z.id === dragging ? { ...z, x, y } : z));
   }, [dragging, zones, onUpdateZones]);
 
+  // Scroll-wheel resize: when hovering a zone, scroll up/down to resize
+  useEffect(() => {
+    const el = overlayRef.current;
+    if (!el || !enabled) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      if (!selectedZoneId) return;
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -2 : 2;
+      const zone = zones.find((z) => z.id === selectedZoneId);
+      if (!zone) return;
+      const newSize = Math.max(10, Math.min(200, zone.size + delta));
+      onUpdateZones(zones.map((z) => z.id === selectedZoneId ? { ...z, size: newSize } : z));
+    };
+
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [enabled, selectedZoneId, zones, onUpdateZones]);
+
   if (!enabled) return null;
 
   return (
@@ -109,8 +128,13 @@ export default function LightingOverlay({ zones, onUpdateZones, selectedZoneId, 
     >
       {zones.map((zone) => {
         const isSelected = zone.id === selectedZoneId;
-        const sizePx = `${zone.size * 2}%`;
+        // Size is now in pixels (10–200px)
+        const sizePx = `${zone.size}px`;
+        const glowBlur = Math.max(4, zone.size * 0.3);
         const opacity = zone.intensity / 100;
+        // Dynamic label size based on zone size
+        const labelSize = zone.size < 30 ? 7 : zone.size < 50 ? 8 : 9;
+        const showLabel = zone.size >= 20;
 
         return (
           <div
@@ -134,22 +158,29 @@ export default function LightingOverlay({ zones, onUpdateZones, selectedZoneId, 
               style={{
                 inset: "-100%",
                 background: `radial-gradient(circle, ${zone.color}${Math.round(opacity * 80).toString(16).padStart(2, "0")} 0%, transparent 70%)`,
-                filter: "blur(8px)",
+                filter: `blur(${glowBlur}px)`,
                 pointerEvents: "none",
               }}
             />
             {/* Core circle */}
             <div
-              className="absolute inset-[15%] rounded-full flex items-center justify-center transition-all"
+              className="absolute inset-[10%] rounded-full flex items-center justify-center transition-all"
               style={{
-                border: `2px solid ${isSelected ? "#fb7185" : "rgba(255,255,255,0.35)"}`,
+                border: `${zone.size < 30 ? 1.5 : 2}px solid ${isSelected ? "#fb7185" : "rgba(255,255,255,0.35)"}`,
                 background: `${zone.color}20`,
                 boxShadow: isSelected ? "0 0 0 3px rgba(251,113,133,0.3)" : "none",
               }}
             >
-              <span className="text-[8px] sm:text-[9px] text-white/90 font-semibold text-center leading-tight select-none pointer-events-none">
-                {zone.name.length > 12 ? zone.name.slice(0, 10) + "…" : zone.name}
-              </span>
+              {showLabel && (
+                <span
+                  className="text-white/90 font-semibold text-center leading-tight select-none pointer-events-none"
+                  style={{ fontSize: `${labelSize}px` }}
+                >
+                  {zone.name.length > (zone.size < 50 ? 6 : 12)
+                    ? zone.name.slice(0, zone.size < 50 ? 4 : 10) + "…"
+                    : zone.name}
+                </span>
+              )}
             </div>
           </div>
         );
