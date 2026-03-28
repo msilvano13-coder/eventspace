@@ -349,8 +349,13 @@ export default function PlannerDashboard() {
         <NewEventModal
           onClose={() => setShowModal(false)}
           onCreate={async (data) => {
-            await createEvent(data);
-            setShowModal(false);
+            try {
+              await createEvent(data);
+              setShowModal(false);
+            } catch (err) {
+              console.error("Failed to create event:", err);
+              alert("Failed to create event. Please try again.");
+            }
           }}
         />
       )}

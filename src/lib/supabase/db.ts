@@ -925,21 +925,23 @@ export async function createEvent(
     { id: "dancefloor", name: "Dance Floor" },
   ];
 
-  const { error: fpError } = await supabase.from("floor_plans").insert(
-    defaultPlans.map((fp, i) => ({
-      id: fp.id,
-      event_id: created.id,
-      name: fp.name,
-      json: null,
-      sort_order: i,
-    }))
-  );
+  const floorPlanRows = defaultPlans.map((fp, i) => ({
+    event_id: created.id,
+    name: fp.name,
+    json: null,
+    sort_order: i,
+  }));
+
+  const { data: insertedFps, error: fpError } = await supabase
+    .from("floor_plans")
+    .insert(floorPlanRows)
+    .select();
 
   if (fpError) throw new Error(`createEvent (floor_plans): ${fpError.message}`);
 
   return eventFromRow({
     ...created,
-    floor_plans: defaultPlans.map((fp) => ({
+    floor_plans: (insertedFps || []).map((fp: any) => ({
       id: fp.id,
       name: fp.name,
       json: null,
