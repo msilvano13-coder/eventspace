@@ -100,6 +100,34 @@ export default function ClientPortalPage() {
         {/* Color Palette */}
         <ClientColorPalette event={event} onUpdate={(colors) => updateEvent(event.id, { colorPalette: colors })} />
 
+        {/* Mood Board */}
+        {(event.moodBoard ?? []).length > 0 && (
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
+            <div className="flex items-center gap-2 px-5 pt-5 pb-4 border-b border-stone-100">
+              <span className="text-pink-400">
+                <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+              </span>
+              <h2 className="font-heading font-semibold text-stone-800">Mood Board</h2>
+            </div>
+            <div className="p-4">
+              <div className="columns-2 sm:columns-3 gap-3 space-y-3">
+                {(event.moodBoard ?? []).map((img) => (
+                  <div key={img.id} className="break-inside-avoid">
+                    <img
+                      src={img.url}
+                      alt={img.caption}
+                      className="w-full rounded-xl object-cover"
+                    />
+                    {img.caption && (
+                      <p className="text-[10px] text-stone-400 mt-1 truncate">{img.caption}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Day Timeline */}
         {schedule.length > 0 && (
           <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">

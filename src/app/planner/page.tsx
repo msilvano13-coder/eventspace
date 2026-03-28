@@ -185,6 +185,7 @@ function NewEventModal({
                 expenses: [],
                 guests: [],
                 colorPalette: [],
+                moodBoard: [],
                 budget: [],
                 messages: [],
               })

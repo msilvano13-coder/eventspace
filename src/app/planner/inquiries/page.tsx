@@ -80,6 +80,7 @@ export default function InquiriesPage() {
       expenses: [],
       guests: [],
       colorPalette: [],
+      moodBoard: [],
       budget: [],
       messages: [],
     });

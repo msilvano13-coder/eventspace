@@ -43,6 +43,7 @@ export interface Event {
   expenses: Expense[];
   guests: Guest[];
   colorPalette: string[];
+  moodBoard: MoodBoardImage[];
   budget: BudgetItem[];
   messages: Message[];
   createdAt: string;
@@ -223,6 +224,15 @@ export const VENDOR_TO_BUDGET_CATEGORY: Record<VendorCategory, string> = {
   officiant: "Officiant",
   other: "Other",
 };
+
+// ── Mood Board ──
+
+export interface MoodBoardImage {
+  id: string;
+  url: string;        // base64 data URL
+  caption: string;
+  addedAt: string;
+}
 
 // ── Messages ──
 

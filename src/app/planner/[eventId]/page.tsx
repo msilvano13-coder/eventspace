@@ -1,6 +1,6 @@
 "use client";
 
-import { useEvent, useStoreActions, useQuestionnaires } from "@/hooks/useStore";
+import { useEvent, useStoreActions, useQuestionnaires, usePlannerProfile } from "@/hooks/useStore";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
@@ -30,9 +30,12 @@ import {
   Palette,
   Users,
   ChevronRight,
+  Download,
+  Image,
 } from "lucide-react";
 import { TimelineItem, Vendor, VendorCategory, QuestionnaireAssignment, Expense, Message, BudgetItem, BUDGET_CATEGORIES, VendorPaymentItem, VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
 import MessageThread from "@/components/event/MessageThread";
+import { exportEventPDF } from "@/lib/export-pdf";
 
 const STATUS_OPTIONS = ["planning", "confirmed", "completed"] as const;
 
@@ -41,6 +44,7 @@ export default function EventDetailPage() {
   const event = useEvent(eventId);
   const { updateEvent, deleteEvent } = useStoreActions();
   const allQuestionnaires = useQuestionnaires();
+  const plannerProfile = usePlannerProfile();
   const router = useRouter();
 
   // ── Event info editing ──
@@ -470,18 +474,27 @@ export default function EventDetailPage() {
               </span>
             </div>
           </div>
-          <button
-            onClick={() => navigator.clipboard.writeText(clientLink)}
-            className="flex items-center gap-2 border border-stone-200 px-3.5 py-2 rounded-xl text-sm text-stone-600 hover:bg-stone-50 transition-colors shrink-0"
-          >
-            <Share2 size={14} />
-            Copy Client Link
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => exportEventPDF(event, plannerProfile.businessName || plannerProfile.plannerName)}
+              className="flex items-center gap-2 border border-stone-200 px-3.5 py-2 rounded-xl text-sm text-stone-600 hover:bg-stone-50 transition-colors"
+            >
+              <Download size={14} />
+              <span className="hidden sm:inline">Export PDF</span>
+            </button>
+            <button
+              onClick={() => navigator.clipboard.writeText(clientLink)}
+              className="flex items-center gap-2 border border-stone-200 px-3.5 py-2 rounded-xl text-sm text-stone-600 hover:bg-stone-50 transition-colors"
+            >
+              <Share2 size={14} />
+              <span className="hidden sm:inline">Client Link</span>
+            </button>
+          </div>
         </div>
       )}
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 mb-8">
         <Link
           href={`/planner/${event.id}/floorplan`}
           className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
@@ -521,6 +534,14 @@ export default function EventDetailPage() {
           <Users size={22} className="text-amber-400 mb-2" />
           <h3 className="font-heading font-semibold text-stone-800 group-hover:text-amber-500 text-sm">Guests</h3>
           <p className="text-xs text-stone-400 mt-1">{(event.guests ?? []).length} guests</p>
+        </Link>
+        <Link
+          href={`/planner/${event.id}/moodboard`}
+          className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
+        >
+          <Image size={22} className="text-pink-400 mb-2" />
+          <h3 className="font-heading font-semibold text-stone-800 group-hover:text-pink-500 text-sm">Mood Board</h3>
+          <p className="text-xs text-stone-400 mt-1">{(event.moodBoard ?? []).length} images</p>
         </Link>
       </div>
 
@@ -573,8 +594,9 @@ export default function EventDetailPage() {
         )}
       </div>
 
-      {/* ── Color Palette ── */}
-      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6">
+      {/* ── Color Palette + To Do (2-col) ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Palette size={16} className="text-rose-400" />
@@ -655,8 +677,8 @@ export default function EventDetailPage() {
         )}
       </div>
 
-      {/* ── To Do List ── */}
-      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6">
+      {/* To Do List */}
+      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <CheckSquare size={16} className="text-emerald-400" />
@@ -758,6 +780,7 @@ export default function EventDetailPage() {
           </div>
         )}
       </div>
+      </div>{/* end 2-col grid */}
 
       {/* ── Questionnaires ── */}
       <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6">
@@ -1067,7 +1090,7 @@ export default function EventDetailPage() {
       </div>
 
       {/* ── Expenses ── */}
-      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6">
+      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6 mt-10">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Wallet size={16} className="text-teal-400" />
@@ -1203,15 +1226,17 @@ export default function EventDetailPage() {
         onSend={(msgs: Message[]) => updateEvent(eventId, { messages: msgs })}
       />
 
-      {/* ── Delete Event ── */}
-      <div className="flex justify-center pb-8">
-        <button
-          onClick={() => setShowDeleteConfirm(true)}
-          className="flex items-center gap-1.5 text-xs text-stone-400 hover:text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors"
-        >
-          <Trash2 size={13} />
-          Delete Event
-        </button>
+      {/* ── Danger Zone ── */}
+      <div className="mt-12 pt-6 border-t border-stone-200 pb-8">
+        <div className="flex justify-center">
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="flex items-center gap-1.5 text-xs text-stone-400 hover:text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors"
+          >
+            <Trash2 size={13} />
+            Delete Event
+          </button>
+        </div>
       </div>
 
       {/* ── Delete Confirmation Modal ── */}

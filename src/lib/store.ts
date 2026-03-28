@@ -48,6 +48,7 @@ class EventStore {
           delete (evt as any).vendorContracts;
           delete (evt as any).comments;
           delete (evt as any).floorPlanThumbnail;
+          if (!evt.moodBoard) evt.moodBoard = [];
           if (!evt.messages) evt.messages = [];
         });
       } catch {
