@@ -225,13 +225,17 @@ export default function FloorPlanPage() {
                 onSelectZone={setSelectedZoneId}
               />
             </div>
-            {/* Mobile: full-screen overlay */}
-            <div className="absolute inset-0 z-40 md:hidden bg-white overflow-y-auto">
-              <div className="sticky top-0 z-10 bg-white border-b border-stone-200 flex items-center justify-between px-4 py-3">
-                <h3 className="text-sm font-heading font-semibold text-stone-800">Lighting Design</h3>
+            {/* Mobile: bottom sheet (partial overlay so floor plan stays visible) */}
+            <div className="absolute left-0 right-0 bottom-0 z-40 md:hidden bg-white rounded-t-2xl shadow-2xl border-t border-stone-200 max-h-[45%] overflow-y-auto">
+              <div className="sticky top-0 z-10 bg-white border-b border-stone-100 flex items-center justify-between px-4 py-2.5 rounded-t-2xl">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-1 bg-stone-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-1.5" />
+                  <Lightbulb size={13} className="text-amber-400 mt-1" />
+                  <h3 className="text-xs font-heading font-semibold text-stone-800 mt-1">Lighting</h3>
+                </div>
                 <button
                   onClick={() => { setShowLighting(false); setSelectedZoneId(null); }}
-                  className="text-xs text-stone-400 hover:text-stone-600 font-medium"
+                  className="text-xs text-stone-400 hover:text-stone-600 font-medium mt-1"
                 >
                   Done
                 </button>
