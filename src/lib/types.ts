@@ -21,7 +21,7 @@ export interface LightingZone {
   intensity: number;      // 0–100
   x: number;              // percentage position (0–100)
   y: number;              // percentage position (0–100)
-  size: number;           // radius in percentage (2–20)
+  size: number;           // size in pixels (10–200)
   notes: string;
 }
 
