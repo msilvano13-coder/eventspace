@@ -149,13 +149,33 @@ export default function ClientFloorPlanPage() {
           />
         )}
         {showSeating && (
-          <div className="absolute top-0 right-0 bottom-0 z-40 hidden md:block shadow-xl">
-            <SeatingPanel
-              floorPlanJSON={activePlan?.json ?? null}
-              guests={event.guests ?? []}
-              onUpdateGuests={(guests: Guest[]) => updateEvent(eventId, { guests })}
-            />
-          </div>
+          <>
+            {/* Mobile: full-screen overlay */}
+            <div className="absolute inset-0 z-40 md:hidden bg-white overflow-y-auto">
+              <div className="sticky top-0 z-10 bg-white border-b border-stone-200 flex items-center justify-between px-4 py-3">
+                <h3 className="text-sm font-heading font-semibold text-stone-800">Seating</h3>
+                <button
+                  onClick={() => setShowSeating(false)}
+                  className="text-xs text-stone-400 hover:text-stone-600 font-medium"
+                >
+                  Done
+                </button>
+              </div>
+              <SeatingPanel
+                floorPlanJSON={activePlan?.json ?? null}
+                guests={event.guests ?? []}
+                onUpdateGuests={(guests: Guest[]) => updateEvent(eventId, { guests })}
+              />
+            </div>
+            {/* Desktop: side panel */}
+            <div className="absolute top-0 right-0 bottom-0 z-40 hidden md:block shadow-xl">
+              <SeatingPanel
+                floorPlanJSON={activePlan?.json ?? null}
+                guests={event.guests ?? []}
+                onUpdateGuests={(guests: Guest[]) => updateEvent(eventId, { guests })}
+              />
+            </div>
+          </>
         )}
       </div>
     </div>
