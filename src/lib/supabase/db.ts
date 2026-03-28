@@ -948,7 +948,7 @@ export async function createEvent(
   const { count: activeCount } = await supabase
     .from("events")
     .select("id", { count: "exact", head: true })
-    .eq("planner_id", userId)
+    .eq("user_id", userId)
     .is("archived_at", null);
 
   if ((activeCount ?? 0) >= maxEvents) {

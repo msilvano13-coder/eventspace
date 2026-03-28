@@ -80,7 +80,7 @@ export async function POST() {
     const { data: events } = await supabaseAdmin
       .from("events")
       .select("id")
-      .eq("planner_id", user.id);
+      .eq("user_id", user.id);
 
     const eventIds = events?.map((e) => e.id) || [];
 
@@ -111,7 +111,7 @@ export async function POST() {
       }
 
       // Delete the events themselves
-      await supabaseAdmin.from("events").delete().eq("planner_id", user.id);
+      await supabaseAdmin.from("events").delete().eq("user_id", user.id);
     }
 
     // Delete planner-level data
@@ -123,7 +123,7 @@ export async function POST() {
     ];
 
     for (const table of plannerTables) {
-      await supabaseAdmin.from(table).delete().eq("planner_id", user.id);
+      await supabaseAdmin.from(table).delete().eq("user_id", user.id);
     }
 
     // 5. Delete the profile
