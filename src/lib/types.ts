@@ -110,6 +110,7 @@ export interface FurnitureItemDef {
   defaultRadius?: number;
   fill: string;
   stroke: string;
+  maxSeats?: number;
 }
 
 export interface RoomPreset {

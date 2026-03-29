@@ -11,8 +11,10 @@ import {
   Polygon,
   Gradient,
   Shadow,
+  ActiveSelection,
+  util,
 } from "fabric";
-import { GRID_SIZE, ROOM_PRESETS } from "@/lib/constants";
+import { GRID_SIZE, ROOM_PRESETS, FurnitureGroup } from "@/lib/constants";
 import {
   unwrapCanvasJSON,
   serializeFloorPlan,
@@ -190,6 +192,8 @@ export default function FloorPlanEditor({
   const gridObjectsRef = useRef<FabricObject[]>([]);
   const lightingOverlayRef = useRef<Rect | null>(null);
   const lightingObjectsRef = useRef<Map<string, Group>>(new Map());
+  const clipboardRef = useRef<any[]>([]);
+  const [canPaste, setCanPaste] = useState(false);
 
   // ── Refs for latest values (used in closures) ──
   const lightingZonesRef = useRef(lightingZones);
@@ -414,6 +418,31 @@ export default function FloorPlanEditor({
         return;
       }
 
+      // Multi-select (ActiveSelection)
+      if (active instanceof ActiveSelection) {
+        const count = active.getObjects().filter(
+          (o) => !o.data?.isGrid && !o.data?.isLighting && !o.data?.isLightingOverlay && !o.data?.isRoom
+        ).length;
+        if (count > 0) {
+          const bound = active.getBoundingRect();
+          setSelectedInfo({
+            label: `${count} items selected`,
+            x: active.left || 0,
+            y: active.top || 0,
+            width: bound.width,
+            height: bound.height,
+            angle: 0,
+            furnitureId: "",
+          });
+          if (onSelectZoneRef.current) {
+            onSelectZoneRef.current(null);
+          }
+        } else {
+          setSelectedInfo(null);
+        }
+        return;
+      }
+
       // Furniture selected
       if (active && active.data && !active.data.isGrid && !active.data.isRoom && !active.data.isLighting && !active.data.isLightingOverlay) {
         const bound = active.getBoundingRect();
@@ -482,12 +511,66 @@ export default function FloorPlanEditor({
     }
 
     const handleKey = (e: KeyboardEvent) => {
+      // ── Copy ──
+      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+        const active = canvas.getActiveObject();
+        if (!active || active.data?.isGrid || active.data?.isLighting || active.data?.isLightingOverlay) return;
+        if (active instanceof ActiveSelection) {
+          clipboardRef.current = active.getObjects()
+            .filter((o) => !o.data?.isGrid && !o.data?.isLighting && !o.data?.isLightingOverlay && !o.data?.isRoom)
+            .map((o) => o.toJSON());
+        } else {
+          clipboardRef.current = [active.toJSON()];
+        }
+        setCanPaste(clipboardRef.current.length > 0);
+      }
+
+      // ── Paste ──
+      if ((e.ctrlKey || e.metaKey) && e.key === "v" && clipboardRef.current.length > 0) {
+        e.preventDefault();
+        util.enlivenObjects(clipboardRef.current).then((objects: any[]) => {
+          objects.forEach((obj) => {
+            obj.set({ left: (obj.left || 0) + 20, top: (obj.top || 0) + 20 });
+            canvas.add(obj);
+          });
+          canvas.requestRenderAll();
+          pushUndo();
+          triggerAutoSave();
+        });
+      }
+
+      // ── Select All ──
+      if ((e.ctrlKey || e.metaKey) && e.key === "a") {
+        e.preventDefault();
+        const furniture = canvas.getObjects().filter((o) =>
+          o.data && !o.data.isGrid && !o.data.isRoom && !o.data.isLighting && !o.data.isLightingOverlay
+        );
+        if (furniture.length > 0) {
+          const sel = new ActiveSelection(furniture, { canvas });
+          canvas.setActiveObject(sel);
+          canvas.requestRenderAll();
+        }
+      }
+
+      // ── Delete / Backspace ──
       if (e.key === "Delete" || e.key === "Backspace") {
         const active = canvas.getActiveObject();
         if (!active) return;
 
         // Don't delete grid or overlay
         if (active.data?.isGrid || active.data?.isLightingOverlay) return;
+
+        // Multi-select delete
+        if (active instanceof ActiveSelection) {
+          const objects = active.getObjects().filter(
+            (o) => !o.data?.isGrid && !o.data?.isLighting && !o.data?.isLightingOverlay && !o.data?.isRoom
+          );
+          canvas.discardActiveObject();
+          objects.forEach((o) => canvas.remove(o));
+          pushUndo();
+          triggerAutoSave();
+          return;
+        }
 
         // Delete lighting zone
         if (active.data?.isLighting) {
@@ -743,6 +826,19 @@ export default function FloorPlanEditor({
     // Don't delete grid or overlay
     if (active.data?.isGrid || active.data?.isLightingOverlay) return;
 
+    // Multi-select delete
+    if (active instanceof ActiveSelection) {
+      const objects = active.getObjects().filter(
+        (o) => !o.data?.isGrid && !o.data?.isLighting && !o.data?.isLightingOverlay && !o.data?.isRoom
+      );
+      canvas.discardActiveObject();
+      objects.forEach((o) => canvas.remove(o));
+      setSelectedInfo(null);
+      pushUndo();
+      triggerAutoSave();
+      return;
+    }
+
     // Lighting zone
     if (active.data?.isLighting) {
       const zoneId = active.data.zoneId;
@@ -766,12 +862,110 @@ export default function FloorPlanEditor({
     const canvas = fabricRef.current;
     if (!canvas) return;
     const active = canvas.getActiveObject();
-    if (active && !active.data?.isLighting) {
+    if (!active || active.data?.isLighting) return;
+
+    if (active instanceof ActiveSelection) {
+      active.getObjects().forEach((obj) => {
+        obj.rotate((obj.angle || 0) + 45);
+      });
+    } else {
       active.rotate((active.angle || 0) + 45);
+    }
+    canvas.requestRenderAll();
+    pushUndo();
+    triggerAutoSave();
+  }
+
+  function handleCopy() {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const active = canvas.getActiveObject();
+    if (!active || active.data?.isGrid || active.data?.isLighting || active.data?.isLightingOverlay) return;
+    if (active instanceof ActiveSelection) {
+      clipboardRef.current = active.getObjects()
+        .filter((o) => !o.data?.isGrid && !o.data?.isLighting && !o.data?.isLightingOverlay && !o.data?.isRoom)
+        .map((o) => o.toJSON());
+    } else {
+      clipboardRef.current = [active.toJSON()];
+    }
+    setCanPaste(clipboardRef.current.length > 0);
+  }
+
+  function handlePaste() {
+    const canvas = fabricRef.current;
+    if (!canvas || clipboardRef.current.length === 0) return;
+    util.enlivenObjects(clipboardRef.current).then((objects: any[]) => {
+      objects.forEach((obj) => {
+        obj.set({ left: (obj.left || 0) + 20, top: (obj.top || 0) + 20 });
+        canvas.add(obj);
+      });
       canvas.requestRenderAll();
       pushUndo();
       triggerAutoSave();
-    }
+    });
+  }
+
+  function addFurnitureGroup(group: FurnitureGroup, x?: number, y?: number) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const centerX = x ?? canvas.getWidth() / 2;
+    const centerY = y ?? canvas.getHeight() / 2;
+
+    group.items.forEach((entry) => {
+      const item = getFurnitureById(entry.furnitureId);
+      if (!item) return;
+
+      let shape: FabricObject;
+      if (item.shape === "circle") {
+        shape = new Circle({
+          radius: item.defaultRadius || item.defaultWidth / 2,
+          fill: item.fill,
+          stroke: item.stroke,
+          strokeWidth: 1.5,
+          originX: "center",
+          originY: "center",
+        });
+      } else {
+        shape = new Rect({
+          width: item.defaultWidth,
+          height: item.defaultHeight,
+          fill: item.fill,
+          stroke: item.stroke,
+          strokeWidth: 1.5,
+          rx: 4,
+          ry: 4,
+          originX: "center",
+          originY: "center",
+        });
+      }
+
+      const label = new FabricText(item.name, {
+        fontSize: 9,
+        fill: "#57534e",
+        originX: "center",
+        originY: "center",
+        fontFamily: "sans-serif",
+      });
+
+      const objLeft = Math.round((centerX + entry.offsetX) / GRID_SIZE) * GRID_SIZE;
+      const objTop = Math.round((centerY + entry.offsetY) / GRID_SIZE) * GRID_SIZE;
+
+      const fabricGroup = new Group([shape, label], {
+        left: objLeft,
+        top: objTop,
+        originX: "center",
+        originY: "center",
+        angle: entry.angle || 0,
+        data: { furnitureId: item.id, label: item.name },
+      });
+
+      canvas.add(fabricGroup);
+    });
+
+    canvas.requestRenderAll();
+    pushUndo();
+    triggerAutoSave();
+    setShowMobilePalette(false);
   }
 
   function handleUpdateLabel(label: string) {
@@ -815,11 +1009,14 @@ export default function FloorPlanEditor({
         hasSelection={selectedInfo !== null}
         zoom={zoom}
         onRoomShape={() => setShowRoomPicker(true)}
+        onCopy={handleCopy}
+        onPaste={handlePaste}
+        canPaste={canPaste}
       />
       <div className="flex flex-1 overflow-hidden relative">
         {/* Desktop side panels */}
         <div className="hidden md:block">
-          <FurniturePalette onAddItem={(item) => addFurnitureToCanvas(item)} />
+          <FurniturePalette onAddItem={(item) => addFurnitureToCanvas(item)} onAddGroup={(group) => addFurnitureGroup(group)} />
         </div>
 
         <div
@@ -870,6 +1067,7 @@ export default function FloorPlanEditor({
               </div>
               <FurniturePalette
                 onAddItem={(item) => addFurnitureToCanvas(item)}
+                onAddGroup={(group) => addFurnitureGroup(group)}
                 mobile
               />
             </div>

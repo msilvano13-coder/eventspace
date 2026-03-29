@@ -9,6 +9,7 @@ import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 interface TableInfo {
   label: string;
   furnitureId: string;
+  maxSeats: number;
 }
 
 interface Props {
@@ -30,7 +31,7 @@ function extractTables(json: string | null): TableInfo[] {
       if (!data.furnitureId) continue;
       const catalogItem = FURNITURE_CATALOG.find((f) => f.id === data.furnitureId);
       if (catalogItem && catalogItem.category === "table") {
-        tables.push({ label: data.label || catalogItem.name, furnitureId: data.furnitureId });
+        tables.push({ label: data.label || catalogItem.name, furnitureId: data.furnitureId, maxSeats: catalogItem.maxSeats ?? 0 });
       }
     }
     return tables;
@@ -96,7 +97,7 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests }: 
           Seating Chart
         </h3>
         <p className="text-[10px] text-stone-400 mt-1">
-          {acceptedGuests.length} accepted · {unassigned.length} unassigned
+          {acceptedGuests.reduce((sum, g) => sum + 1 + (g.plusOne ? 1 : 0), 0)}/{tables.reduce((sum, t) => sum + t.maxSeats, 0)} seated · {unassigned.length} unassigned
         </p>
       </div>
 
@@ -114,8 +115,20 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests }: 
                 className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-stone-50 transition-colors"
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-6 h-6 rounded-full bg-stone-100 flex items-center justify-center flex-shrink-0">
-                    <span className="text-[10px] font-semibold text-stone-500">{count}</span>
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    table.maxSeats > 0 && count > table.maxSeats
+                      ? "bg-red-100"
+                      : table.maxSeats > 0 && count === table.maxSeats
+                        ? "bg-emerald-100"
+                        : "bg-stone-100"
+                  }`}>
+                    <span className={`text-[10px] font-semibold ${
+                      table.maxSeats > 0 && count > table.maxSeats
+                        ? "text-red-600"
+                        : table.maxSeats > 0 && count === table.maxSeats
+                          ? "text-emerald-600"
+                          : "text-stone-500"
+                    }`}>{count}/{table.maxSeats}</span>
                   </div>
                   <span className="text-xs font-medium text-stone-700 truncate">{table.label}</span>
                 </div>

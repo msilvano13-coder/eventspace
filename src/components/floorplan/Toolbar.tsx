@@ -10,6 +10,8 @@ import {
   Trash2,
   RotateCw,
   LayoutTemplate,
+  Copy,
+  ClipboardPaste,
 } from "lucide-react";
 
 interface Props {
@@ -27,6 +29,9 @@ interface Props {
   hasSelection: boolean;
   zoom: number;
   onRoomShape: () => void;
+  onCopy: () => void;
+  onPaste: () => void;
+  canPaste: boolean;
 }
 
 export default function Toolbar({
@@ -44,6 +49,9 @@ export default function Toolbar({
   hasSelection,
   zoom,
   onRoomShape,
+  onCopy,
+  onPaste,
+  canPaste,
 }: Props) {
   return (
     <div className="h-11 bg-white border-b border-stone-200 flex items-center px-3 gap-1 overflow-x-auto flex-nowrap">
@@ -84,6 +92,19 @@ export default function Toolbar({
         disabled={!hasSelection}
         tooltip="Delete"
         danger
+      />
+      <Divider />
+      <ToolButton
+        icon={Copy}
+        onClick={onCopy}
+        disabled={!hasSelection}
+        tooltip="Copy (Ctrl+C)"
+      />
+      <ToolButton
+        icon={ClipboardPaste}
+        onClick={onPaste}
+        disabled={!canPaste}
+        tooltip="Paste (Ctrl+V)"
       />
       <div className="flex-1" />
       <ToolButton icon={Download} onClick={onExport} tooltip="Export PNG" />

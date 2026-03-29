@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { Trash2 } from "lucide-react";
+import { pxToFeetInches } from "@/lib/constants";
+import { getFurnitureById } from "./furniture-items";
 
 export interface SelectedObjectInfo {
   label: string;
@@ -63,28 +65,37 @@ export default function PropertiesPanel({
         />
       </div>
 
+      <div>
+        <label className="block text-[10px] font-medium text-stone-400 uppercase tracking-wider mb-1">
+          Dimensions
+        </label>
+        <p className="text-xs text-stone-600 bg-stone-50 rounded-xl px-3 py-2 border border-stone-200">
+          {(() => {
+            const furnitureDef = getFurnitureById(selected.furnitureId);
+            if (furnitureDef?.shape === "circle") {
+              return `\u00D8 ${pxToFeetInches(selected.width)}`;
+            }
+            return `${pxToFeetInches(selected.width)} \u00D7 ${pxToFeetInches(selected.height)}`;
+          })()}
+        </p>
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <div>
           <label className="block text-[10px] font-medium text-stone-400 uppercase tracking-wider mb-1">
             X
           </label>
-          <input
-            type="number"
-            value={Math.round(selected.x)}
-            readOnly
-            className="w-full border border-stone-200 bg-stone-50 rounded-xl px-3 py-2 text-xs text-stone-500"
-          />
+          <p className="text-xs text-stone-500 bg-stone-50 rounded-xl px-3 py-2 border border-stone-200">
+            {pxToFeetInches(selected.x)}
+          </p>
         </div>
         <div>
           <label className="block text-[10px] font-medium text-stone-400 uppercase tracking-wider mb-1">
             Y
           </label>
-          <input
-            type="number"
-            value={Math.round(selected.y)}
-            readOnly
-            className="w-full border border-stone-200 bg-stone-50 rounded-xl px-3 py-2 text-xs text-stone-500"
-          />
+          <p className="text-xs text-stone-500 bg-stone-50 rounded-xl px-3 py-2 border border-stone-200">
+            {pxToFeetInches(selected.y)}
+          </p>
         </div>
       </div>
 

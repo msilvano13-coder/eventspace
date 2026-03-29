@@ -2,6 +2,18 @@ import { FurnitureItemDef, LightingType, RoomPreset } from "./types";
 
 export const GRID_SIZE = 20;
 
+export const PIXELS_PER_INCH = 1; // 1px = 1 inch (implicit in furniture catalog)
+export const INCHES_PER_FOOT = 12;
+
+/** Convert pixels to a human-readable dimension string */
+export function pxToFeetInches(px: number): string {
+  const inches = Math.round(px / PIXELS_PER_INCH);
+  if (inches < 12) return `${inches}"`;
+  const feet = Math.floor(inches / 12);
+  const remainingInches = inches % 12;
+  return remainingInches === 0 ? `${feet}'` : `${feet}' ${remainingInches}"`;
+}
+
 export const FURNITURE_CATALOG: FurnitureItemDef[] = [
   // Tables
   {
@@ -14,6 +26,7 @@ export const FURNITURE_CATALOG: FurnitureItemDef[] = [
     defaultRadius: 30,
     fill: "#f5f0e8",
     stroke: "#c4b5a0",
+    maxSeats: 8,
   },
   {
     id: "round-table-72",
@@ -25,6 +38,7 @@ export const FURNITURE_CATALOG: FurnitureItemDef[] = [
     defaultRadius: 36,
     fill: "#f5f0e8",
     stroke: "#c4b5a0",
+    maxSeats: 10,
   },
   {
     id: "rect-table-6",
@@ -35,6 +49,7 @@ export const FURNITURE_CATALOG: FurnitureItemDef[] = [
     defaultHeight: 30,
     fill: "#f5f0e8",
     stroke: "#c4b5a0",
+    maxSeats: 6,
   },
   {
     id: "rect-table-8",
@@ -45,6 +60,7 @@ export const FURNITURE_CATALOG: FurnitureItemDef[] = [
     defaultHeight: 30,
     fill: "#f5f0e8",
     stroke: "#c4b5a0",
+    maxSeats: 8,
   },
   {
     id: "cocktail-table",
@@ -56,6 +72,7 @@ export const FURNITURE_CATALOG: FurnitureItemDef[] = [
     defaultRadius: 12,
     fill: "#f5f0e8",
     stroke: "#c4b5a0",
+    maxSeats: 4,
   },
   {
     id: "sweetheart-table",
@@ -66,6 +83,7 @@ export const FURNITURE_CATALOG: FurnitureItemDef[] = [
     defaultHeight: 24,
     fill: "#fce7f3",
     stroke: "#ec4899",
+    maxSeats: 2,
   },
   {
     id: "high-top-table",
@@ -77,6 +95,7 @@ export const FURNITURE_CATALOG: FurnitureItemDef[] = [
     defaultRadius: 12,
     fill: "#f5f0e8",
     stroke: "#92400e",
+    maxSeats: 4,
   },
   {
     id: "gift-table",
@@ -87,6 +106,7 @@ export const FURNITURE_CATALOG: FurnitureItemDef[] = [
     defaultHeight: 30,
     fill: "#f5f0e8",
     stroke: "#c4b5a0",
+    maxSeats: 0,
   },
   {
     id: "cake-table",
@@ -98,6 +118,7 @@ export const FURNITURE_CATALOG: FurnitureItemDef[] = [
     defaultRadius: 18,
     fill: "#f5f0e8",
     stroke: "#c4b5a0",
+    maxSeats: 0,
   },
   {
     id: "guest-book-table",
@@ -108,6 +129,7 @@ export const FURNITURE_CATALOG: FurnitureItemDef[] = [
     defaultHeight: 24,
     fill: "#f5f0e8",
     stroke: "#c4b5a0",
+    maxSeats: 0,
   },
   // Seating
   {
@@ -338,6 +360,90 @@ export const ROOM_PRESETS: RoomPreset[] = [
     height: 250,
     points: [
       [0, 0], [800, 0], [800, 250], [0, 250],
+    ],
+  },
+];
+
+// ── Furniture Groups (Table + Chairs presets) ──
+
+export interface FurnitureGroup {
+  id: string;
+  name: string;
+  description: string;
+  items: { furnitureId: string; offsetX: number; offsetY: number; angle?: number }[];
+}
+
+/** Arrange chairs in a circle around center at given radius */
+function chairsInCircle(count: number, radius: number): { furnitureId: string; offsetX: number; offsetY: number; angle: number }[] {
+  return Array.from({ length: count }, (_, i) => {
+    const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
+    return {
+      furnitureId: "chair",
+      offsetX: Math.round(Math.cos(angle) * radius),
+      offsetY: Math.round(Math.sin(angle) * radius),
+      angle: Math.round((angle * 180 / Math.PI) + 90), // face inward
+    };
+  });
+}
+
+/** Arrange chairs along both long sides of a rect table */
+function chairsAlongRect(countPerSide: number, tableWidth: number, tableHeight: number): { furnitureId: string; offsetX: number; offsetY: number; angle: number }[] {
+  const chairs: { furnitureId: string; offsetX: number; offsetY: number; angle: number }[] = [];
+  const chairSpacing = tableWidth / (countPerSide + 1);
+  const yOffset = tableHeight / 2 + 14; // 14px gap between table edge and chair center
+  for (let i = 0; i < countPerSide; i++) {
+    const x = -tableWidth / 2 + chairSpacing * (i + 1);
+    chairs.push({ furnitureId: "chair", offsetX: Math.round(x), offsetY: -Math.round(yOffset), angle: 0 });
+    chairs.push({ furnitureId: "chair", offsetX: Math.round(x), offsetY: Math.round(yOffset), angle: 180 });
+  }
+  return chairs;
+}
+
+export const FURNITURE_GROUPS: FurnitureGroup[] = [
+  {
+    id: "round-60-8",
+    name: "Round 60\" + 8 Chairs",
+    description: "8-top round table",
+    items: [
+      { furnitureId: "round-table-60", offsetX: 0, offsetY: 0 },
+      ...chairsInCircle(8, 46),
+    ],
+  },
+  {
+    id: "round-72-10",
+    name: "Round 72\" + 10 Chairs",
+    description: "10-top round table",
+    items: [
+      { furnitureId: "round-table-72", offsetX: 0, offsetY: 0 },
+      ...chairsInCircle(10, 54),
+    ],
+  },
+  {
+    id: "rect-6-6",
+    name: "Rect 6' + 6 Chairs",
+    description: "6-seat banquet",
+    items: [
+      { furnitureId: "rect-table-6", offsetX: 0, offsetY: 0 },
+      ...chairsAlongRect(3, 72, 30),
+    ],
+  },
+  {
+    id: "rect-8-8",
+    name: "Rect 8' + 8 Chairs",
+    description: "8-seat banquet",
+    items: [
+      { furnitureId: "rect-table-8", offsetX: 0, offsetY: 0 },
+      ...chairsAlongRect(4, 96, 30),
+    ],
+  },
+  {
+    id: "sweetheart-2",
+    name: "Sweetheart + 2 Chairs",
+    description: "Head table for two",
+    items: [
+      { furnitureId: "sweetheart-table", offsetX: 0, offsetY: 0 },
+      { furnitureId: "chair", offsetX: -16, offsetY: -28, angle: 0 },
+      { furnitureId: "chair", offsetX: 16, offsetY: -28, angle: 0 },
     ],
   },
 ];
