@@ -80,8 +80,12 @@ function eventFieldsToRow(fields: Partial<Event>): Record<string, unknown> {
   return row;
 }
 
+/**
+ * Core fields shared between core-only and full event loads.
+ * Avoids duplicating the base field mapping.
+ */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function eventFromRow(r: any): Event {
+function eventCoreFields(r: any) {
   return {
     id: r.id,
     name: r.name,
@@ -96,7 +100,48 @@ function eventFromRow(r: any): Event {
     shareToken: r.share_token ?? '',
     createdAt: r.created_at,
     updatedAt: r.updated_at,
-    // Sub-entities — mapped if present, otherwise empty arrays
+  };
+}
+
+/**
+ * Map a DB row to a core Event (only base fields + floorPlans).
+ * Sub-entity arrays are left as empty arrays — the store's CORE_SUB_ENTITIES
+ * filter ensures only floorPlans overwrites existing data.
+ * Used by fetchEventCore() where sub-entities are loaded separately.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function eventCoreFromRow(r: any): Event {
+  return {
+    ...eventCoreFields(r),
+    // Only floorPlans are loaded with core (CORE_SUB_ENTITIES)
+    floorPlans: Array.isArray(r.floor_plans)
+      ? r.floor_plans.map(floorPlanFromRow)
+      : [],
+    // All other sub-entities: empty defaults (never merged by store for core loads)
+    timeline: [],
+    schedule: [],
+    vendors: [],
+    guests: [],
+    questionnaires: [],
+    invoices: [],
+    expenses: [],
+    budget: [],
+    contracts: [],
+    files: [],
+    moodBoard: [],
+    messages: [],
+    discoveredVendors: [],
+  };
+}
+
+/**
+ * Map a DB row to a full Event with all sub-entities populated.
+ * Used when all sub-entities are joined (e.g., full event fetch, createEvent return).
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function eventFromRow(r: any): Event {
+  return {
+    ...eventCoreFields(r),
     floorPlans: Array.isArray(r.floor_plans)
       ? r.floor_plans.map(floorPlanFromRow)
       : [],
@@ -949,7 +994,7 @@ export async function fetchEventCore(eventId: string): Promise<Event | null> {
     if (error.code === "PGRST116") return null;
     throw new Error(`fetchEventCore: ${error.message}`);
   }
-  return eventFromRow(data);
+  return eventCoreFromRow(data);
 }
 
 export async function fetchEventGuests(eventId: string): Promise<Guest[]> {
@@ -1185,18 +1230,26 @@ export async function replaceGuests(
 ): Promise<void> {
   const supabase = createClient();
 
-  const { error: delError } = await supabase
-    .from("guests")
-    .delete()
-    .eq("event_id", eventId);
-  if (delError) throw new Error(`replaceGuests (delete): ${delError.message}`);
-
   if (guests.length > 0) {
-    const { error: insError } = await supabase
+    const { error: upsertError } = await supabase
       .from("guests")
-      .insert(guests.map((g) => guestToRow(g, eventId)));
-    if (insError)
-      throw new Error(`replaceGuests (insert): ${insError.message}`);
+      .upsert(guests.map((g) => guestToRow(g, eventId)), { onConflict: "id" });
+    if (upsertError) throw new Error(`replaceGuests (upsert): ${upsertError.message}`);
+
+    // Delete rows that were removed
+    const ids = guests.map((g) => g.id);
+    const { error: delError } = await supabase
+      .from("guests")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${ids.join(",")})`);
+    if (delError) throw new Error(`replaceGuests (delete removed): ${delError.message}`);
+  } else {
+    const { error: delError } = await supabase
+      .from("guests")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError) throw new Error(`replaceGuests (delete all): ${delError.message}`);
   }
 }
 
@@ -1271,12 +1324,16 @@ export async function replaceGuestRelationships(
   relationships: GuestRelationship[]
 ): Promise<void> {
   const supabase = createClient();
+
+  // Composite key table (guest_id_1, guest_id_2) — no single `id` column,
+  // so we keep delete-then-insert but wrap in proper logic.
   const { error: delError } = await supabase
     .from("guest_relationships")
     .delete()
     .eq("event_id", eventId);
   if (delError)
     throw new Error(`replaceGuestRelationships (delete): ${delError.message}`);
+
   if (relationships.length > 0) {
     const { error: insError } = await supabase
       .from("guest_relationships")
@@ -1292,23 +1349,35 @@ export async function replaceVendors(
 ): Promise<void> {
   const supabase = createClient();
 
-  // Delete existing vendors (vendor_payments cascade)
-  const { error: delError } = await supabase
-    .from("vendors")
-    .delete()
-    .eq("event_id", eventId);
-  if (delError)
-    throw new Error(`replaceVendors (delete): ${delError.message}`);
-
   if (vendors.length > 0) {
-    // Insert vendors
-    const { error: insError } = await supabase
+    // 1. Upsert vendor rows
+    const { error: upsertError } = await supabase
       .from("vendors")
-      .insert(vendors.map((v) => vendorToRow(v, eventId)));
-    if (insError)
-      throw new Error(`replaceVendors (insert vendors): ${insError.message}`);
+      .upsert(vendors.map((v) => vendorToRow(v, eventId)), { onConflict: "id" });
+    if (upsertError)
+      throw new Error(`replaceVendors (upsert): ${upsertError.message}`);
 
-    // Collect and insert all payments
+    // 2. Delete removed vendors (payments cascade)
+    const vendorIds = vendors.map((v) => v.id);
+    const { error: delError } = await supabase
+      .from("vendors")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${vendorIds.join(",")})`);
+    if (delError)
+      throw new Error(`replaceVendors (delete removed): ${delError.message}`);
+
+    // 3. Delete all payments for current vendors, then re-insert
+    for (const v of vendors) {
+      const { error: delPayError } = await supabase
+        .from("vendor_payments")
+        .delete()
+        .eq("vendor_id", v.id);
+      if (delPayError)
+        throw new Error(`replaceVendors (delete payments): ${delPayError.message}`);
+    }
+
+    // 4. Re-insert all payments
     const allPayments = vendors.flatMap((v) =>
       v.payments.map((p) => vendorPaymentToRow(p, v.id))
     );
@@ -1317,10 +1386,16 @@ export async function replaceVendors(
         .from("vendor_payments")
         .insert(allPayments);
       if (payError)
-        throw new Error(
-          `replaceVendors (insert payments): ${payError.message}`
-        );
+        throw new Error(`replaceVendors (insert payments): ${payError.message}`);
     }
+  } else {
+    // Delete all vendors (payments cascade)
+    const { error: delError } = await supabase
+      .from("vendors")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError)
+      throw new Error(`replaceVendors (delete all): ${delError.message}`);
   }
 }
 
@@ -1330,19 +1405,28 @@ export async function replaceTimeline(
 ): Promise<void> {
   const supabase = createClient();
 
-  const { error: delError } = await supabase
-    .from("timeline_items")
-    .delete()
-    .eq("event_id", eventId);
-  if (delError)
-    throw new Error(`replaceTimeline (delete): ${delError.message}`);
-
   if (items.length > 0) {
-    const { error: insError } = await supabase
+    const { error: upsertError } = await supabase
       .from("timeline_items")
-      .insert(items.map((t) => timelineItemToRow(t, eventId)));
-    if (insError)
-      throw new Error(`replaceTimeline (insert): ${insError.message}`);
+      .upsert(items.map((t) => timelineItemToRow(t, eventId)), { onConflict: "id" });
+    if (upsertError)
+      throw new Error(`replaceTimeline (upsert): ${upsertError.message}`);
+
+    const ids = items.map((t) => t.id);
+    const { error: delError } = await supabase
+      .from("timeline_items")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${ids.join(",")})`);
+    if (delError)
+      throw new Error(`replaceTimeline (delete removed): ${delError.message}`);
+  } else {
+    const { error: delError } = await supabase
+      .from("timeline_items")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError)
+      throw new Error(`replaceTimeline (delete all): ${delError.message}`);
   }
 }
 
@@ -1352,19 +1436,28 @@ export async function replaceSchedule(
 ): Promise<void> {
   const supabase = createClient();
 
-  const { error: delError } = await supabase
-    .from("schedule_items")
-    .delete()
-    .eq("event_id", eventId);
-  if (delError)
-    throw new Error(`replaceSchedule (delete): ${delError.message}`);
-
   if (items.length > 0) {
-    const { error: insError } = await supabase
+    const { error: upsertError } = await supabase
       .from("schedule_items")
-      .insert(items.map((s) => scheduleItemToRow(s, eventId)));
-    if (insError)
-      throw new Error(`replaceSchedule (insert): ${insError.message}`);
+      .upsert(items.map((s) => scheduleItemToRow(s, eventId)), { onConflict: "id" });
+    if (upsertError)
+      throw new Error(`replaceSchedule (upsert): ${upsertError.message}`);
+
+    const ids = items.map((s) => s.id);
+    const { error: delError } = await supabase
+      .from("schedule_items")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${ids.join(",")})`);
+    if (delError)
+      throw new Error(`replaceSchedule (delete removed): ${delError.message}`);
+  } else {
+    const { error: delError } = await supabase
+      .from("schedule_items")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError)
+      throw new Error(`replaceSchedule (delete all): ${delError.message}`);
   }
 }
 
@@ -1440,19 +1533,28 @@ export async function replaceExpenses(
 ): Promise<void> {
   const supabase = createClient();
 
-  const { error: delError } = await supabase
-    .from("expenses")
-    .delete()
-    .eq("event_id", eventId);
-  if (delError)
-    throw new Error(`replaceExpenses (delete): ${delError.message}`);
-
   if (expenses.length > 0) {
-    const { error: insError } = await supabase
+    const { error: upsertError } = await supabase
       .from("expenses")
-      .insert(expenses.map((e) => expenseToRow(e, eventId)));
-    if (insError)
-      throw new Error(`replaceExpenses (insert): ${insError.message}`);
+      .upsert(expenses.map((e) => expenseToRow(e, eventId)), { onConflict: "id" });
+    if (upsertError)
+      throw new Error(`replaceExpenses (upsert): ${upsertError.message}`);
+
+    const ids = expenses.map((e) => e.id);
+    const { error: delError } = await supabase
+      .from("expenses")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${ids.join(",")})`);
+    if (delError)
+      throw new Error(`replaceExpenses (delete removed): ${delError.message}`);
+  } else {
+    const { error: delError } = await supabase
+      .from("expenses")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError)
+      throw new Error(`replaceExpenses (delete all): ${delError.message}`);
   }
 }
 
@@ -1462,19 +1564,28 @@ export async function replaceBudget(
 ): Promise<void> {
   const supabase = createClient();
 
-  const { error: delError } = await supabase
-    .from("budget_items")
-    .delete()
-    .eq("event_id", eventId);
-  if (delError)
-    throw new Error(`replaceBudget (delete): ${delError.message}`);
-
   if (items.length > 0) {
-    const { error: insError } = await supabase
+    const { error: upsertError } = await supabase
       .from("budget_items")
-      .insert(items.map((b) => budgetItemToRow(b, eventId)));
-    if (insError)
-      throw new Error(`replaceBudget (insert): ${insError.message}`);
+      .upsert(items.map((b) => budgetItemToRow(b, eventId)), { onConflict: "id" });
+    if (upsertError)
+      throw new Error(`replaceBudget (upsert): ${upsertError.message}`);
+
+    const ids = items.map((b) => b.id);
+    const { error: delError } = await supabase
+      .from("budget_items")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${ids.join(",")})`);
+    if (delError)
+      throw new Error(`replaceBudget (delete removed): ${delError.message}`);
+  } else {
+    const { error: delError } = await supabase
+      .from("budget_items")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError)
+      throw new Error(`replaceBudget (delete all): ${delError.message}`);
   }
 }
 
@@ -1484,25 +1595,35 @@ export async function replaceInvoices(
 ): Promise<void> {
   const supabase = createClient();
 
-  // Delete existing invoices (invoice_line_items cascade)
-  const { error: delError } = await supabase
-    .from("invoices")
-    .delete()
-    .eq("event_id", eventId);
-  if (delError)
-    throw new Error(`replaceInvoices (delete): ${delError.message}`);
-
   if (invoices.length > 0) {
-    // Insert invoices
-    const { error: insError } = await supabase
+    // 1. Upsert invoice rows
+    const { error: upsertError } = await supabase
       .from("invoices")
-      .insert(invoices.map((inv) => invoiceToRow(inv, eventId)));
-    if (insError)
-      throw new Error(
-        `replaceInvoices (insert invoices): ${insError.message}`
-      );
+      .upsert(invoices.map((inv) => invoiceToRow(inv, eventId)), { onConflict: "id" });
+    if (upsertError)
+      throw new Error(`replaceInvoices (upsert): ${upsertError.message}`);
 
-    // Collect and insert all line items
+    // 2. Delete removed invoices (line_items cascade)
+    const invoiceIds = invoices.map((inv) => inv.id);
+    const { error: delError } = await supabase
+      .from("invoices")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${invoiceIds.join(",")})`);
+    if (delError)
+      throw new Error(`replaceInvoices (delete removed): ${delError.message}`);
+
+    // 3. Delete all line items for current invoices, then re-insert
+    for (const inv of invoices) {
+      const { error: delLiError } = await supabase
+        .from("invoice_line_items")
+        .delete()
+        .eq("invoice_id", inv.id);
+      if (delLiError)
+        throw new Error(`replaceInvoices (delete line items): ${delLiError.message}`);
+    }
+
+    // 4. Re-insert all line items
     const allLineItems = invoices.flatMap((inv) =>
       inv.lineItems.map((li) => invoiceLineItemToRow(li, inv.id))
     );
@@ -1511,10 +1632,16 @@ export async function replaceInvoices(
         .from("invoice_line_items")
         .insert(allLineItems);
       if (liError)
-        throw new Error(
-          `replaceInvoices (insert line items): ${liError.message}`
-        );
+        throw new Error(`replaceInvoices (insert line items): ${liError.message}`);
     }
+  } else {
+    // Delete all invoices (line_items cascade)
+    const { error: delError } = await supabase
+      .from("invoices")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError)
+      throw new Error(`replaceInvoices (delete all): ${delError.message}`);
   }
 }
 
@@ -1524,19 +1651,28 @@ export async function replaceContracts(
 ): Promise<void> {
   const supabase = createClient();
 
-  const { error: delError } = await supabase
-    .from("event_contracts")
-    .delete()
-    .eq("event_id", eventId);
-  if (delError)
-    throw new Error(`replaceContracts (delete): ${delError.message}`);
-
   if (contracts.length > 0) {
-    const { error: insError } = await supabase
+    const { error: upsertError } = await supabase
       .from("event_contracts")
-      .insert(contracts.map((c) => eventContractToRow(c, eventId)));
-    if (insError)
-      throw new Error(`replaceContracts (insert): ${insError.message}`);
+      .upsert(contracts.map((c) => eventContractToRow(c, eventId)), { onConflict: "id" });
+    if (upsertError)
+      throw new Error(`replaceContracts (upsert): ${upsertError.message}`);
+
+    const ids = contracts.map((c) => c.id);
+    const { error: delError } = await supabase
+      .from("event_contracts")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${ids.join(",")})`);
+    if (delError)
+      throw new Error(`replaceContracts (delete removed): ${delError.message}`);
+  } else {
+    const { error: delError } = await supabase
+      .from("event_contracts")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError)
+      throw new Error(`replaceContracts (delete all): ${delError.message}`);
   }
 }
 
@@ -1546,18 +1682,28 @@ export async function replaceFiles(
 ): Promise<void> {
   const supabase = createClient();
 
-  const { error: delError } = await supabase
-    .from("shared_files")
-    .delete()
-    .eq("event_id", eventId);
-  if (delError) throw new Error(`replaceFiles (delete): ${delError.message}`);
-
   if (files.length > 0) {
-    const { error: insError } = await supabase
+    const { error: upsertError } = await supabase
       .from("shared_files")
-      .insert(files.map((f) => sharedFileToRow(f, eventId)));
-    if (insError)
-      throw new Error(`replaceFiles (insert): ${insError.message}`);
+      .upsert(files.map((f) => sharedFileToRow(f, eventId)), { onConflict: "id" });
+    if (upsertError)
+      throw new Error(`replaceFiles (upsert): ${upsertError.message}`);
+
+    const ids = files.map((f) => f.id);
+    const { error: delError } = await supabase
+      .from("shared_files")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${ids.join(",")})`);
+    if (delError)
+      throw new Error(`replaceFiles (delete removed): ${delError.message}`);
+  } else {
+    const { error: delError } = await supabase
+      .from("shared_files")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError)
+      throw new Error(`replaceFiles (delete all): ${delError.message}`);
   }
 }
 
@@ -1567,19 +1713,28 @@ export async function replaceMoodBoard(
 ): Promise<void> {
   const supabase = createClient();
 
-  const { error: delError } = await supabase
-    .from("mood_board_images")
-    .delete()
-    .eq("event_id", eventId);
-  if (delError)
-    throw new Error(`replaceMoodBoard (delete): ${delError.message}`);
-
   if (images.length > 0) {
-    const { error: insError } = await supabase
+    const { error: upsertError } = await supabase
       .from("mood_board_images")
-      .insert(images.map((img) => moodBoardImageToRow(img, eventId)));
-    if (insError)
-      throw new Error(`replaceMoodBoard (insert): ${insError.message}`);
+      .upsert(images.map((img) => moodBoardImageToRow(img, eventId)), { onConflict: "id" });
+    if (upsertError)
+      throw new Error(`replaceMoodBoard (upsert): ${upsertError.message}`);
+
+    const ids = images.map((img) => img.id);
+    const { error: delError } = await supabase
+      .from("mood_board_images")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${ids.join(",")})`);
+    if (delError)
+      throw new Error(`replaceMoodBoard (delete removed): ${delError.message}`);
+  } else {
+    const { error: delError } = await supabase
+      .from("mood_board_images")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError)
+      throw new Error(`replaceMoodBoard (delete all): ${delError.message}`);
   }
 }
 
@@ -1589,19 +1744,28 @@ export async function replaceMessages(
 ): Promise<void> {
   const supabase = createClient();
 
-  const { error: delError } = await supabase
-    .from("messages")
-    .delete()
-    .eq("event_id", eventId);
-  if (delError)
-    throw new Error(`replaceMessages (delete): ${delError.message}`);
-
   if (messages.length > 0) {
-    const { error: insError } = await supabase
+    const { error: upsertError } = await supabase
       .from("messages")
-      .insert(messages.map((m) => messageToRow(m, eventId)));
-    if (insError)
-      throw new Error(`replaceMessages (insert): ${insError.message}`);
+      .upsert(messages.map((m) => messageToRow(m, eventId)), { onConflict: "id" });
+    if (upsertError)
+      throw new Error(`replaceMessages (upsert): ${upsertError.message}`);
+
+    const ids = messages.map((m) => m.id);
+    const { error: delError } = await supabase
+      .from("messages")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${ids.join(",")})`);
+    if (delError)
+      throw new Error(`replaceMessages (delete removed): ${delError.message}`);
+  } else {
+    const { error: delError } = await supabase
+      .from("messages")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError)
+      throw new Error(`replaceMessages (delete all): ${delError.message}`);
   }
 }
 
@@ -1611,23 +1775,28 @@ export async function replaceDiscoveredVendors(
 ): Promise<void> {
   const supabase = createClient();
 
-  const { error: delError } = await supabase
-    .from("discovered_vendors")
-    .delete()
-    .eq("event_id", eventId);
-  if (delError)
-    throw new Error(
-      `replaceDiscoveredVendors (delete): ${delError.message}`
-    );
-
   if (vendors.length > 0) {
-    const { error: insError } = await supabase
+    const { error: upsertError } = await supabase
       .from("discovered_vendors")
-      .insert(vendors.map((dv) => discoveredVendorToRow(dv, eventId)));
-    if (insError)
-      throw new Error(
-        `replaceDiscoveredVendors (insert): ${insError.message}`
-      );
+      .upsert(vendors.map((dv) => discoveredVendorToRow(dv, eventId)), { onConflict: "id" });
+    if (upsertError)
+      throw new Error(`replaceDiscoveredVendors (upsert): ${upsertError.message}`);
+
+    const ids = vendors.map((dv) => dv.id);
+    const { error: delError } = await supabase
+      .from("discovered_vendors")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${ids.join(",")})`);
+    if (delError)
+      throw new Error(`replaceDiscoveredVendors (delete removed): ${delError.message}`);
+  } else {
+    const { error: delError } = await supabase
+      .from("discovered_vendors")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError)
+      throw new Error(`replaceDiscoveredVendors (delete all): ${delError.message}`);
   }
 }
 
@@ -1637,27 +1806,23 @@ export async function replaceQuestionnaireAssignments(
 ): Promise<void> {
   const supabase = createClient();
 
+  // QuestionnaireAssignment IDs are server-generated and not exposed to the client,
+  // so we can't upsert by ID. Delete-then-insert is the only option here.
   const { error: delError } = await supabase
     .from("questionnaire_assignments")
     .delete()
     .eq("event_id", eventId);
   if (delError)
-    throw new Error(
-      `replaceQuestionnaireAssignments (delete): ${delError.message}`
-    );
+    throw new Error(`replaceQuestionnaireAssignments (delete): ${delError.message}`);
 
   if (assignments.length > 0) {
     const { error: insError } = await supabase
       .from("questionnaire_assignments")
       .insert(
-        assignments.map((qa) =>
-          questionnaireAssignmentToRow(qa, eventId)
-        )
+        assignments.map((qa) => questionnaireAssignmentToRow(qa, eventId))
       );
     if (insError)
-      throw new Error(
-        `replaceQuestionnaireAssignments (insert): ${insError.message}`
-      );
+      throw new Error(`replaceQuestionnaireAssignments (insert): ${insError.message}`);
   }
 }
 

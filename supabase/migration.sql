@@ -1122,5 +1122,112 @@ create policy "Users can delete guest_relationships for their events"
   ));
 
 -- =============================================================================
+-- 24. STORAGE COLUMNS (added post-launch for Supabase Storage integration)
+-- =============================================================================
+
+-- Storage paths for mood board images
+ALTER TABLE mood_board_images
+  ADD COLUMN IF NOT EXISTS storage_path text,
+  ADD COLUMN IF NOT EXISTS storage_thumb text;
+
+-- Storage path for shared files
+ALTER TABLE shared_files
+  ADD COLUMN IF NOT EXISTS storage_path text;
+
+-- Storage paths for event contracts (signed docs, signatures)
+ALTER TABLE event_contracts
+  ADD COLUMN IF NOT EXISTS storage_path text,
+  ADD COLUMN IF NOT EXISTS storage_signed_path text,
+  ADD COLUMN IF NOT EXISTS storage_planner_sig text,
+  ADD COLUMN IF NOT EXISTS storage_client_sig text;
+
+-- Storage path for contract templates
+ALTER TABLE contract_templates
+  ADD COLUMN IF NOT EXISTS storage_path text;
+
+-- =============================================================================
+-- 25. STRIPE WEBHOOK IDEMPOTENCY TABLE
+-- =============================================================================
+
+CREATE TABLE IF NOT EXISTS public.stripe_webhook_events (
+  id                uuid primary key default gen_random_uuid(),
+  stripe_event_id   text not null unique,
+  event_type        text not null,
+  processed_at      timestamptz not null default now()
+);
+
+COMMENT ON TABLE public.stripe_webhook_events IS 'Tracks processed Stripe webhook events for idempotency. Safe to prune rows older than 30 days.';
+
+CREATE INDEX IF NOT EXISTS idx_stripe_webhook_events_stripe_id
+  ON public.stripe_webhook_events (stripe_event_id);
+
+-- =============================================================================
+-- 26. STORAGE BUCKETS & POLICIES
+-- =============================================================================
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('event-files', 'event-files', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('contract-templates', 'contract-templates', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('brand-assets', 'brand-assets', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- event-files: authenticated users can manage their own files
+CREATE POLICY "Users can upload event files"
+  ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'event-files' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Users can read own event files"
+  ON storage.objects FOR SELECT TO authenticated
+  USING (bucket_id = 'event-files' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Users can update own event files"
+  ON storage.objects FOR UPDATE TO authenticated
+  USING (bucket_id = 'event-files' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Users can delete own event files"
+  ON storage.objects FOR DELETE TO authenticated
+  USING (bucket_id = 'event-files' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+-- contract-templates: authenticated users can manage their own templates
+CREATE POLICY "Users can upload contract templates"
+  ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'contract-templates' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Users can read own contract templates"
+  ON storage.objects FOR SELECT TO authenticated
+  USING (bucket_id = 'contract-templates' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Users can update own contract templates"
+  ON storage.objects FOR UPDATE TO authenticated
+  USING (bucket_id = 'contract-templates' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Users can delete own contract templates"
+  ON storage.objects FOR DELETE TO authenticated
+  USING (bucket_id = 'contract-templates' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+-- brand-assets: public read, authenticated write for own files
+CREATE POLICY "Anyone can read brand assets"
+  ON storage.objects FOR SELECT
+  USING (bucket_id = 'brand-assets');
+
+CREATE POLICY "Users can upload own brand assets"
+  ON storage.objects FOR INSERT TO authenticated
+  WITH CHECK (bucket_id = 'brand-assets' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Users can update own brand assets"
+  ON storage.objects FOR UPDATE TO authenticated
+  USING (bucket_id = 'brand-assets' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+CREATE POLICY "Users can delete own brand assets"
+  ON storage.objects FOR DELETE TO authenticated
+  USING (bucket_id = 'brand-assets' AND (storage.foldername(name))[1] = auth.uid()::text);
+
+-- =============================================================================
 -- DONE
 -- =============================================================================

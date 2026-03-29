@@ -421,28 +421,32 @@ function NewEventModal({
           <button
             onClick={async () => {
               setCreating(true);
-              await onCreate({
-                ...form,
-                status: "planning" as const,
-                floorPlanJSON: null,
-                floorPlans: createDefaultFloorPlans(),
-                files: [],
-                timeline: [],
-                schedule: [],
-                vendors: [],
-                questionnaires: [],
-                invoices: [],
-                expenses: [],
-                guests: [],
-                colorPalette: [],
-                moodBoard: [],
-                discoveredVendors: [],
-                contracts: [],
-                budget: [],
-                messages: [],
-                archivedAt: null,
-                shareToken: '',
-              });
+              try {
+                await onCreate({
+                  ...form,
+                  status: "planning" as const,
+                  floorPlanJSON: null,
+                  floorPlans: createDefaultFloorPlans(),
+                  files: [],
+                  timeline: [],
+                  schedule: [],
+                  vendors: [],
+                  questionnaires: [],
+                  invoices: [],
+                  expenses: [],
+                  guests: [],
+                  colorPalette: [],
+                  moodBoard: [],
+                  discoveredVendors: [],
+                  contracts: [],
+                  budget: [],
+                  messages: [],
+                  archivedAt: null,
+                  shareToken: '',
+                });
+              } finally {
+                setCreating(false);
+              }
             }}
             disabled={!form.name || !form.date || creating}
             className="bg-rose-400 hover:bg-rose-500 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2"

@@ -28,6 +28,28 @@ export async function POST(request: Request) {
     );
   }
 
+  // Idempotency: skip duplicate webhook deliveries
+  const { data: existing } = await supabaseAdmin
+    .from("stripe_webhook_events")
+    .select("id")
+    .eq("stripe_event_id", event.id)
+    .maybeSingle();
+
+  if (existing) {
+    return NextResponse.json({ received: true, deduplicated: true });
+  }
+
+  // Claim this event ID before processing
+  const { error: claimError } = await supabaseAdmin
+    .from("stripe_webhook_events")
+    .insert({ stripe_event_id: event.id, event_type: event.type });
+
+  if (claimError) {
+    // Another instance claimed it — skip
+    console.log(`Webhook event ${event.id} already being processed`);
+    return NextResponse.json({ received: true, deduplicated: true });
+  }
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
