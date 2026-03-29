@@ -35,6 +35,11 @@ export function wrapCanvasJSON(canvasJSON: Record<string, unknown>): CanvasEnvel
  */
 export function unwrapCanvasJSON(stored: string): Record<string, unknown> {
   try {
+    // Guard against oversized payloads (10 MB limit)
+    if (stored.length > 10 * 1024 * 1024) {
+      console.error("[FloorPlan] JSON exceeds 10 MB size limit, returning empty canvas");
+      return { objects: [] };
+    }
     const parsed = JSON.parse(stored);
 
     // Versioned envelope

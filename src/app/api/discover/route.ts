@@ -16,20 +16,25 @@ function isRateLimited(ip: string): boolean {
   return entry.count > RATE_LIMIT_MAX;
 }
 
-// Periodically clean stale entries to prevent memory leak (every 5 min)
+// Periodically clean stale entries to prevent memory leak (every 1 min)
 if (typeof globalThis !== "undefined") {
   const cleanup = () => {
     const now = Date.now();
     rateLimitMap.forEach((entry, ip) => {
       if (now > entry.resetAt) rateLimitMap.delete(ip);
     });
+    // Also evict expired cache entries
+    cache.forEach((entry, key) => {
+      if (now - entry.ts > SEVEN_DAYS) cache.delete(key);
+    });
   };
-  setInterval(cleanup, 5 * 60 * 1000).unref?.();
+  setInterval(cleanup, 60 * 1000).unref?.();
 }
 
-// ── In-memory cache with 7-day TTL ──
+// ── In-memory cache with 7-day TTL and LRU eviction (max 500 entries) ──
 const cache = new Map<string, { data: DiscoverVendor[]; ts: number }>();
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+const MAX_CACHE_ENTRIES = 500;
 
 interface DiscoverVendor {
   id: string;
@@ -363,7 +368,11 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Store in cache
+  // Store in cache (evict oldest if full)
+  if (cache.size >= MAX_CACHE_ENTRIES) {
+    const oldestKey = cache.keys().next().value;
+    if (oldestKey !== undefined) cache.delete(oldestKey);
+  }
   cache.set(cacheKey, { data: vendors, ts: Date.now() });
 
   return NextResponse.json({ vendors, demo: isDemo });

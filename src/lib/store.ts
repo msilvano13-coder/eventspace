@@ -66,6 +66,7 @@ class EventStore {
   private hydrating = false;
   private _loading = true;
   private cachedAll: Event[] = EMPTY;
+  private cacheDirty = true;
   private coreLoaded: Set<string> = new Set();
   private loadingCore: Set<string> = new Set();
   // Track which sub-entities have been loaded per event
@@ -98,12 +99,19 @@ class EventStore {
   }
 
   private rebuildCache() {
+    this.cacheDirty = true;
+  }
+
+  private ensureCache() {
+    if (!this.cacheDirty) return;
     this.cachedAll = Array.from(this.events.values()).sort(
       (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
+    this.cacheDirty = false;
   }
 
   getSnapshot(): Event[] {
+    this.ensureCache();
     return this.cachedAll;
   }
 

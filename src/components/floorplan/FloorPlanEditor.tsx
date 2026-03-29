@@ -641,6 +641,10 @@ export default function FloorPlanEditor({
         // Initial undo state (excluding lighting)
         const rawJSON = canvas.toJSON();
         setUndoStack([JSON.stringify(rawJSON)]);
+      }).catch((err) => {
+        console.error("[FloorPlan] Failed to load canvas JSON:", err);
+        isLoadingRef.current = false;
+        setUndoStack([JSON.stringify(canvas.toJSON())]);
       });
     } else {
       setUndoStack([JSON.stringify(canvas.toJSON())]);
@@ -748,6 +752,8 @@ export default function FloorPlanEditor({
       window.removeEventListener("keydown", handleKey);
       resizeObserver.disconnect();
       clearAngleGuide();
+      // Remove all canvas event listeners to prevent accumulation on remount
+      canvas.off();
       // Cancel pending debounces
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (undoDebounceRef.current) clearTimeout(undoDebounceRef.current);

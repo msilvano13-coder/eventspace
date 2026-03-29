@@ -12,6 +12,7 @@ import { fetchGuestRelationships } from "@/lib/supabase/db";
 import { exportFloorPlanPDF } from "@/lib/floorplan-export-pdf";
 import SeatingPanel from "@/components/floorplan/SeatingPanel";
 import LightingPanel from "@/components/floorplan/LightingPanel";
+import { FloorPlanErrorBoundary } from "@/components/floorplan/FloorPlanErrorBoundary";
 
 const FloorPlanEditor = dynamic(
   () => import("@/components/floorplan/FloorPlanEditor"),
@@ -151,6 +152,7 @@ export default function FloorPlanPage() {
   }
 
   return (
+    <FloorPlanErrorBoundary>
     <div className="fixed inset-0 z-50 flex flex-col bg-stone-50">
       {/* Top bar */}
       <div className="h-11 md:h-12 bg-white border-b border-stone-200 flex items-center px-4 gap-3 flex-shrink-0">
@@ -388,5 +390,6 @@ export default function FloorPlanPage() {
         )}
       </div>
     </div>
+    </FloorPlanErrorBoundary>
   );
 }
