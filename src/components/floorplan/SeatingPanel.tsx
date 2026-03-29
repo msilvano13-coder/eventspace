@@ -8,6 +8,9 @@ import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 import { autoSeat, TableSlot } from "@/lib/seating-algorithm";
 
 interface TableInfo {
+  /** Stable unique ID persisted on canvas object — used as seating key */
+  tableId: string;
+  /** Human-readable display name */
   label: string;
   furnitureId: string;
   maxSeats: number;
@@ -20,23 +23,31 @@ interface Props {
   relationships?: GuestRelationship[];
 }
 
-/** Parse floor plan JSON to extract table objects with unique labels */
+/** Parse floor plan JSON to extract table objects with stable unique IDs */
 function extractTables(json: string | null): TableInfo[] {
   if (!json) return [];
   try {
     const canvas = unwrapCanvasJSON(json);
     const objects = (canvas as Record<string, unknown>).objects as any[] || [];
     const tables: TableInfo[] = [];
+    let fallbackIdx = 0;
     for (const obj of objects) {
       const data = obj.data;
       if (!data || data.isGrid || data.isRoom) continue;
       if (!data.furnitureId) continue;
       const catalogItem = FURNITURE_CATALOG.find((f) => f.id === data.furnitureId);
       if (catalogItem && catalogItem.category === "table") {
-        tables.push({ label: data.label || catalogItem.name, furnitureId: data.furnitureId, maxSeats: catalogItem.maxSeats ?? 0 });
+        // Use persisted tableId if available, otherwise generate a deterministic fallback
+        const tableId = data.tableId || `__legacy_${data.furnitureId}_${fallbackIdx++}`;
+        tables.push({
+          tableId,
+          label: data.label || catalogItem.name,
+          furnitureId: data.furnitureId,
+          maxSeats: catalogItem.maxSeats ?? 0,
+        });
       }
     }
-    // Ensure unique labels — duplicate labels break the seating algorithm's Map
+    // Ensure unique display labels — append #N for duplicates
     const labelCounts = new Map<string, number>();
     for (const t of tables) {
       labelCounts.set(t.label, (labelCounts.get(t.label) ?? 0) + 1);
@@ -63,15 +74,15 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
 
   const acceptedGuests = guests.filter((g) => g.rsvp === "accepted");
   const unassigned = acceptedGuests.filter(
-    (g) => !g.tableAssignment || !tables.some((t) => t.label === g.tableAssignment)
+    (g) => !g.tableAssignment || !tables.some((t) => t.tableId === g.tableAssignment)
   );
 
   // Compute unique groups for display
   const groups = Array.from(new Set(acceptedGuests.map((g) => g.group).filter(Boolean)));
 
-  function assignGuest(guestId: string, tableLabel: string) {
+  function assignGuest(guestId: string, tableId: string) {
     const updated = guests.map((g) =>
-      g.id === guestId ? { ...g, tableAssignment: tableLabel } : g
+      g.id === guestId ? { ...g, tableAssignment: tableId } : g
     );
     onUpdateGuests(updated);
   }
@@ -94,8 +105,8 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
       .filter((t) => t.maxSeats > 0)
       .map((t) => {
         // Subtract already-occupied seats so algorithm knows remaining capacity
-        const occupied = headCount(t.label);
-        return { label: t.label, maxSeats: Math.max(0, t.maxSeats - occupied) };
+        const occupied = headCount(t.tableId);
+        return { label: t.tableId, maxSeats: Math.max(0, t.maxSeats - occupied) };
       })
       .filter((t) => t.maxSeats > 0); // Only tables with remaining capacity
 
@@ -106,16 +117,15 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
     // Only pass unassigned guests to the algorithm
     const unassignedGuests = guests.filter((g) => {
       if (g.rsvp !== "accepted") return false;
-      return !g.tableAssignment || !tables.some((t) => t.label === g.tableAssignment);
+      return !g.tableAssignment || !tables.some((t) => t.tableId === g.tableAssignment);
     });
 
-    // Build a fake guest list with only unassigned guests (all marked accepted)
     const result = autoSeat(unassignedGuests, seatableTables, relationships);
 
-    // Apply assignments — only update guests who got new assignments
+    // Apply assignments — algorithm returns tableId values (passed as label to TableSlot)
     const updated = guests.map((g) => {
-      const table = result.assignments.get(g.id);
-      return table ? { ...g, tableAssignment: table } : g;
+      const tableId = result.assignments.get(g.id);
+      return tableId ? { ...g, tableAssignment: tableId } : g;
     });
 
     onUpdateGuests(updated);
@@ -126,12 +136,12 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
     setShowAutoSeatConfirm(false);
   }
 
-  function guestsAtTable(tableLabel: string) {
-    return acceptedGuests.filter((g) => g.tableAssignment === tableLabel);
+  function guestsAtTable(tableId: string) {
+    return acceptedGuests.filter((g) => g.tableAssignment === tableId);
   }
 
-  function headCount(tableLabel: string) {
-    const seated = guestsAtTable(tableLabel);
+  function headCount(tableId: string) {
+    const seated = guestsAtTable(tableId);
     return seated.reduce((sum, g) => sum + 1 + (g.plusOne ? 1 : 0), 0);
   }
 
@@ -155,7 +165,7 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
 
   const totalCapacity = tables.reduce((sum, t) => sum + t.maxSeats, 0);
   const assignedGuests = acceptedGuests.filter(
-    (g) => g.tableAssignment && tables.some((t) => t.label === g.tableAssignment)
+    (g) => g.tableAssignment && tables.some((t) => t.tableId === g.tableAssignment)
   );
   const totalSeated = assignedGuests.reduce((sum, g) => sum + 1 + (g.plusOne ? 1 : 0), 0);
 
@@ -237,14 +247,14 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
       {/* Tables */}
       <div className="divide-y divide-stone-100">
         {tables.map((table) => {
-          const seated = guestsAtTable(table.label);
-          const count = headCount(table.label);
-          const isExpanded = expandedTable === table.label;
+          const seated = guestsAtTable(table.tableId);
+          const count = headCount(table.tableId);
+          const isExpanded = expandedTable === table.tableId;
 
           return (
-            <div key={table.label}>
+            <div key={table.tableId}>
               <button
-                onClick={() => setExpandedTable(isExpanded ? null : table.label)}
+                onClick={() => setExpandedTable(isExpanded ? null : table.tableId)}
                 className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-stone-50 transition-colors"
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -306,7 +316,7 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
                         {unassigned.map((guest) => (
                           <button
                             key={guest.id}
-                            onClick={() => assignGuest(guest.id, table.label)}
+                            onClick={() => assignGuest(guest.id, table.tableId)}
                             className="w-full flex items-center gap-1.5 text-left bg-stone-50 hover:bg-rose-50 rounded-lg px-2.5 py-1.5 transition-colors group"
                           >
                             <UserPlus size={10} className="text-stone-300 group-hover:text-rose-400 flex-shrink-0" />

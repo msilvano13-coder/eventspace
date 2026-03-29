@@ -26,6 +26,7 @@ FabricObject.prototype.toObject = function (propertiesToInclude?: string[]) {
   return origToObject.call(this, [...(propertiesToInclude || []), "data"]);
 };
 
+import { v4 as uuid } from "uuid";
 import { FurnitureItemDef, LightingZone, RoomPreset } from "@/lib/types";
 import { getFurnitureById } from "./furniture-items";
 import FurniturePalette from "./FurniturePalette";
@@ -1031,7 +1032,7 @@ export default function FloorPlanEditor({
       top: Math.round(centerY / GRID_SIZE) * GRID_SIZE,
       originX: "center",
       originY: "center",
-      data: { furnitureId: item.id, label: item.name },
+      data: { furnitureId: item.id, label: item.name, tableId: uuid() },
     });
 
     canvas.add(group);
@@ -1339,6 +1340,7 @@ export default function FloorPlanEditor({
         label: group.name,
         isTableSet: true,
         groupId: group.id,
+        tableId: uuid(),
       },
     });
 
