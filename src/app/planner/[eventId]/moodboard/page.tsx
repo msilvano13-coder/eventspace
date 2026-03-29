@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEvent, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { ArrowLeft, Plus, X, Image, Pencil, Check, Loader2, ZoomIn } from "lucide-react";
@@ -14,6 +14,7 @@ import { getUserId } from "@/lib/supabase/db";
 export default function MoodBoardPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  useEventSubEntities(eventId, ["moodBoard"]);
   const { updateEvent } = useStoreActions();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCaption, setEditCaption] = useState("");

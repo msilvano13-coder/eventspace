@@ -2,12 +2,17 @@
 
 import { Event } from "./types";
 import {
-  getUserId, fetchEvents, fetchEventFull, createEvent as dbCreateEvent,
+  getUserId, fetchEvents, fetchEventCore, createEvent as dbCreateEvent,
   updateEventFields, deleteEvent as dbDeleteEvent,
   replaceTimeline, replaceSchedule, replaceFloorPlans, replaceVendors,
   replaceGuests, replaceQuestionnaireAssignments, replaceInvoices,
   replaceExpenses, replaceBudget, replaceContracts, replaceFiles,
-  replaceMoodBoard, replaceMessages, replaceDiscoveredVendors
+  replaceMoodBoard, replaceMessages, replaceDiscoveredVendors,
+  fetchEventGuests, fetchEventTimeline, fetchEventSchedule,
+  fetchEventVendors, fetchEventInvoices, fetchEventExpenses,
+  fetchEventBudget, fetchEventContracts, fetchEventFiles,
+  fetchEventMoodBoard, fetchEventMessages, fetchEventQuestionnaireAssignments,
+  fetchEventDiscoveredVendors,
 } from "@/lib/supabase/db";
 
 type Listener = () => void;
@@ -37,6 +42,23 @@ const SUB_ENTITY_REPLACERS: Record<string, (eventId: string, data: any) => Promi
   discoveredVendors: replaceDiscoveredVendors,
 };
 
+// Map sub-entity keys to their lazy fetcher
+const SUB_ENTITY_FETCHERS: Record<string, (eventId: string) => Promise<any>> = {
+  guests: fetchEventGuests,
+  timeline: fetchEventTimeline,
+  schedule: fetchEventSchedule,
+  vendors: fetchEventVendors,
+  invoices: fetchEventInvoices,
+  expenses: fetchEventExpenses,
+  budget: fetchEventBudget,
+  contracts: fetchEventContracts,
+  files: fetchEventFiles,
+  moodBoard: fetchEventMoodBoard,
+  messages: fetchEventMessages,
+  questionnaires: fetchEventQuestionnaireAssignments,
+  discoveredVendors: fetchEventDiscoveredVendors,
+};
+
 class EventStore {
   private events: Map<string, Event> = new Map();
   private listeners: Set<Listener> = new Set();
@@ -44,8 +66,11 @@ class EventStore {
   private hydrating = false;
   private _loading = true;
   private cachedAll: Event[] = EMPTY;
-  private fullyLoaded: Set<string> = new Set();
-  private loadingFull: Set<string> = new Set();
+  private coreLoaded: Set<string> = new Set();
+  private loadingCore: Set<string> = new Set();
+  // Track which sub-entities have been loaded per event
+  private loadedEntities: Map<string, Set<string>> = new Map();
+  private loadingEntities: Map<string, Set<string>> = new Map();
 
   get isLoading(): boolean {
     return this._loading;
@@ -86,23 +111,74 @@ class EventStore {
     return EMPTY;
   }
 
+  /** Load event core data (event fields + floor plans). Replaces the old 14-way fetchEventFull. */
   getById(id: string): Event | undefined {
     const evt = this.events.get(id);
-    if (evt && !this.fullyLoaded.has(id) && !this.loadingFull.has(id)) {
-      this.loadingFull.add(id);
-      fetchEventFull(id)
+    if (evt && !this.coreLoaded.has(id) && !this.loadingCore.has(id)) {
+      this.loadingCore.add(id);
+      fetchEventCore(id)
         .then((full) => {
           if (full) {
-            this.events.set(id, full);
+            this.events.set(id, { ...evt, ...full });
             this.rebuildCache();
-            this.fullyLoaded.add(id);
+            this.coreLoaded.add(id);
             this.emit();
           }
         })
-        .catch((err) => console.error("[EventStore] lazy load failed:", err))
-        .finally(() => this.loadingFull.delete(id));
+        .catch((err) => console.error("[EventStore] core load failed:", err))
+        .finally(() => this.loadingCore.delete(id));
     }
     return evt;
+  }
+
+  /**
+   * Lazy-load a sub-entity for an event. Only fetches from DB once per entity type per event.
+   * Call from tab pages: store.ensureSubEntity(eventId, "guests")
+   */
+  ensureSubEntity(eventId: string, key: string): void {
+    const loaded = this.loadedEntities.get(eventId);
+    if (loaded?.has(key)) return;
+
+    let loading = this.loadingEntities.get(eventId);
+    if (loading?.has(key)) return;
+
+    const fetcher = SUB_ENTITY_FETCHERS[key];
+    if (!fetcher) return;
+
+    if (!loading) {
+      loading = new Set();
+      this.loadingEntities.set(eventId, loading);
+    }
+    loading.add(key);
+
+    fetcher(eventId)
+      .then((data) => {
+        const evt = this.events.get(eventId);
+        if (evt) {
+          this.events.set(eventId, { ...evt, [key]: data });
+          this.rebuildCache();
+
+          let loadedSet = this.loadedEntities.get(eventId);
+          if (!loadedSet) {
+            loadedSet = new Set();
+            this.loadedEntities.set(eventId, loadedSet);
+          }
+          loadedSet.add(key);
+
+          this.emit();
+        }
+      })
+      .catch((err) => console.error(`[EventStore] load ${key} failed:`, err))
+      .finally(() => {
+        const l = this.loadingEntities.get(eventId);
+        if (l) l.delete(key);
+      });
+  }
+
+  /** Invalidate a sub-entity so it re-fetches on next access */
+  invalidateSubEntity(eventId: string, key: string): void {
+    const loaded = this.loadedEntities.get(eventId);
+    if (loaded) loaded.delete(key);
   }
 
   async create(data: Omit<Event, "id" | "createdAt" | "updatedAt">): Promise<Event> {
@@ -152,12 +228,14 @@ class EventStore {
       );
     } catch (err) {
       console.error("[EventStore] update failed:", err);
-      // Optimistic update stays in cache
     }
   }
 
   async delete(id: string): Promise<void> {
     this.events.delete(id);
+    this.loadedEntities.delete(id);
+    this.loadingEntities.delete(id);
+    this.coreLoaded.delete(id);
     this.rebuildCache();
     this.emit();
     try {

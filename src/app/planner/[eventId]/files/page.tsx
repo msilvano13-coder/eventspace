@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEvent, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, FileText, Image, Palette, File, Upload, Download, X, Loader2 } from "lucide-react";
@@ -25,6 +25,7 @@ function getFileType(file: File): "contract" | "photo" | "moodboard" | "other" {
 export default function FilesPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  useEventSubEntities(eventId, ["files"]);
   const { updateEvent } = useStoreActions();
   const [uploading, setUploading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, Suspense } from "react";
+import { useMemo, useCallback, useEffect, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Text } from "@react-three/drei";
 import { Color, Vector2, Shape, DoubleSide } from "three";
@@ -61,11 +61,17 @@ function getHeight(furnitureId: string): number {
   return FURNITURE_HEIGHTS[furnitureId] ?? 30;
 }
 
-// ── Color cache (avoid allocating THREE.Color on every render) ──
+// ── Color cache (avoid allocating THREE.Color on every render, bounded to prevent leaks) ──
+const MAX_COLOR_CACHE = 200;
 const colorCache = new Map<string, Color>();
 function getCachedColor(hex: string): Color {
   let c = colorCache.get(hex);
   if (!c) {
+    // Evict oldest entries if cache is full
+    if (colorCache.size >= MAX_COLOR_CACHE) {
+      const firstKey = colorCache.keys().next().value;
+      if (firstKey !== undefined) colorCache.delete(firstKey);
+    }
     try {
       c = new Color(hex);
     } catch {
@@ -417,6 +423,16 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
     canvas.addEventListener("webglcontextlost", (e: Event) => {
       e.preventDefault();
     });
+    canvas.addEventListener("webglcontextrestored", () => {
+      // R3F will re-render automatically
+    });
+  }, []);
+
+  // Clear color cache when the 3D view unmounts to free GPU-side references
+  useEffect(() => {
+    return () => {
+      colorCache.clear();
+    };
   }, []);
 
   return (

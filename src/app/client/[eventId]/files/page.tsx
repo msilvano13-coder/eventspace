@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEvent, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
 import { ArrowLeft, FileText, Image, Palette, File, Upload, Trash2, Plus } from "lucide-react";
 
@@ -22,6 +22,7 @@ const typeColors: Record<string, string> = {
 export default function ClientFilesPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  useEventSubEntities(eventId, ["files"]);
   const { updateEvent } = useStoreActions();
 
   if (!event) return <div className="px-4 py-6 text-stone-500">Event not found.</div>;

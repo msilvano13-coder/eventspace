@@ -1,6 +1,6 @@
 "use client";
 
-import { useEvent, useStoreActions, useContractTemplates } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions, useContractTemplates } from "@/hooks/useStore";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useCallback, useRef, useEffect } from "react";
@@ -18,6 +18,7 @@ import type { EventContract } from "@/lib/types";
 export default function EventContractsPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  useEventSubEntities(eventId, ["contracts"]);
   const { updateEvent } = useStoreActions();
   const templates = useContractTemplates();
 

@@ -1,5 +1,32 @@
 import { NextRequest, NextResponse } from "next/server";
 
+// ── In-memory rate limiter (per IP, sliding window) ──
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX = 20; // 20 requests per minute per IP
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
+    return false;
+  }
+  entry.count++;
+  return entry.count > RATE_LIMIT_MAX;
+}
+
+// Periodically clean stale entries to prevent memory leak (every 5 min)
+if (typeof globalThis !== "undefined") {
+  const cleanup = () => {
+    const now = Date.now();
+    rateLimitMap.forEach((entry, ip) => {
+      if (now > entry.resetAt) rateLimitMap.delete(ip);
+    });
+  };
+  setInterval(cleanup, 5 * 60 * 1000).unref?.();
+}
+
 // ── In-memory cache with 7-day TTL ──
 const cache = new Map<string, { data: DiscoverVendor[]; ts: number }>();
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -282,6 +309,15 @@ async function fetchFromGooglePlaces(
 }
 
 export async function GET(request: NextRequest) {
+  // Rate limiting
+  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+  if (isRateLimited(ip)) {
+    return NextResponse.json(
+      { error: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": "60" } }
+    );
+  }
+
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category") || "all";
   const location = searchParams.get("location") || "";

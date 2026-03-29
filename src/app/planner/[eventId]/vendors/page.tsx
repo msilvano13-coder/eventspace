@@ -1,6 +1,6 @@
 "use client";
 
-import { useEvent, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
@@ -35,6 +35,7 @@ const fmt = (n: number) => n.toLocaleString("en-US", { style: "currency", curren
 export default function VendorsPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  useEventSubEntities(eventId, ["vendors"]);
   const { updateEvent } = useStoreActions();
 
   const [search, setSearch] = useState("");

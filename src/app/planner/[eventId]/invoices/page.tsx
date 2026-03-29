@@ -1,6 +1,6 @@
 "use client";
 
-import { useEvent, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -31,6 +31,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function InvoicesPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  useEventSubEntities(eventId, ["invoices", "vendors"]);
   const { updateEvent } = useStoreActions();
 
   const [expandedId, setExpandedId] = useState<string | null>(null);

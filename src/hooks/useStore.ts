@@ -89,6 +89,20 @@ export function useEvent(id: string): Event | undefined {
   );
 }
 
+/**
+ * Lazy-load a sub-entity for an event. Call from tab pages to avoid the 14-way join.
+ * Example: useEventSubEntity(eventId, "guests") — only fetches guests for this event.
+ * Accepts multiple keys to load several entities at once.
+ */
+export function useEventSubEntities(eventId: string, keys: string[]): void {
+  useEffect(() => {
+    if (!eventId) return;
+    for (const key of keys) {
+      store.ensureSubEntity(eventId, key);
+    }
+  }, [eventId, ...keys]); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
 export function useStoreActions() {
   const createEvent = useCallback(
     (data: Omit<Event, "id" | "createdAt" | "updatedAt">) => store.create(data),

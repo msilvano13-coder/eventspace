@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
-import { useEvent, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
 import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown, FileDown, Box } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -40,6 +40,7 @@ const FloorPlan3DView = dynamic(
 export default function FloorPlanPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  useEventSubEntities(eventId, ["guests"]);
   const { updateEvent } = useStoreActions();
   const [activePlanId, setActivePlanId] = useState<string>("ceremony");
   const [showAddTab, setShowAddTab] = useState(false);

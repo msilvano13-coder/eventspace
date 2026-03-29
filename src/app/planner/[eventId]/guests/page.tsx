@@ -1,6 +1,6 @@
 "use client";
 
-import { useEvent, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -47,6 +47,7 @@ const EMPTY_GUEST: Omit<Guest, "id"> = {
 export default function GuestsPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  useEventSubEntities(eventId, ["guests"]);
   const { updateEvent } = useStoreActions();
 
   const [search, setSearch] = useState("");

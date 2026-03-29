@@ -934,6 +934,157 @@ export async function fetchEventFull(
   return eventFromRow(data);
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// Per-tab lazy fetch functions (avoid monolithic 14-way join)
+// ────────────────────────────────────────────────────────────────────────────
+
+export async function fetchEventCore(eventId: string): Promise<Event | null> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select("*, floor_plans (*, lighting_zones (*))")
+    .eq("id", eventId)
+    .single();
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    throw new Error(`fetchEventCore: ${error.message}`);
+  }
+  return eventFromRow(data);
+}
+
+export async function fetchEventGuests(eventId: string): Promise<Guest[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("guests")
+    .select("*")
+    .eq("event_id", eventId);
+  if (error) throw new Error(`fetchEventGuests: ${error.message}`);
+  return (data ?? []).map(guestFromRow);
+}
+
+export async function fetchEventTimeline(eventId: string): Promise<TimelineItem[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("timeline_items")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("sort_order", { ascending: true });
+  if (error) throw new Error(`fetchEventTimeline: ${error.message}`);
+  return (data ?? []).map(timelineItemFromRow);
+}
+
+export async function fetchEventSchedule(eventId: string): Promise<ScheduleItem[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("schedule_items")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("time", { ascending: true });
+  if (error) throw new Error(`fetchEventSchedule: ${error.message}`);
+  return (data ?? []).map(scheduleItemFromRow);
+}
+
+export async function fetchEventVendors(eventId: string): Promise<Vendor[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("vendors")
+    .select("*, vendor_payments (*)")
+    .eq("event_id", eventId);
+  if (error) throw new Error(`fetchEventVendors: ${error.message}`);
+  return (data ?? []).map(vendorFromRow);
+}
+
+export async function fetchEventInvoices(eventId: string): Promise<Invoice[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("invoices")
+    .select("*, invoice_line_items (*)")
+    .eq("event_id", eventId);
+  if (error) throw new Error(`fetchEventInvoices: ${error.message}`);
+  return (data ?? []).map(invoiceFromRow);
+}
+
+export async function fetchEventExpenses(eventId: string): Promise<Expense[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("expenses")
+    .select("*")
+    .eq("event_id", eventId);
+  if (error) throw new Error(`fetchEventExpenses: ${error.message}`);
+  return (data ?? []).map(expenseFromRow);
+}
+
+export async function fetchEventBudget(eventId: string): Promise<BudgetItem[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("budget_items")
+    .select("*")
+    .eq("event_id", eventId);
+  if (error) throw new Error(`fetchEventBudget: ${error.message}`);
+  return (data ?? []).map(budgetItemFromRow);
+}
+
+export async function fetchEventContracts(eventId: string): Promise<EventContract[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("event_contracts")
+    .select("*")
+    .eq("event_id", eventId);
+  if (error) throw new Error(`fetchEventContracts: ${error.message}`);
+  return (data ?? []).map(eventContractFromRow);
+}
+
+export async function fetchEventFiles(eventId: string): Promise<SharedFile[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("shared_files")
+    .select("*")
+    .eq("event_id", eventId);
+  if (error) throw new Error(`fetchEventFiles: ${error.message}`);
+  return (data ?? []).map(sharedFileFromRow);
+}
+
+export async function fetchEventMoodBoard(eventId: string): Promise<MoodBoardImage[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("mood_board_images")
+    .select("*")
+    .eq("event_id", eventId);
+  if (error) throw new Error(`fetchEventMoodBoard: ${error.message}`);
+  return (data ?? []).map(moodBoardImageFromRow);
+}
+
+export async function fetchEventMessages(eventId: string): Promise<Message[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("messages")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("created_at", { ascending: true });
+  if (error) throw new Error(`fetchEventMessages: ${error.message}`);
+  return (data ?? []).map(messageFromRow);
+}
+
+export async function fetchEventQuestionnaireAssignments(eventId: string): Promise<QuestionnaireAssignment[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("questionnaire_assignments")
+    .select("*")
+    .eq("event_id", eventId);
+  if (error) throw new Error(`fetchEventQuestionnaireAssignments: ${error.message}`);
+  return (data ?? []).map(questionnaireAssignmentFromRow);
+}
+
+export async function fetchEventDiscoveredVendors(eventId: string): Promise<DiscoveredVendor[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("discovered_vendors")
+    .select("*")
+    .eq("event_id", eventId);
+  if (error) throw new Error(`fetchEventDiscoveredVendors: ${error.message}`);
+  return (data ?? []).map(discoveredVendorFromRow);
+}
+
 export async function createEvent(
   data: Omit<Event, "id" | "createdAt" | "updatedAt">,
   userId: string

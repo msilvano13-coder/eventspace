@@ -1,6 +1,6 @@
 "use client";
 
-import { useEvent, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
@@ -18,6 +18,7 @@ function fmt12(time: string) {
 export default function TimelinePage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  useEventSubEntities(eventId, ["timeline"]);
   const { updateEvent } = useStoreActions();
 
   const [editingId, setEditingId] = useState<string | null>(null);

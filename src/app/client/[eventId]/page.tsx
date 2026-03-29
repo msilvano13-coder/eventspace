@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEvent, useStoreActions, useQuestionnaires, usePlannerProfile } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions, useQuestionnaires, usePlannerProfile } from "@/hooks/useStore";
 import Link from "next/link";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Users, Wallet, Search, Phone, Globe, Download, Upload, UserCheck, PenTool, Plus, Trash2, Pencil, X, UtensilsCrossed, AlertTriangle, Image, Loader2 } from "lucide-react";
@@ -60,6 +60,7 @@ const INV_STATUS_COLORS: Record<string, string> = {
 export default function ClientPortalPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  useEventSubEntities(eventId, ["timeline", "schedule", "vendors", "guests", "messages"]);
   const { updateEvent } = useStoreActions();
   const allQuestionnaires = useQuestionnaires();
   const profile = usePlannerProfile();
