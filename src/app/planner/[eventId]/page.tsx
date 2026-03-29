@@ -35,6 +35,7 @@ import {
   Image,
   Archive,
   RotateCcw,
+  Link2,
 } from "lucide-react";
 import { TimelineItem, QuestionnaireAssignment, Expense, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
 import MessageThread from "@/components/event/MessageThread";
@@ -51,6 +52,7 @@ export default function EventDetailPage() {
   const { updateEvent, deleteEvent } = useStoreActions();
   const allQuestionnaires = useQuestionnaires();
   const plannerProfile = usePlannerProfile();
+  const isDiy = plannerProfile.plan === "diy";
   const router = useRouter();
 
   // ── Event info editing ──
@@ -111,6 +113,7 @@ export default function EventDetailPage() {
   }
 
   const clientLink = `${typeof window !== "undefined" ? window.location.origin : ""}/client/${event.id}`;
+  const vendorLink = `${typeof window !== "undefined" ? window.location.origin : ""}/vendor/${event.id}`;
   const sortedTodos = [...event.timeline].sort((a, b) => a.order - b.order);
   const vendors = event.vendors ?? [];
 
@@ -438,13 +441,23 @@ export default function EventDetailPage() {
               <Download size={14} />
               <span className="hidden sm:inline">Export PDF</span>
             </button>
-            <button
-              onClick={() => navigator.clipboard.writeText(clientLink)}
-              className="flex items-center gap-2 border border-stone-200 px-3.5 py-2 rounded-xl text-sm text-stone-600 hover:bg-stone-50 transition-colors"
-            >
-              <Share2 size={14} />
-              <span className="hidden sm:inline">Client Link</span>
-            </button>
+            {isDiy ? (
+              <button
+                onClick={() => navigator.clipboard.writeText(vendorLink)}
+                className="flex items-center gap-2 border border-stone-200 px-3.5 py-2 rounded-xl text-sm text-stone-600 hover:bg-stone-50 transition-colors"
+              >
+                <Link2 size={14} />
+                <span className="hidden sm:inline">Vendor Link</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => navigator.clipboard.writeText(clientLink)}
+                className="flex items-center gap-2 border border-stone-200 px-3.5 py-2 rounded-xl text-sm text-stone-600 hover:bg-stone-50 transition-colors"
+              >
+                <Share2 size={14} />
+                <span className="hidden sm:inline">Client Link</span>
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -475,14 +488,16 @@ export default function EventDetailPage() {
           <h3 className="font-heading font-semibold text-stone-800 group-hover:text-violet-500 text-sm">Timeline</h3>
           <p className="text-xs text-stone-400 mt-1">{(event.schedule ?? []).length} moments</p>
         </Link>
-        <Link
-          href={`/planner/${event.id}/invoices`}
-          className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
-        >
-          <Receipt size={22} className="text-emerald-400 mb-2" />
-          <h3 className="font-heading font-semibold text-stone-800 group-hover:text-emerald-500 text-sm">Invoices</h3>
-          <p className="text-xs text-stone-400 mt-1">{(event.invoices ?? []).length} invoices</p>
-        </Link>
+        {!isDiy && (
+          <Link
+            href={`/planner/${event.id}/invoices`}
+            className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
+          >
+            <Receipt size={22} className="text-emerald-400 mb-2" />
+            <h3 className="font-heading font-semibold text-stone-800 group-hover:text-emerald-500 text-sm">Invoices</h3>
+            <p className="text-xs text-stone-400 mt-1">{(event.invoices ?? []).length} invoices</p>
+          </Link>
+        )}
         <Link
           href={`/planner/${event.id}/guests`}
           className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
@@ -507,18 +522,20 @@ export default function EventDetailPage() {
           <h3 className="font-heading font-semibold text-stone-800 group-hover:text-orange-500 text-sm">Vendors</h3>
           <p className="text-xs text-stone-400 mt-1">{(event.vendors ?? []).length} vendors</p>
         </Link>
-        <Link
-          href={`/planner/${event.id}/contracts`}
-          className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
-        >
-          <FileText size={22} className="text-teal-400 mb-2" />
-          <h3 className="font-heading font-semibold text-stone-800 group-hover:text-teal-500 text-sm">Contracts</h3>
-          <p className="text-xs text-stone-400 mt-1">{(event.contracts ?? []).length} contracts</p>
-        </Link>
+        {!isDiy && (
+          <Link
+            href={`/planner/${event.id}/contracts`}
+            className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
+          >
+            <FileText size={22} className="text-teal-400 mb-2" />
+            <h3 className="font-heading font-semibold text-stone-800 group-hover:text-teal-500 text-sm">Contracts</h3>
+            <p className="text-xs text-stone-400 mt-1">{(event.contracts ?? []).length} contracts</p>
+          </Link>
+        )}
       </div>
 
-      {/* ── Client Details ── */}
-      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6">
+      {/* ── Client Details (Pro only) ── */}
+      {!isDiy && <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-heading font-semibold text-stone-800">Client Details</h2>
           {!editingClient && (
@@ -564,7 +581,7 @@ export default function EventDetailPage() {
             </div>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── Color Palette + To Do (2-col) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -755,10 +772,10 @@ export default function EventDetailPage() {
       </div>{/* end 2-col grid */}
 
       {/* ── Questionnaires & Vendors (side by side) ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+      <div className={`grid grid-cols-1 ${isDiy ? "" : "lg:grid-cols-2"} gap-6 mb-6`}>
 
-      {/* ── Questionnaires ── */}
-      <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft">
+      {/* ── Questionnaires (Pro only) ── */}
+      {!isDiy && <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <ClipboardList size={16} className="text-indigo-400" />
@@ -851,7 +868,7 @@ export default function EventDetailPage() {
             })}
           </div>
         )}
-      </div>
+      </div>}
 
       {/* ── Vendors (summary + link) ── */}
       <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft">
@@ -1042,13 +1059,15 @@ export default function EventDetailPage() {
         )}
       </div>
 
-      {/* ── Messages ── */}
-      <MessageThread
-        messages={event.messages ?? []}
-        senderRole="planner"
-        senderName="Planner"
-        onSend={(msgs: Message[]) => updateEvent(eventId, { messages: msgs })}
-      />
+      {/* ── Messages (Pro only) ── */}
+      {!isDiy && (
+        <MessageThread
+          messages={event.messages ?? []}
+          senderRole="planner"
+          senderName="Planner"
+          onSend={(msgs: Message[]) => updateEvent(eventId, { messages: msgs })}
+        />
+      )}
 
       {/* ── Expenses ── */}
       <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6 mt-6">
