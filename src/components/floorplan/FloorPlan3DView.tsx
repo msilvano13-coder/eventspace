@@ -94,20 +94,52 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
   const fabricObjects = (canvasJSON as any).objects || [];
   const parsed: ParsedObject[] = [];
 
-  function processObject(obj: any) {
+  function processObject(obj: any, parentX = 0, parentY = 0, parentAngle = 0) {
     const data = obj.data;
+    const absX = parentX + (obj.left || 0);
+    const absY = parentY + (obj.top || 0);
+    const absAngle = parentAngle + (obj.angle || 0);
 
-    // Recurse into Fabric.js groups to find nested furniture/rooms
-    if (obj.type === "group" && Array.isArray(obj.objects) && !data?.furnitureId && !data?.isRoom) {
+    // Table set groups or plain groups: recurse into children
+    if (obj.type === "group" && Array.isArray(obj.objects)) {
+      // If this is a table set, recurse into sub-objects to render each piece
+      if (data?.isTableSet) {
+        for (const child of obj.objects) {
+          processObject(child, absX, absY, absAngle);
+        }
+        return;
+      }
+
+      // Individual furniture item (group = shape + label) — has furnitureId
+      if (data?.furnitureId) {
+        const catalogItem = FURNITURE_CATALOG.find((f) => f.id === data.furnitureId);
+        const shape = catalogItem?.shape || "rect";
+        const scaleX = obj.scaleX || 1;
+        const scaleY = obj.scaleY || 1;
+        const w = (obj.width || catalogItem?.defaultWidth || 40) * scaleX;
+        const h = (obj.height || catalogItem?.defaultHeight || 40) * scaleY;
+        const r = catalogItem?.defaultRadius ? catalogItem.defaultRadius * scaleX : undefined;
+
+        parsed.push({
+          type: "furniture",
+          furnitureId: data.furnitureId,
+          label: data.label || data.furnitureId,
+          shape,
+          x: absX,
+          y: absY,
+          width: w,
+          height: h,
+          radius: r,
+          angle: absAngle,
+          fill: catalogItem?.fill || obj.fill || "#f5f0e8",
+          stroke: catalogItem?.stroke || obj.stroke || "#c4b5a0",
+        });
+        return;
+      }
+
+      // Unknown group without data — recurse to find nested items
       for (const child of obj.objects) {
-        // Offset child positions by group position
-        const adjusted = {
-          ...child,
-          left: (obj.left || 0) + (child.left || 0),
-          top: (obj.top || 0) + (child.top || 0),
-          angle: (obj.angle || 0) + (child.angle || 0),
-        };
-        processObject(adjusted);
+        processObject(child, absX, absY, absAngle);
       }
       return;
     }
@@ -122,11 +154,11 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
         furnitureId: "",
         label: "Room",
         shape: "rect",
-        x: obj.left || 0,
-        y: obj.top || 0,
+        x: absX,
+        y: absY,
         width: (obj.width || 0) * (obj.scaleX || 1),
         height: (obj.height || 0) * (obj.scaleY || 1),
-        angle: obj.angle || 0,
+        angle: absAngle,
         fill: "#faf7f0",
         stroke: "#a89070",
         points: points.map((p: any) => [p.x, p.y]),
@@ -148,12 +180,12 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
         furnitureId: data.furnitureId,
         label: data.label || data.furnitureId,
         shape,
-        x: obj.left || 0,
-        y: obj.top || 0,
+        x: absX,
+        y: absY,
         width: w,
         height: h,
         radius: r,
-        angle: obj.angle || 0,
+        angle: absAngle,
         fill: catalogItem?.fill || obj.fill || "#f5f0e8",
         stroke: catalogItem?.stroke || obj.stroke || "#c4b5a0",
       });

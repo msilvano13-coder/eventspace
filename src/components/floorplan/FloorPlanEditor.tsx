@@ -1047,9 +1047,17 @@ export default function FloorPlanEditor({
     const centerX = x ?? canvas.getWidth() / 2;
     const centerY = y ?? canvas.getHeight() / 2;
 
-    group.items.forEach((entry) => {
+    // Build all sub-objects relative to (0,0), then wrap in one Group
+    const subObjects: FabricObject[] = [];
+    // Track the first (primary) item for labeling the group
+    let primaryItemId: string | null = null;
+
+    group.items.forEach((entry, idx) => {
       const item = getFurnitureById(entry.furnitureId);
       if (!item) return;
+      if (idx === 0) primaryItemId = item.id;
+
+      const isChair = entry.furnitureId === "chair";
 
       let shape: FabricObject;
       if (item.shape === "circle") {
@@ -1057,7 +1065,7 @@ export default function FloorPlanEditor({
           radius: item.defaultRadius || item.defaultWidth / 2,
           fill: item.fill,
           stroke: item.stroke,
-          strokeWidth: 1.5,
+          strokeWidth: isChair ? 1 : 1.5,
           originX: "center",
           originY: "center",
         });
@@ -1067,37 +1075,65 @@ export default function FloorPlanEditor({
           height: item.defaultHeight,
           fill: item.fill,
           stroke: item.stroke,
-          strokeWidth: 1.5,
-          rx: 4,
-          ry: 4,
+          strokeWidth: isChair ? 1 : 1.5,
+          rx: isChair ? 3 : 4,
+          ry: isChair ? 3 : 4,
           originX: "center",
           originY: "center",
         });
       }
 
-      const label = new FabricText(item.name, {
-        fontSize: 9,
-        fill: "#57534e",
-        originX: "center",
-        originY: "center",
-        fontFamily: "sans-serif",
-      });
-
-      const objLeft = Math.round((centerX + entry.offsetX) / GRID_SIZE) * GRID_SIZE;
-      const objTop = Math.round((centerY + entry.offsetY) / GRID_SIZE) * GRID_SIZE;
-
-      const fabricGroup = new Group([shape, label], {
-        left: objLeft,
-        top: objTop,
-        originX: "center",
-        originY: "center",
-        angle: entry.angle || 0,
-        data: { furnitureId: item.id, label: item.name },
-      });
-
-      canvas.add(fabricGroup);
+      // Only label the primary table, not individual chairs
+      if (!isChair) {
+        const label = new FabricText(item.name, {
+          fontSize: 9,
+          fill: "#57534e",
+          originX: "center",
+          originY: "center",
+          fontFamily: "sans-serif",
+        });
+        const itemGroup = new Group([shape, label], {
+          left: entry.offsetX,
+          top: entry.offsetY,
+          originX: "center",
+          originY: "center",
+          angle: entry.angle || 0,
+        });
+        subObjects.push(itemGroup);
+      } else {
+        // Chairs: just the shape, no label — cleaner look
+        const chairGroup = new Group([shape], {
+          left: entry.offsetX,
+          top: entry.offsetY,
+          originX: "center",
+          originY: "center",
+          angle: entry.angle || 0,
+        });
+        subObjects.push(chairGroup);
+      }
     });
 
+    if (subObjects.length === 0) return;
+
+    // Wrap everything in a single group that moves/selects together
+    const snappedX = Math.round(centerX / GRID_SIZE) * GRID_SIZE;
+    const snappedY = Math.round(centerY / GRID_SIZE) * GRID_SIZE;
+
+    const combinedGroup = new Group(subObjects, {
+      left: snappedX,
+      top: snappedY,
+      originX: "center",
+      originY: "center",
+      data: {
+        furnitureId: primaryItemId || group.items[0]?.furnitureId,
+        label: group.name,
+        isTableSet: true,
+        groupId: group.id,
+      },
+    });
+
+    canvas.add(combinedGroup);
+    canvas.setActiveObject(combinedGroup);
     canvas.requestRenderAll();
     pushUndo();
     triggerAutoSave();
