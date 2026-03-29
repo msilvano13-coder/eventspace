@@ -405,6 +405,16 @@ export default function FloorPlanEditor({
       lightingObjectsRef.current.set(zone.id, obj);
     });
 
+    // Re-select the active zone so click-to-drag works without a double-click.
+    // Without this, clicking a light triggers a state change that recreates all
+    // lighting objects, destroying the Fabric object the user just clicked.
+    if (selZoneId) {
+      const selObj = lightingObjectsRef.current.get(selZoneId);
+      if (selObj) {
+        canvas.setActiveObject(selObj);
+      }
+    }
+
     canvas.requestRenderAll();
   }, []);
 
