@@ -236,7 +236,7 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
 // ── 3D Components ──
 
 /** Scale factor: convert canvas px (inches) to 3D world units */
-const SCALE = 1 / 24; // 1 inch = 1/24 world unit (so a 60" table = 2.5 units)
+const SCALE = 1 / 12; // 1 inch = 1/12 world unit (1 foot = 1 unit; a 60" table = 5 units)
 const S = SCALE; // alias for compact geometry args
 
 function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: number; originY: number }) {
@@ -265,7 +265,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
         </mesh>
         <Text
           position={[0, h3d + 2 * S, 0]}
-          fontSize={0.12}
+          fontSize={0.25}
           color="#57534e"
           anchorX="center"
           anchorY="bottom"
@@ -383,7 +383,7 @@ function LightingZone3D({
         shadow-mapSize-height={castShadow ? 512 : undefined}
       />
       <mesh>
-        <sphereGeometry args={[0.06, 12, 12]} />
+        <sphereGeometry args={[0.12, 12, 12]} />
         <meshBasicMaterial color={color} transparent opacity={0.8} />
       </mesh>
     </group>
@@ -487,16 +487,33 @@ function FloorPlan3DScene({
 export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
   const { floorPlanJSON } = props;
 
-  // Compute camera position from data
+  // Compute camera position to frame the actual furniture, not the full canvas
   const camConfig = useMemo(() => {
     const parsed = parseCanvasJSON(floorPlanJSON);
-    const maxDim = Math.max(parsed.canvasWidth, parsed.canvasHeight) * S;
-    const dist = maxDim * 0.8;
+    const furniture = parsed.objects.filter((o) => o.type === "furniture");
+    let span: number;
+    if (furniture.length > 0) {
+      // Compute bounding box of all furniture
+      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+      for (const obj of furniture) {
+        const hw = (obj.width || 40) / 2;
+        const hh = (obj.height || 40) / 2;
+        minX = Math.min(minX, obj.x - hw);
+        maxX = Math.max(maxX, obj.x + hw);
+        minY = Math.min(minY, obj.y - hh);
+        maxY = Math.max(maxY, obj.y + hh);
+      }
+      span = Math.max(maxX - minX, maxY - minY) * S;
+    } else {
+      span = Math.max(parsed.canvasWidth, parsed.canvasHeight) * S;
+    }
+    // Camera distance: far enough to see all furniture with some padding
+    const dist = Math.max(span * 0.9, 8);
     return {
-      position: [dist * 0.6, dist * 0.8, dist * 0.6] as [number, number, number],
+      position: [dist * 0.6, dist * 0.7, dist * 0.6] as [number, number, number],
       fov: 50,
       near: 0.1,
-      far: 500,
+      far: 1000,
     };
   }, [floorPlanJSON]);
 
