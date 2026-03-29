@@ -35,7 +35,6 @@ import {
   Image,
   Archive,
   RotateCcw,
-  Link2,
 } from "lucide-react";
 import { TimelineItem, QuestionnaireAssignment, Expense, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
 import MessageThread from "@/components/event/MessageThread";
@@ -113,7 +112,6 @@ export default function EventDetailPage() {
   }
 
   const clientLink = `${typeof window !== "undefined" ? window.location.origin : ""}/client/${event.id}`;
-  const vendorLink = `${typeof window !== "undefined" ? window.location.origin : ""}/vendor/${event.id}`;
   const sortedTodos = [...event.timeline].sort((a, b) => a.order - b.order);
   const vendors = event.vendors ?? [];
 
@@ -441,15 +439,7 @@ export default function EventDetailPage() {
               <Download size={14} />
               <span className="hidden sm:inline">Export PDF</span>
             </button>
-            {isDiy ? (
-              <button
-                onClick={() => navigator.clipboard.writeText(vendorLink)}
-                className="flex items-center gap-2 border border-stone-200 px-3.5 py-2 rounded-xl text-sm text-stone-600 hover:bg-stone-50 transition-colors"
-              >
-                <Link2 size={14} />
-                <span className="hidden sm:inline">Vendor Link</span>
-              </button>
-            ) : (
+            {!isDiy && (
               <button
                 onClick={() => navigator.clipboard.writeText(clientLink)}
                 className="flex items-center gap-2 border border-stone-200 px-3.5 py-2 rounded-xl text-sm text-stone-600 hover:bg-stone-50 transition-colors"
