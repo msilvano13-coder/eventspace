@@ -1335,9 +1335,29 @@ export default function FloorPlanEditor({
     if (!canvas) return;
     const active = canvas.getActiveObject();
     if (active && active instanceof Group) {
-      const textObj = active.getObjects().find((o) => o instanceof FabricText) as FabricText | undefined;
+      // For table sets the text lives inside a nested sub-group, so search recursively
+      const findText = (group: Group): FabricText | undefined => {
+        for (const child of group.getObjects()) {
+          if (child instanceof FabricText) return child;
+          if (child instanceof Group) {
+            const found = findText(child);
+            if (found) return found;
+          }
+        }
+        return undefined;
+      };
+      const textObj = findText(active);
       if (textObj) textObj.set("text", label);
       active.data = { ...active.data, label };
+      // Also update the nested sub-group's data.label (for table sets)
+      if (active.data?.isTableSet) {
+        for (const child of active.getObjects()) {
+          if (child instanceof Group && child.data?.furnitureId && child.data.furnitureId !== "chair") {
+            child.data = { ...child.data, label };
+            break;
+          }
+        }
+      }
       canvas.requestRenderAll();
       triggerAutoSave();
     }
