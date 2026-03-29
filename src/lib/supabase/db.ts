@@ -1379,22 +1379,29 @@ export async function replaceFloorPlans(
 ): Promise<void> {
   const supabase = createClient();
 
-  // Delete existing floor plans (lighting_zones cascade)
-  const { error: delError } = await supabase
+  // Delete existing lighting zones first (child table)
+  const { data: existingPlans } = await supabase
     .from("floor_plans")
-    .delete()
+    .select("id")
     .eq("event_id", eventId);
-  if (delError)
-    throw new Error(`replaceFloorPlans (delete): ${delError.message}`);
+  if (existingPlans && existingPlans.length > 0) {
+    const planIds = existingPlans.map((p: any) => p.id);
+    await supabase
+      .from("lighting_zones")
+      .delete()
+      .in("floor_plan_id", planIds);
+  }
 
+  // Upsert floor plans (avoids duplicate key on race conditions)
   if (plans.length > 0) {
-    // Insert floor plans
     const { error: insError } = await supabase
       .from("floor_plans")
-      .insert(plans.map((fp, i) => floorPlanToRow(fp, eventId, i)));
+      .upsert(plans.map((fp, i) => floorPlanToRow(fp, eventId, i)), {
+        onConflict: "id",
+      });
     if (insError)
       throw new Error(
-        `replaceFloorPlans (insert plans): ${insError.message}`
+        `replaceFloorPlans (upsert plans): ${insError.message}`
       );
 
     // Collect and insert all lighting zones
