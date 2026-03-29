@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useEvent, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
-import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown, FileDown } from "lucide-react";
+import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown, FileDown, Box } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FloorPlan, Guest, GuestRelationship, LightingZone } from "@/lib/types";
 import { v4 as uuid } from "uuid";
@@ -25,6 +25,18 @@ const FloorPlanEditor = dynamic(
   }
 );
 
+const FloorPlan3DView = dynamic(
+  () => import("@/components/floorplan/FloorPlan3DView"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex-1 flex items-center justify-center bg-stone-200">
+        <p className="text-stone-400 text-sm">Loading 3D view...</p>
+      </div>
+    ),
+  }
+);
+
 export default function FloorPlanPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
@@ -34,6 +46,7 @@ export default function FloorPlanPage() {
   const [newTabName, setNewTabName] = useState("");
   const [showSeating, setShowSeating] = useState(false);
   const [showLighting, setShowLighting] = useState(false);
+  const [show3D, setShow3D] = useState(false);
   const [mobileLightingExpanded, setMobileLightingExpanded] = useState(true);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [guestRelationships, setGuestRelationships] = useState<GuestRelationship[]>([]);
@@ -135,6 +148,20 @@ export default function FloorPlanPage() {
         </h2>
         <div className="flex-1" />
 
+        {/* 3D View toggle */}
+        <button
+          onClick={() => setShow3D(!show3D)}
+          className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+            show3D
+              ? "bg-indigo-50 text-indigo-600 border border-indigo-200"
+              : "text-stone-400 hover:text-stone-600 hover:bg-stone-50 border border-transparent"
+          }`}
+          title={show3D ? "Back to 2D Editor" : "3D Preview"}
+        >
+          <Box size={13} />
+          <span className="hidden sm:inline">{show3D ? "2D" : "3D"}</span>
+        </button>
+
         {/* PDF Export */}
         <button
           onClick={handleExportPDF}
@@ -227,19 +254,29 @@ export default function FloorPlanPage() {
       {/* Editor + Side Panels */}
       <div className="flex-1 relative overflow-hidden flex">
         <div className="flex-1 relative">
-          {activePlan && (
-            <FloorPlanEditor
-              key={activePlan.id}
-              eventId={eventId}
-              initialJSON={activePlan.json}
-              onSave={handleSave}
-              lightingZones={lightingZones}
-              lightingEnabled={showLighting}
-              onUpdateZones={handleUpdateLightingZones}
-              selectedZoneId={selectedZoneId}
-              onSelectZone={setSelectedZoneId}
-              onCanvasReady={(getDataURL) => { getCanvasDataURLRef.current = getDataURL; }}
-            />
+          {show3D ? (
+            activePlan && (
+              <FloorPlan3DView
+                floorPlanJSON={activePlan.json}
+                lightingZones={lightingZones}
+                lightingEnabled={showLighting}
+              />
+            )
+          ) : (
+            activePlan && (
+              <FloorPlanEditor
+                key={activePlan.id}
+                eventId={eventId}
+                initialJSON={activePlan.json}
+                onSave={handleSave}
+                lightingZones={lightingZones}
+                lightingEnabled={showLighting}
+                onUpdateZones={handleUpdateLightingZones}
+                selectedZoneId={selectedZoneId}
+                onSelectZone={setSelectedZoneId}
+                onCanvasReady={(getDataURL) => { getCanvasDataURLRef.current = getDataURL; }}
+              />
+            )
           )}
         </div>
 

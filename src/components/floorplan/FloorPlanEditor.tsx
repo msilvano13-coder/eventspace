@@ -182,6 +182,7 @@ export default function FloorPlanEditor({
   const containerRef = useRef<HTMLDivElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
   const [snapEnabled, setSnapEnabled] = useState(true);
+  const [rotationSnap, setRotationSnap] = useState(true);
   const [zoom, setZoom] = useState(1);
   const [selectedInfo, setSelectedInfo] = useState<SelectedInfo | null>(null);
   const [undoStack, setUndoStack] = useState<string[]>([]);
@@ -196,6 +197,7 @@ export default function FloorPlanEditor({
   const lightingObjectsRef = useRef<Map<string, Group>>(new Map());
   const clipboardRef = useRef<any[]>([]);
   const [canPaste, setCanPaste] = useState(false);
+  const angleGuideRef = useRef<{ line: FabricObject; text: FabricText } | null>(null);
 
   // ── Refs for latest values (used in closures) ──
   const lightingZonesRef = useRef(lightingZones);
@@ -205,6 +207,7 @@ export default function FloorPlanEditor({
   const onSelectZoneRef = useRef(onSelectZone);
   const readOnlyRef = useRef(readOnly);
   const snapEnabledRef = useRef(snapEnabled);
+  const rotationSnapRef = useRef(rotationSnap);
   useEffect(() => {
     lightingZonesRef.current = lightingZones;
     lightingEnabledRef.current = lightingEnabled;
@@ -213,6 +216,7 @@ export default function FloorPlanEditor({
     onSelectZoneRef.current = onSelectZone;
     readOnlyRef.current = readOnly;
     snapEnabledRef.current = snapEnabled;
+    rotationSnapRef.current = rotationSnap;
   });
 
   // ── Serialize canvas excluding lighting objects ──
@@ -222,9 +226,11 @@ export default function FloorPlanEditor({
 
     // Temporarily remove non-content objects so they don't get serialized
     const lightingObjs = canvas.getObjects().filter((o: any) => o.data?.isLighting);
+    const guideObjs = canvas.getObjects().filter((o: any) => o.data?.isGuide);
     const gridObjs = gridObjectsRef.current.filter((o) => canvas.getObjects().includes(o));
     const overlayObj = lightingOverlayRef.current;
     lightingObjs.forEach((o) => canvas.remove(o));
+    guideObjs.forEach((o) => canvas.remove(o));
     gridObjs.forEach((o) => canvas.remove(o));
     if (overlayObj) canvas.remove(overlayObj);
 
@@ -441,6 +447,84 @@ export default function FloorPlanEditor({
       });
     });
 
+    // ── Rotation snapping (15° increments) + visual angle guide ──
+    const ROTATION_SNAP_ANGLE = 15;
+    const GUIDE_LINE_LEN = 60;
+
+    canvas.on("object:rotating", (e) => {
+      const obj = e.target;
+      if (!obj || obj.data?.isLighting) return;
+
+      if (rotationSnapRef.current) {
+        const raw = obj.angle || 0;
+        const snapped = Math.round(raw / ROTATION_SNAP_ANGLE) * ROTATION_SNAP_ANGLE;
+        obj.rotate(snapped);
+        // Also snap individual objects within ActiveSelection
+        if (obj instanceof ActiveSelection) {
+          obj.getObjects().forEach((child) => {
+            const childRaw = child.angle || 0;
+            child.rotate(Math.round(childRaw / ROTATION_SNAP_ANGLE) * ROTATION_SNAP_ANGLE);
+          });
+        }
+      }
+
+      // Show visual angle guide
+      const center = obj.getCenterPoint();
+      const angle = obj.angle || 0;
+      const radians = (angle * Math.PI) / 180;
+      const endX = center.x + Math.cos(radians - Math.PI / 2) * GUIDE_LINE_LEN;
+      const endY = center.y + Math.sin(radians - Math.PI / 2) * GUIDE_LINE_LEN;
+
+      // Remove previous guide
+      if (angleGuideRef.current) {
+        canvas.remove(angleGuideRef.current.line);
+        canvas.remove(angleGuideRef.current.text);
+        angleGuideRef.current = null;
+      }
+
+      const guideLine = new Rect({
+        left: center.x,
+        top: center.y,
+        width: 1.5,
+        height: GUIDE_LINE_LEN,
+        fill: "#e11d48",
+        originX: "center",
+        originY: "bottom",
+        angle: angle,
+        selectable: false,
+        evented: false,
+        data: { isGuide: true },
+      });
+
+      const guideText = new FabricText(`${Math.round(angle)}°`, {
+        left: endX + 8,
+        top: endY - 6,
+        fontSize: 11,
+        fill: "#e11d48",
+        fontWeight: "700",
+        fontFamily: "sans-serif",
+        selectable: false,
+        evented: false,
+        data: { isGuide: true },
+      });
+
+      canvas.add(guideLine);
+      canvas.add(guideText);
+      angleGuideRef.current = { line: guideLine, text: guideText };
+    });
+
+    // Remove angle guide when rotation ends
+    const clearAngleGuide = () => {
+      if (angleGuideRef.current) {
+        canvas.remove(angleGuideRef.current.line);
+        canvas.remove(angleGuideRef.current.text);
+        angleGuideRef.current = null;
+        canvas.requestRenderAll();
+      }
+    };
+    canvas.on("selection:cleared", clearAngleGuide);
+    canvas.on("mouse:up", clearAngleGuide);
+
     const updateSelection = () => {
       const active = canvas.getActiveObject();
 
@@ -508,6 +592,9 @@ export default function FloorPlanEditor({
     });
 
     canvas.on("object:modified", (e) => {
+      // Clear rotation angle guide
+      clearAngleGuide();
+
       const obj = e.target;
 
       // If lighting zone was moved, sync position
@@ -658,6 +745,7 @@ export default function FloorPlanEditor({
     return () => {
       window.removeEventListener("keydown", handleKey);
       resizeObserver.disconnect();
+      clearAngleGuide();
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (undoDebounceRef.current) clearTimeout(undoDebounceRef.current);
       canvas.dispose();
@@ -911,12 +999,13 @@ export default function FloorPlanEditor({
     const active = canvas.getActiveObject();
     if (!active || active.data?.isLighting) return;
 
+    const step = rotationSnap ? 15 : 45;
     if (active instanceof ActiveSelection) {
       active.getObjects().forEach((obj) => {
-        obj.rotate((obj.angle || 0) + 45);
+        obj.rotate((obj.angle || 0) + step);
       });
     } else {
-      active.rotate((active.angle || 0) + 45);
+      active.rotate((active.angle || 0) + step);
     }
     canvas.requestRenderAll();
     pushUndo();
@@ -1044,6 +1133,8 @@ export default function FloorPlanEditor({
       <Toolbar
         snapEnabled={snapEnabled}
         onToggleSnap={() => setSnapEnabled(!snapEnabled)}
+        rotationSnap={rotationSnap}
+        onToggleRotationSnap={() => setRotationSnap(!rotationSnap)}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onUndo={handleUndo}
@@ -1081,6 +1172,7 @@ export default function FloorPlanEditor({
             onUpdateLabel={handleUpdateLabel}
             onUpdateAngle={handleUpdateAngle}
             onDelete={handleDeleteSelected}
+            rotationSnap={rotationSnap}
           />
         </div>
 

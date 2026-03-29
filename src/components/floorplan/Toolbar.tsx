@@ -12,11 +12,14 @@ import {
   LayoutTemplate,
   Copy,
   ClipboardPaste,
+  Magnet,
 } from "lucide-react";
 
 interface Props {
   snapEnabled: boolean;
   onToggleSnap: () => void;
+  rotationSnap: boolean;
+  onToggleRotationSnap: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onUndo: () => void;
@@ -37,6 +40,8 @@ interface Props {
 export default function Toolbar({
   snapEnabled,
   onToggleSnap,
+  rotationSnap,
+  onToggleRotationSnap,
   onZoomIn,
   onZoomOut,
   onUndo,
@@ -84,7 +89,13 @@ export default function Toolbar({
         icon={RotateCw}
         onClick={onRotateSelected}
         disabled={!hasSelection}
-        tooltip="Rotate 45deg"
+        tooltip={rotationSnap ? "Rotate 15°" : "Rotate 45°"}
+      />
+      <ToolButton
+        icon={Magnet}
+        onClick={onToggleRotationSnap}
+        active={rotationSnap}
+        tooltip={rotationSnap ? "Rotation Snap: 15°" : "Rotation Snap: Off"}
       />
       <ToolButton
         icon={Trash2}
