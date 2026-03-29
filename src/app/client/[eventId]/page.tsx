@@ -3,11 +3,10 @@
 import { useParams } from "next/navigation";
 import { useEvent, useEventSubEntities, useStoreActions, useQuestionnaires, usePlannerProfile } from "@/hooks/useStore";
 import Link from "next/link";
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Users, Wallet, Search, Phone, Globe, Download, Upload, UserCheck, PenTool, Plus, Trash2, Pencil, X, UtensilsCrossed, AlertTriangle, Image, Loader2 } from "lucide-react";
-import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY, Vendor, VendorCategory, EventContract, ScheduleItem, MoodBoardImage } from "@/lib/types";
+import { useState, useRef, useEffect } from "react";
+import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Users, Wallet, Search, Phone, Globe, Download, Upload, UserCheck, PenTool, Plus, Trash2, Pencil, X, UtensilsCrossed, AlertTriangle, Image } from "lucide-react";
+import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY, Vendor, VendorCategory, EventContract, ScheduleItem } from "@/lib/types";
 import { readPdfAsBase64, downloadBase64File, formatBytes } from "@/lib/pdf-utils";
-import { compressImage, compressImageToBlob } from "@/lib/image-compress";
 import MessageThread from "@/components/event/MessageThread";
 import SignaturePad from "@/components/ui/SignaturePad";
 
@@ -128,12 +127,6 @@ export default function ClientPortalPage() {
 
         {/* Color Palette */}
         <ClientColorPalette event={event} onUpdate={(colors) => updateEvent(event.id, { colorPalette: colors })} />
-
-        {/* Mood Board — editable */}
-        <ClientMoodBoard
-          event={event}
-          onUpdate={(moodBoard) => updateEvent(event.id, { moodBoard })}
-        />
 
         {/* Day Timeline — editable */}
         <ClientTimeline
@@ -881,215 +874,6 @@ function ClientColorPalette({ event, onUpdate }: { event: Event; onUpdate: (colo
           >
             Cancel
           </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Client Mood Board (inline preview + add) ──
-function ClientMoodBoard({ event, onUpdate }: { event: Event; onUpdate: (moodBoard: MoodBoardImage[]) => void }) {
-  const images = event.moodBoard ?? [];
-  const [uploading, setUploading] = useState(false);
-  const [uploadCount, setUploadCount] = useState(0);
-  const [uploadTotal, setUploadTotal] = useState(0);
-  const [lightboxId, setLightboxId] = useState<string | null>(null);
-  const lightboxImg = lightboxId ? images.find((m) => m.id === lightboxId) : null;
-
-  // Refresh signed URLs for storage-backed images on load
-  const refreshUrls = useCallback(async () => {
-    const needsRefresh = images.filter(img => img.storagePath);
-    if (needsRefresh.length === 0 || !event.shareToken) return;
-    const updated = await Promise.all(images.map(async (img) => {
-      if (!img.storagePath) return img;
-      try {
-        const url = await getClientSignedUrl(event.shareToken, "event-files", img.storagePath);
-        const thumb = img.storageThumb
-          ? await getClientSignedUrl(event.shareToken, "event-files", img.storageThumb)
-          : img.thumb;
-        return { ...img, url, thumb };
-      } catch {
-        return img; // keep existing URLs if refresh fails
-      }
-    }));
-    // Only update if URLs actually changed
-    if (updated.some((img, i) => img.url !== images[i].url || img.thumb !== images[i].thumb)) {
-      onUpdate(updated);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [event.shareToken, images.length]);
-
-  useEffect(() => {
-    refreshUrls();
-  }, [refreshUrls]);
-
-  async function addImages(files: FileList) {
-    const fileArr = Array.from(files);
-    if (fileArr.length === 0) return;
-    setUploading(true);
-    setUploadCount(0);
-    setUploadTotal(fileArr.length);
-    let currentImages = [...images];
-    for (let i = 0; i < fileArr.length; i++) {
-      setUploadCount(i + 1);
-      try {
-        // Try Storage upload via API first, fall back to base64
-        if (event.shareToken) {
-          const { full: fullBlob, thumb: thumbBlob } = await compressImageToBlob(fileArr[i]);
-          const imgId = crypto.randomUUID();
-          const ext = "jpg";
-          // We use the event id as path prefix; the API validates against shareToken -> planner user_id
-          // The path must start with the planner's user_id, which we don't know client-side.
-          // Instead, we upload via the API which resolves the correct user_id from the shareToken.
-          // Build path with a placeholder that the API will validate.
-          const basePath = `${event.id}/moodboard/${imgId}`;
-          const fullPath = `${basePath}.${ext}`;
-          const thumbPath = `${basePath}_thumb.${ext}`;
-          try {
-            // uploadClientFile returns the resolved path (with planner user_id prefix)
-            const resolvedFullPath = await uploadClientFile(event.shareToken, "event-files", fullPath, fullBlob);
-            const resolvedThumbPath = await uploadClientFile(event.shareToken, "event-files", thumbPath, thumbBlob);
-            const fullUrl = await getClientSignedUrl(event.shareToken, "event-files", resolvedFullPath);
-            const thumbUrl = await getClientSignedUrl(event.shareToken, "event-files", resolvedThumbPath);
-            const newImg: MoodBoardImage = {
-              id: imgId,
-              url: fullUrl,
-              thumb: thumbUrl,
-              caption: fileArr[i].name.replace(/\.[^.]+$/, ""),
-              addedAt: new Date().toISOString(),
-              storagePath: resolvedFullPath,
-              storageThumb: resolvedThumbPath,
-            };
-            currentImages = [...currentImages, newImg];
-            onUpdate(currentImages);
-            continue;
-          } catch {
-            // Fall through to base64 fallback
-          }
-        }
-        // Fallback: base64 (legacy behavior)
-        const { full, thumb } = await compressImage(fileArr[i]);
-        const newImg: MoodBoardImage = {
-          id: crypto.randomUUID(),
-          url: full,
-          thumb,
-          caption: fileArr[i].name.replace(/\.[^.]+$/, ""),
-          addedAt: new Date().toISOString(),
-          storagePath: null,
-          storageThumb: null,
-        };
-        currentImages = [...currentImages, newImg];
-        onUpdate(currentImages);
-      } catch {
-        // Skip files that fail
-      }
-    }
-    setUploading(false);
-  }
-
-  function removeImage(id: string) {
-    onUpdate(images.filter((m) => m.id !== id));
-    if (lightboxId === id) setLightboxId(null);
-  }
-
-  return (
-    <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
-      <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-stone-100">
-        <div className="flex items-center gap-2">
-          <Image size={15} className="text-pink-400" />
-          <h2 className="font-heading font-semibold text-stone-800">Mood Board</h2>
-          {images.length > 0 && <span className="text-xs text-stone-400 ml-1">({images.length})</span>}
-        </div>
-        <label className={`flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600 transition-colors cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
-          {uploading ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              {uploadCount}/{uploadTotal}
-            </>
-          ) : (
-            <>
-              <Plus size={14} /> Add
-            </>
-          )}
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            disabled={uploading}
-            onChange={(e) => {
-              if (e.target.files) addImages(e.target.files);
-              e.target.value = "";
-            }}
-          />
-        </label>
-      </div>
-
-      {images.length === 0 ? (
-        <div className="px-5 py-8 text-center">
-          <Image size={20} className="text-stone-300 mx-auto mb-2" />
-          <p className="text-sm text-stone-400">No inspiration images yet.</p>
-          <label className="inline-flex items-center gap-1.5 text-xs font-medium text-rose-500 hover:text-rose-600 mt-2 cursor-pointer transition-colors">
-            <Plus size={12} /> Upload photos
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files) addImages(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </label>
-        </div>
-      ) : (
-        <div className="p-4">
-          <div className="columns-2 sm:columns-3 gap-3 space-y-3">
-            {images.map((img) => (
-              <div key={img.id} className="break-inside-avoid relative group">
-                <img
-                  src={img.thumb || img.url}
-                  alt={img.caption}
-                  className="w-full rounded-xl object-cover cursor-pointer"
-                  loading="lazy"
-                  onClick={() => setLightboxId(img.id)}
-                />
-                <button
-                  onClick={() => removeImage(img.id)}
-                  className="absolute top-1.5 right-1.5 w-6 h-6 bg-white/90 rounded-full flex items-center justify-center shadow-sm sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                  aria-label="Remove image"
-                >
-                  <X size={10} className="text-stone-500" />
-                </button>
-                {img.caption && (
-                  <p className="text-[10px] text-stone-400 mt-1 truncate">{img.caption}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Lightbox */}
-      {lightboxImg && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setLightboxId(null)}
-        >
-          <button className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors">
-            <X size={20} className="text-white" />
-          </button>
-          <div className="max-w-4xl max-h-[85vh] relative" onClick={(e) => e.stopPropagation()}>
-            <img
-              src={lightboxImg.url}
-              alt={lightboxImg.caption}
-              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
-            />
-            {lightboxImg.caption && (
-              <p className="text-center text-white/80 text-sm mt-3">{lightboxImg.caption}</p>
-            )}
-          </div>
         </div>
       )}
     </div>

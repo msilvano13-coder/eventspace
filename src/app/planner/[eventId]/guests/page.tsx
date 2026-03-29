@@ -72,8 +72,11 @@ export default function GuestsPage() {
     }
   }, [eventId]);
 
+  const [relError, setRelError] = useState<string | null>(null);
+
   async function addRelationship() {
     if (!relGuest1 || !relGuest2 || relGuest1 === relGuest2) return;
+    setRelError(null);
     // Normalize order so (a,b) and (b,a) are the same
     const [g1, g2] = [relGuest1, relGuest2].sort();
     const rel: GuestRelationship = { guestId1: g1, guestId2: g2, type: relType };
@@ -87,10 +90,14 @@ export default function GuestsPage() {
       });
       setRelGuest1("");
       setRelGuest2("");
-    } catch {}
+    } catch (err) {
+      console.error("addRelationship failed:", err);
+      setRelError("Failed to save relationship. Please try again.");
+    }
   }
 
   async function removeRelationship(r: GuestRelationship) {
+    setRelError(null);
     try {
       await deleteGuestRelationship(eventId, r.guestId1, r.guestId2);
       setRelationships((prev) =>
@@ -98,7 +105,10 @@ export default function GuestsPage() {
           (x) => !(x.guestId1 === r.guestId1 && x.guestId2 === r.guestId2)
         )
       );
-    } catch {}
+    } catch (err) {
+      console.error("removeRelationship failed:", err);
+      setRelError("Failed to remove relationship. Please try again.");
+    }
   }
 
   if (!event) {
@@ -535,7 +545,13 @@ export default function GuestsPage() {
               </div>
             )}
 
-            {relationships.length === 0 && (
+            {relError && (
+              <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-3 py-2">
+                {relError}
+              </div>
+            )}
+
+            {relationships.length === 0 && !relError && (
               <p className="text-xs text-stone-400 italic">No relationships defined yet.</p>
             )}
           </div>
