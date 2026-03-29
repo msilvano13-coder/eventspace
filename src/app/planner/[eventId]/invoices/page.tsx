@@ -1,6 +1,7 @@
 "use client";
 
-import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions, useEventsLoading } from "@/hooks/useStore";
+import EventLoader from "@/components/ui/EventLoader";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -31,6 +32,7 @@ const STATUS_COLORS: Record<string, string> = {
 export default function InvoicesPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  const loading = useEventsLoading();
   useEventSubEntities(eventId, ["invoices", "vendors"]);
   const { updateEvent } = useStoreActions();
 
@@ -45,6 +47,8 @@ export default function InvoicesPage() {
   const [formDueDate, setFormDueDate] = useState("");
   const [formNotes, setFormNotes] = useState("");
   const [formItems, setFormItems] = useState<InvoiceLineItem[]>([]);
+
+  if (loading) return <EventLoader className="px-4 py-6 sm:px-6 md:px-8 flex items-center justify-center min-h-[200px]" />;
 
   if (!event) {
     return (

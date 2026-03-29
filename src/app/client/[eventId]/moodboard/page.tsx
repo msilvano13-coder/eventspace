@@ -1,7 +1,8 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions, useEventsLoading } from "@/hooks/useStore";
+import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, Plus, X, Image, Pencil, Check, Loader2, ZoomIn } from "lucide-react";
@@ -11,6 +12,7 @@ import { compressImage } from "@/lib/image-compress";
 export default function ClientMoodBoardPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  const loading = useEventsLoading();
   useEventSubEntities(eventId, ["moodBoard"]);
   const { updateEvent } = useStoreActions();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -19,6 +21,8 @@ export default function ClientMoodBoardPage() {
   const [uploadCount, setUploadCount] = useState(0);
   const [uploadTotal, setUploadTotal] = useState(0);
   const [lightboxId, setLightboxId] = useState<string | null>(null);
+
+  if (loading) return <EventLoader />;
 
   if (!event) {
     return (

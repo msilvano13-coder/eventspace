@@ -1,6 +1,7 @@
 "use client";
 
-import { useEvent, useEventSubEntities, useStoreActions, useContractTemplates } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions, useContractTemplates, useEventsLoading } from "@/hooks/useStore";
+import EventLoader from "@/components/ui/EventLoader";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useCallback, useRef, useEffect } from "react";
@@ -18,6 +19,7 @@ import type { EventContract } from "@/lib/types";
 export default function EventContractsPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  const loading = useEventsLoading();
   useEventSubEntities(eventId, ["contracts"]);
   const { updateEvent } = useStoreActions();
   const templates = useContractTemplates();
@@ -64,6 +66,8 @@ export default function EventContractsPage() {
     if (toastTimeout.current) clearTimeout(toastTimeout.current);
     toastTimeout.current = setTimeout(() => setToast(null), 3000);
   }, []);
+
+  if (loading) return <EventLoader className="px-4 py-6 sm:px-6 md:px-8 flex items-center justify-center min-h-[200px]" />;
 
   if (!event) {
     return (

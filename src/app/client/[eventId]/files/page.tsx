@@ -1,7 +1,8 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions, useEventsLoading } from "@/hooks/useStore";
+import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, FileText, Image, Palette, File, Upload, Trash2, Plus, Download, Loader2, AlertCircle } from "lucide-react";
@@ -54,12 +55,14 @@ async function uploadClientFile(shareToken: string, bucket: string, path: string
 export default function ClientFilesPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  const loading = useEventsLoading();
   useEventSubEntities(eventId, ["files"]);
   const { updateEvent } = useStoreActions();
   const [uploading, setUploading] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  if (loading) return <EventLoader />;
   if (!event) return <div className="px-4 py-6 text-stone-500">Event not found.</div>;
 
   const files = event.files ?? [];

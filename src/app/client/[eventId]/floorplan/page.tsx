@@ -2,7 +2,8 @@
 
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
-import { useEvent } from "@/hooks/useStore";
+import { useEvent, useEventsLoading } from "@/hooks/useStore";
+import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
 import { ArrowLeft, Users, Lightbulb } from "lucide-react";
 import { useState } from "react";
@@ -24,9 +25,12 @@ const FloorPlanEditor = dynamic(
 export default function ClientFloorPlanPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  const loading = useEventsLoading();
   const [activePlanId, setActivePlanId] = useState<string>("ceremony");
   const [showSeating, setShowSeating] = useState(false);
   const [showLighting, setShowLighting] = useState(false);
+
+  if (loading) return <EventLoader />;
 
   if (!event) {
     return (

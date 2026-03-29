@@ -1,7 +1,8 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEvent, useEventSubEntities, useStoreActions, useQuestionnaires, usePlannerProfile } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions, useQuestionnaires, usePlannerProfile, useEventsLoading } from "@/hooks/useStore";
+import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
 import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Users, Wallet, Search, Phone, Globe, Download, Upload, UserCheck, PenTool, Plus, Trash2, Pencil, X, UtensilsCrossed, AlertTriangle, Image } from "lucide-react";
@@ -59,12 +60,14 @@ const INV_STATUS_COLORS: Record<string, string> = {
 export default function ClientPortalPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  const loading = useEventsLoading();
   useEventSubEntities(eventId, ["timeline", "schedule", "vendors", "guests", "messages", "contracts", "invoices", "budget", "files", "questionnaires", "discoveredVendors"]);
   const { updateEvent } = useStoreActions();
   const allQuestionnaires = useQuestionnaires();
   const profile = usePlannerProfile();
   const [openQId, setOpenQId] = useState<string | null>(null);
 
+  if (loading) return <EventLoader />;
 
   if (!event) {
     return (

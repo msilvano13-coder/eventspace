@@ -1,7 +1,8 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions, useEventsLoading } from "@/hooks/useStore";
+import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { ArrowLeft, Plus, X, Image, Pencil, Check, Loader2, ZoomIn } from "lucide-react";
@@ -14,6 +15,7 @@ import { getUserId } from "@/lib/supabase/db";
 export default function MoodBoardPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  const loading = useEventsLoading();
   useEventSubEntities(eventId, ["moodBoard"]);
   const { updateEvent } = useStoreActions();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -48,6 +50,8 @@ export default function MoodBoardPage() {
     refreshUrls();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [images.length]);
+
+  if (loading) return <EventLoader className="px-4 py-6 sm:px-6 md:px-8 flex items-center justify-center min-h-[200px]" />;
 
   if (!event) {
     return (

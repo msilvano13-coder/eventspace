@@ -1,6 +1,7 @@
 "use client";
 
-import { useEvent, useEventSubEntities, useStoreActions, useQuestionnaires, usePlannerProfile } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions, useQuestionnaires, usePlannerProfile, useEventsLoading } from "@/hooks/useStore";
+import EventLoader from "@/components/ui/EventLoader";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
@@ -45,6 +46,7 @@ const STATUS_OPTIONS = ["planning", "confirmed", "completed"] as const;
 export default function EventDetailPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  const loading = useEventsLoading();
   useEventSubEntities(eventId, ["timeline", "schedule", "vendors", "guests", "invoices", "expenses", "budget"]);
   const { updateEvent, deleteEvent } = useStoreActions();
   const allQuestionnaires = useQuestionnaires();
@@ -94,6 +96,8 @@ export default function EventDetailPage() {
 
   useEffect(() => { if (addingTodo) newTodoRef.current?.focus(); }, [addingTodo]);
   useEffect(() => { if (editingTodoId) editTodoRef.current?.focus(); }, [editingTodoId]);
+
+  if (loading) return <EventLoader className="px-4 py-6 sm:px-6 md:px-8 flex items-center justify-center min-h-[200px]" />;
 
   if (!event) {
     return (

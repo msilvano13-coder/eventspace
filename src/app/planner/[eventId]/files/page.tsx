@@ -1,7 +1,8 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions, useEventsLoading } from "@/hooks/useStore";
+import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, FileText, Image, Palette, File, Upload, Download, X, Loader2 } from "lucide-react";
@@ -25,11 +26,13 @@ function getFileType(file: File): "contract" | "photo" | "moodboard" | "other" {
 export default function FilesPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  const loading = useEventsLoading();
   useEventSubEntities(eventId, ["files"]);
   const { updateEvent } = useStoreActions();
   const [uploading, setUploading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
 
+  if (loading) return <EventLoader className="px-4 py-6 sm:px-6 md:px-8 flex items-center justify-center min-h-[200px]" />;
   if (!event) return <div className="px-4 py-6 text-stone-500">Event not found.</div>;
 
   async function handleUpload() {

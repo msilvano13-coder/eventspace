@@ -1,6 +1,7 @@
 "use client";
 
-import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useStoreActions, useEventsLoading } from "@/hooks/useStore";
+import EventLoader from "@/components/ui/EventLoader";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
@@ -18,6 +19,7 @@ function fmt12(time: string) {
 export default function TimelinePage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  const loading = useEventsLoading();
   useEventSubEntities(eventId, ["schedule"]);
   const { updateEvent } = useStoreActions();
 
@@ -43,6 +45,8 @@ export default function TimelinePage() {
 
   useEffect(() => { if (adding) newTitleRef.current?.focus(); }, [adding]);
   useEffect(() => { if (editingId) editTitleRef.current?.focus(); }, [editingId]);
+
+  if (loading) return <EventLoader className="px-4 py-6 sm:px-6 md:px-8 flex items-center justify-center min-h-[200px]" />;
 
   if (!event) {
     return (
