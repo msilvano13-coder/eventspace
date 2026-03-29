@@ -101,7 +101,9 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
     const absAngle = parentAngle + (obj.angle || 0);
 
     // Table set groups or plain groups: recurse into children
-    if (obj.type === "group" && Array.isArray(obj.objects)) {
+    // Fabric.js v6 serializes type as "Group" (capital G)
+    const objType = (obj.type || "").toLowerCase();
+    if (objType === "group" && Array.isArray(obj.objects)) {
       // If this is a table set, recurse into sub-objects to render each piece
       if (data?.isTableSet) {
         for (const child of obj.objects) {
