@@ -734,8 +734,11 @@ function RoomFloor({ obj, originX, originY }: { obj: ParsedObject; originX: numb
   // Memoize shape to avoid re-creating on every render
   const floorShape = useMemo(() => {
     if (!obj.points || obj.points.length < 3) return null;
+    // Negate Y because the Shape (XY plane) is rotated -π/2 around X,
+    // mapping Shape Y → World -Z.  Furniture uses posZ = +(canvasY - originY),
+    // so we negate here to keep room floor and furniture in the same Z direction.
     const shapePoints = obj.points.map(
-      ([x, y]) => new Vector2((x + obj.x - originX) * S, (y + obj.y - originY) * S)
+      ([x, y]) => new Vector2((x + obj.x - originX) * S, -(y + obj.y - originY) * S)
     );
     return new Shape(shapePoints);
   }, [obj.points, obj.x, obj.y, originX, originY]);
