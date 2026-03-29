@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Guest } from "@/lib/types";
-import { Users, UserPlus, X, ChevronDown, ChevronUp } from "lucide-react";
+import { Guest, GuestRelationship } from "@/lib/types";
+import { Users, UserPlus, X, ChevronDown, ChevronUp, Sparkles, Star, RotateCcw } from "lucide-react";
 import { FURNITURE_CATALOG } from "@/lib/constants";
 import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
+import { autoSeat, TableSlot } from "@/lib/seating-algorithm";
 
 interface TableInfo {
   label: string;
@@ -16,6 +17,7 @@ interface Props {
   floorPlanJSON: string | null;
   guests: Guest[];
   onUpdateGuests: (guests: Guest[]) => void;
+  relationships?: GuestRelationship[];
 }
 
 /** Parse floor plan JSON to extract table objects */
@@ -40,14 +42,19 @@ function extractTables(json: string | null): TableInfo[] {
   }
 }
 
-export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests }: Props) {
+export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, relationships: relsProp }: Props) {
   const tables = extractTables(floorPlanJSON);
   const [expandedTable, setExpandedTable] = useState<string | null>(null);
+  const [showAutoSeatConfirm, setShowAutoSeatConfirm] = useState(false);
+  const [lastAutoResult, setLastAutoResult] = useState<{ seated: number; unassigned: number } | null>(null);
 
   const acceptedGuests = guests.filter((g) => g.rsvp === "accepted");
   const unassigned = acceptedGuests.filter(
     (g) => !g.tableAssignment || !tables.some((t) => t.label === g.tableAssignment)
   );
+
+  // Compute unique groups for display
+  const groups = Array.from(new Set(acceptedGuests.map((g) => g.group).filter(Boolean)));
 
   function assignGuest(guestId: string, tableLabel: string) {
     const updated = guests.map((g) =>
@@ -61,6 +68,37 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests }: 
       g.id === guestId ? { ...g, tableAssignment: "" } : g
     );
     onUpdateGuests(updated);
+  }
+
+  function clearAllAssignments() {
+    const updated = guests.map((g) => ({ ...g, tableAssignment: "" }));
+    onUpdateGuests(updated);
+    setLastAutoResult(null);
+  }
+
+  function runAutoSeat() {
+    const seatableTables: TableSlot[] = tables
+      .filter((t) => t.maxSeats > 0)
+      .map((t) => ({ label: t.label, maxSeats: t.maxSeats }));
+
+    if (seatableTables.length === 0) return;
+
+    const relationships: GuestRelationship[] = relsProp ?? [];
+
+    const result = autoSeat(guests, seatableTables, relationships);
+
+    // Apply assignments
+    const updated = guests.map((g) => {
+      const table = result.assignments.get(g.id);
+      return table ? { ...g, tableAssignment: table } : g;
+    });
+
+    onUpdateGuests(updated);
+    setLastAutoResult({
+      seated: result.assignments.size,
+      unassigned: result.unassigned.length,
+    });
+    setShowAutoSeatConfirm(false);
   }
 
   function guestsAtTable(tableLabel: string) {
@@ -90,6 +128,9 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests }: 
     );
   }
 
+  const totalCapacity = tables.reduce((sum, t) => sum + t.maxSeats, 0);
+  const totalSeated = acceptedGuests.reduce((sum, g) => sum + 1 + (g.plusOne ? 1 : 0), 0);
+
   return (
     <div className="w-72 h-full bg-white border-l border-stone-200 flex-shrink-0 overflow-y-auto">
       <div className="p-3 border-b border-stone-100">
@@ -97,8 +138,72 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests }: 
           Seating Chart
         </h3>
         <p className="text-[10px] text-stone-400 mt-1">
-          {acceptedGuests.reduce((sum, g) => sum + 1 + (g.plusOne ? 1 : 0), 0)}/{tables.reduce((sum, t) => sum + t.maxSeats, 0)} seated · {unassigned.length} unassigned
+          {totalSeated}/{totalCapacity} seated · {unassigned.length} unassigned
         </p>
+
+        {/* Auto-Seat + Clear buttons */}
+        <div className="flex gap-1.5 mt-2">
+          {!showAutoSeatConfirm ? (
+            <button
+              onClick={() => setShowAutoSeatConfirm(true)}
+              disabled={unassigned.length === 0}
+              className="flex-1 flex items-center justify-center gap-1.5 text-[11px] font-medium bg-gradient-to-r from-violet-500 to-purple-500 text-white px-2.5 py-1.5 rounded-lg hover:from-violet-600 hover:to-purple-600 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+            >
+              <Sparkles size={11} />
+              Auto-Seat
+            </button>
+          ) : (
+            <div className="flex-1 space-y-1.5">
+              <p className="text-[10px] text-stone-500">
+                Auto-assign {unassigned.length} unassigned guest{unassigned.length !== 1 ? "s" : ""}? Groups, VIPs, and dietary notes will be considered.
+              </p>
+              <div className="flex gap-1.5">
+                <button
+                  onClick={runAutoSeat}
+                  className="flex-1 text-[10px] font-medium bg-violet-500 text-white px-2 py-1 rounded-md hover:bg-violet-600 transition-colors"
+                >
+                  Assign
+                </button>
+                <button
+                  onClick={() => setShowAutoSeatConfirm(false)}
+                  className="text-[10px] text-stone-400 hover:text-stone-600 px-2 py-1"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+          {acceptedGuests.some((g) => g.tableAssignment) && !showAutoSeatConfirm && (
+            <button
+              onClick={clearAllAssignments}
+              className="flex items-center gap-1 text-[11px] text-stone-400 hover:text-red-500 px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+              title="Clear all seating"
+            >
+              <RotateCcw size={10} />
+            </button>
+          )}
+        </div>
+
+        {/* Auto-seat result feedback */}
+        {lastAutoResult && (
+          <div className="mt-2 text-[10px] bg-violet-50 text-violet-600 rounded-md px-2 py-1.5">
+            Seated {lastAutoResult.seated} guest{lastAutoResult.seated !== 1 ? "s" : ""}
+            {lastAutoResult.unassigned > 0 && (
+              <span className="text-amber-600"> · {lastAutoResult.unassigned} could not be placed</span>
+            )}
+          </div>
+        )}
+
+        {/* Groups summary */}
+        {groups.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {groups.map((g) => (
+              <span key={g} className="text-[9px] bg-stone-100 text-stone-500 px-1.5 py-0.5 rounded-full">
+                {g}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Tables */}
@@ -143,10 +248,16 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests }: 
                       key={guest.id}
                       className="flex items-center justify-between bg-emerald-50 rounded-lg px-2.5 py-1.5"
                     >
-                      <div className="min-w-0">
+                      <div className="min-w-0 flex items-center gap-1">
+                        {guest.vip && <Star size={9} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
                         <span className="text-xs text-stone-700 truncate block">{guest.name}</span>
+                        {guest.group && (
+                          <span className="text-[8px] bg-stone-200 text-stone-500 px-1 py-0.5 rounded-full flex-shrink-0 max-w-[60px] truncate">
+                            {guest.group}
+                          </span>
+                        )}
                         {guest.plusOne && (
-                          <span className="text-[10px] text-stone-400">+1{guest.plusOneName ? `: ${guest.plusOneName}` : ""}</span>
+                          <span className="text-[10px] text-stone-400 flex-shrink-0">+1</span>
                         )}
                       </div>
                       <button
@@ -171,7 +282,13 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests }: 
                             className="w-full flex items-center gap-1.5 text-left bg-stone-50 hover:bg-rose-50 rounded-lg px-2.5 py-1.5 transition-colors group"
                           >
                             <UserPlus size={10} className="text-stone-300 group-hover:text-rose-400 flex-shrink-0" />
+                            {guest.vip && <Star size={8} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
                             <span className="text-xs text-stone-600 truncate">{guest.name}</span>
+                            {guest.group && (
+                              <span className="text-[8px] bg-stone-100 text-stone-400 px-1 py-0.5 rounded-full flex-shrink-0">
+                                {guest.group}
+                              </span>
+                            )}
                             {guest.plusOne && <span className="text-[10px] text-stone-400 flex-shrink-0">+1</span>}
                           </button>
                         ))}
@@ -199,9 +316,15 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests }: 
             {unassigned.map((guest) => (
               <div
                 key={guest.id}
-                className="flex items-center gap-2 bg-amber-50 rounded-lg px-2.5 py-1.5"
+                className="flex items-center gap-1.5 bg-amber-50 rounded-lg px-2.5 py-1.5"
               >
+                {guest.vip && <Star size={8} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
                 <span className="text-xs text-stone-600 truncate">{guest.name}</span>
+                {guest.group && (
+                  <span className="text-[8px] bg-amber-100 text-amber-500 px-1 py-0.5 rounded-full flex-shrink-0">
+                    {guest.group}
+                  </span>
+                )}
                 {guest.plusOne && <span className="text-[10px] text-stone-400 flex-shrink-0">+1</span>}
               </div>
             ))}

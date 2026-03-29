@@ -44,6 +44,7 @@ interface Props {
   selectedZoneId?: string | null;
   onSelectZone?: (id: string | null) => void;
   readOnly?: boolean; // client portal: makes lighting non-interactive
+  onCanvasReady?: (getDataURL: () => string | null) => void;
 }
 
 interface SelectedInfo {
@@ -175,6 +176,7 @@ export default function FloorPlanEditor({
   selectedZoneId = null,
   onSelectZone,
   readOnly = false,
+  onCanvasReady,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -384,16 +386,49 @@ export default function FloorPlanEditor({
       const obj = e.target;
       if (!obj) return;
 
-      // Lighting zones: convert pixel position back to percentage
+      // Lighting zones: snap to furniture or convert pixel position to percentage
       if (obj.data?.isLighting) {
         const cw = canvas.getWidth();
         const ch = canvas.getHeight();
         const zoneId = obj.data.zoneId;
-        const x = Math.max(0, Math.min(100, ((obj.left || 0) / cw) * 100));
-        const y = Math.max(0, Math.min(100, ((obj.top || 0) / ch) * 100));
+        const objLeft = obj.left || 0;
+        const objTop = obj.top || 0;
+
+        // Check proximity to furniture objects for snap
+        const SNAP_DIST = 40;
+        let snappedLabel: string | undefined;
+        let snapX = objLeft;
+        let snapY = objTop;
+        let minDist = SNAP_DIST;
+
+        const allObjects = canvas.getObjects();
+        for (const other of allObjects) {
+          if (other.data?.isGrid || other.data?.isLighting || other.data?.isLightingOverlay || other.data?.isRoom) continue;
+          if (!other.data?.furnitureId) continue;
+          const otherCenter = other.getCenterPoint();
+          const dx = objLeft - otherCenter.x;
+          const dy = objTop - otherCenter.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < minDist) {
+            minDist = dist;
+            snapX = otherCenter.x;
+            snapY = otherCenter.y;
+            snappedLabel = other.data.label || other.data.furnitureId;
+          }
+        }
+
+        if (snappedLabel) {
+          obj.set({ left: snapX, top: snapY });
+          obj.setCoords();
+        }
+
+        const x = Math.max(0, Math.min(100, (snapX / cw) * 100));
+        const y = Math.max(0, Math.min(100, (snapY / ch) * 100));
         if (onUpdateZonesRef.current && lightingZonesRef.current) {
           onUpdateZonesRef.current(
-            lightingZonesRef.current.map((z) => (z.id === zoneId ? { ...z, x, y } : z))
+            lightingZonesRef.current.map((z) =>
+              z.id === zoneId ? { ...z, x, y, snappedToFurnitureId: snappedLabel } : z
+            )
           );
         }
         return;
@@ -494,6 +529,18 @@ export default function FloorPlanEditor({
       triggerAutoSave();
       updateSelection();
     });
+
+    // Expose canvas data URL getter for PDF export
+    if (onCanvasReady) {
+      onCanvasReady(() => {
+        gridObjectsRef.current.forEach((o) => o.set("visible", false));
+        canvas.requestRenderAll();
+        const dataURL = canvas.toDataURL({ format: "png", multiplier: 2 });
+        gridObjectsRef.current.forEach((o) => o.set("visible", snapEnabledRef.current));
+        canvas.requestRenderAll();
+        return dataURL;
+      });
+    }
 
     // Load initial JSON with schema migration
     if (initialJSON) {

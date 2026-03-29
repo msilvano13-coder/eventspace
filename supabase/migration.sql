@@ -1078,5 +1078,49 @@ create policy "Users can delete their own preferred vendors"
   on public.preferred_vendors for delete using (auth.uid() = user_id);
 
 -- =============================================================================
+-- Phase 2: Smart Seating — new guest columns + relationships table
+-- =============================================================================
+
+alter table public.guests add column if not exists guest_group text not null default '';
+alter table public.guests add column if not exists vip boolean not null default false;
+
+create table if not exists public.guest_relationships (
+  id         uuid primary key default gen_random_uuid(),
+  event_id   uuid not null references public.events on delete cascade,
+  guest_id_1 uuid not null references public.guests on delete cascade,
+  guest_id_2 uuid not null references public.guests on delete cascade,
+  type       text not null check (type in ('together', 'apart')),
+  unique (guest_id_1, guest_id_2)
+);
+
+create index if not exists idx_guest_relationships_event on public.guest_relationships (event_id);
+
+alter table public.guest_relationships enable row level security;
+
+create policy "Users can view guest_relationships for their events"
+  on public.guest_relationships for select
+  using (exists (
+    select 1 from public.events where events.id = guest_relationships.event_id and events.user_id = auth.uid()
+  ));
+
+create policy "Users can insert guest_relationships for their events"
+  on public.guest_relationships for insert
+  with check (exists (
+    select 1 from public.events where events.id = guest_relationships.event_id and events.user_id = auth.uid()
+  ));
+
+create policy "Users can update guest_relationships for their events"
+  on public.guest_relationships for update
+  using (exists (
+    select 1 from public.events where events.id = guest_relationships.event_id and events.user_id = auth.uid()
+  ));
+
+create policy "Users can delete guest_relationships for their events"
+  on public.guest_relationships for delete
+  using (exists (
+    select 1 from public.events where events.id = guest_relationships.event_id and events.user_id = auth.uid()
+  ));
+
+-- =============================================================================
 -- DONE
 -- =============================================================================

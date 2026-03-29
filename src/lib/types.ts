@@ -30,6 +30,7 @@ export interface LightingZone {
   y: number;              // percentage position (0–100)
   size: number;           // size in pixels (10–200)
   notes: string;
+  snappedToFurnitureId?: string;  // canvas object data.label when snapped to furniture
 }
 
 export interface FloorPlan {
@@ -198,6 +199,16 @@ export interface Guest {
   plusOne: boolean;
   plusOneName: string;
   dietaryNotes: string;
+  group: string;           // e.g. "Bride's Family", "College Friends"
+  vip: boolean;            // VIPs get priority seating
+}
+
+export type RelationshipType = "together" | "apart";
+
+export interface GuestRelationship {
+  guestId1: string;
+  guestId2: string;
+  type: RelationshipType;
 }
 
 // ── Expenses ──

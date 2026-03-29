@@ -1666,7 +1666,7 @@ function ClientGuestRSVP({ event, onUpdate }: { event: Event; onUpdate: (guests:
         }
 
         if (!name) { errors.push(`Row ${rowIdx + (hasHeaders ? 2 : 1)}: Missing name, skipped.`); return; }
-        parsed.push({ name, email, rsvp, mealChoice, tableAssignment, plusOne, plusOneName, dietaryNotes });
+        parsed.push({ name, email, rsvp, mealChoice, tableAssignment, plusOne, plusOneName, dietaryNotes, group: "", vip: false });
       });
 
       if (parsed.length === 0) errors.push("No valid guests found in file.");
@@ -1763,6 +1763,8 @@ function ClientGuestRSVP({ event, onUpdate }: { event: Event; onUpdate: (guests:
         plusOne: plusOneVal,
         plusOneName: plusOneNameVal,
         dietaryNotes: dietaryVal,
+        group: "",
+        vip: false,
       };
       onUpdate([...guests, newGuest]);
       setAdding(false);

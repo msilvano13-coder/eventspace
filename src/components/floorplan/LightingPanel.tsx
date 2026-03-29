@@ -1,7 +1,7 @@
 "use client";
 
 import { LightingZone, LightingType } from "@/lib/types";
-import { Trash2, Lightbulb } from "lucide-react";
+import { Trash2, Lightbulb, Link2, Link2Off } from "lucide-react";
 import { LIGHTING_TYPE_DEFAULTS as TYPE_DEFAULTS } from "@/lib/constants";
 
 interface Props {
@@ -180,9 +180,17 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
                 />
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-stone-700 truncate">{zone.name}</p>
-                  <p className="text-[11px] text-stone-400">
-                    {LIGHTING_TYPES.find((lt) => lt.value === zone.type)?.label}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-[11px] text-stone-400">
+                      {LIGHTING_TYPES.find((lt) => lt.value === zone.type)?.label}
+                    </p>
+                    {zone.snappedToFurnitureId && (
+                      <span className="flex items-center gap-0.5 text-[9px] text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded-full">
+                        <Link2 size={8} />
+                        {zone.snappedToFurnitureId}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <span className="text-xs font-semibold text-stone-500">{zone.intensity}%</span>
               </div>
@@ -281,6 +289,30 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
               <span>Small</span>
               <span>Large</span>
             </div>
+          </div>
+
+          {/* Snap status */}
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">Snap to Furniture</label>
+            {selectedZone.snappedToFurnitureId ? (
+              <div className="flex items-center gap-2 bg-violet-50 rounded-xl px-3 py-2.5">
+                <Link2 size={12} className="text-violet-500 shrink-0" />
+                <span className="text-xs text-violet-700 font-medium flex-1 truncate">
+                  Snapped to {selectedZone.snappedToFurnitureId}
+                </span>
+                <button
+                  onClick={() => updateZone(selectedZone.id, { snappedToFurnitureId: undefined })}
+                  className="text-[10px] text-violet-400 hover:text-red-500 transition-colors"
+                  title="Unsnap"
+                >
+                  <Link2Off size={12} />
+                </button>
+              </div>
+            ) : (
+              <p className="text-[11px] text-stone-400 italic px-1">
+                Drag light near a table to snap. Within 40px auto-snaps.
+              </p>
+            )}
           </div>
 
           {/* Notes */}

@@ -3,7 +3,7 @@
 import { useEvent, useStoreActions } from "@/hooks/useStore";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   Plus,
@@ -18,8 +18,11 @@ import {
   AlertCircle,
   Check,
   X,
+  Link2,
+  Link2Off,
 } from "lucide-react";
-import { Guest, RsvpStatus } from "@/lib/types";
+import { Guest, GuestRelationship, RelationshipType, RsvpStatus } from "@/lib/types";
+import { fetchGuestRelationships, upsertGuestRelationship, deleteGuestRelationship } from "@/lib/supabase/db";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const RSVP_COLORS: Record<RsvpStatus, string> = {
@@ -37,6 +40,8 @@ const EMPTY_GUEST: Omit<Guest, "id"> = {
   plusOne: false,
   plusOneName: "",
   dietaryNotes: "",
+  group: "",
+  vip: false,
 };
 
 export default function GuestsPage() {
@@ -54,6 +59,46 @@ export default function GuestsPage() {
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importFileName, setImportFileName] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [showRelationships, setShowRelationships] = useState(false);
+  const [relationships, setRelationships] = useState<GuestRelationship[]>([]);
+  const [relGuest1, setRelGuest1] = useState("");
+  const [relGuest2, setRelGuest2] = useState("");
+  const [relType, setRelType] = useState<RelationshipType>("together");
+
+  useEffect(() => {
+    if (eventId) {
+      fetchGuestRelationships(eventId).then(setRelationships).catch(() => {});
+    }
+  }, [eventId]);
+
+  async function addRelationship() {
+    if (!relGuest1 || !relGuest2 || relGuest1 === relGuest2) return;
+    // Normalize order so (a,b) and (b,a) are the same
+    const [g1, g2] = [relGuest1, relGuest2].sort();
+    const rel: GuestRelationship = { guestId1: g1, guestId2: g2, type: relType };
+    try {
+      await upsertGuestRelationship(eventId, rel);
+      setRelationships((prev) => {
+        const filtered = prev.filter(
+          (r) => !(r.guestId1 === g1 && r.guestId2 === g2)
+        );
+        return [...filtered, rel];
+      });
+      setRelGuest1("");
+      setRelGuest2("");
+    } catch {}
+  }
+
+  async function removeRelationship(r: GuestRelationship) {
+    try {
+      await deleteGuestRelationship(eventId, r.guestId1, r.guestId2);
+      setRelationships((prev) =>
+        prev.filter(
+          (x) => !(x.guestId1 === r.guestId1 && x.guestId2 === r.guestId2)
+        )
+      );
+    } catch {}
+  }
 
   if (!event) {
     return (
@@ -74,7 +119,8 @@ export default function GuestsPage() {
         g.name.toLowerCase().includes(q) ||
         g.email.toLowerCase().includes(q) ||
         g.tableAssignment.toLowerCase().includes(q) ||
-        g.mealChoice.toLowerCase().includes(q)
+        g.mealChoice.toLowerCase().includes(q) ||
+        g.group.toLowerCase().includes(q)
       );
     }
     return true;
@@ -102,6 +148,8 @@ export default function GuestsPage() {
       plusOne: g.plusOne,
       plusOneName: g.plusOneName,
       dietaryNotes: g.dietaryNotes,
+      group: g.group,
+      vip: g.vip,
     });
     setEditingId(g.id);
     setShowForm(false);
@@ -135,10 +183,10 @@ export default function GuestsPage() {
   }
 
   function exportCSV() {
-    const headers = ["Name", "Email", "RSVP", "Meal Choice", "Table", "Plus One", "Plus One Name", "Dietary Notes"];
+    const headers = ["Name", "Email", "RSVP", "Meal Choice", "Table", "Plus One", "Plus One Name", "Dietary Notes", "Group", "VIP"];
     const rows = guests.map((g) => [
       g.name, g.email, g.rsvp, g.mealChoice, g.tableAssignment,
-      g.plusOne ? "Yes" : "No", g.plusOneName, g.dietaryNotes,
+      g.plusOne ? "Yes" : "No", g.plusOneName, g.dietaryNotes, g.group, g.vip ? "Yes" : "No",
     ]);
     const csv = [headers, ...rows].map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
@@ -279,7 +327,7 @@ export default function GuestsPage() {
           return;
         }
 
-        parsed.push({ name, email, rsvp, mealChoice, tableAssignment, plusOne, plusOneName, dietaryNotes });
+        parsed.push({ name, email, rsvp, mealChoice, tableAssignment, plusOne, plusOneName, dietaryNotes, group: "", vip: false });
       });
 
       if (parsed.length === 0) {
@@ -374,6 +422,123 @@ export default function GuestsPage() {
           <p className="text-xs text-stone-400 mb-1">Total Attending</p>
           <p className="text-xl font-heading font-bold text-stone-800">{totalAttending}</p>
         </div>
+      </div>
+
+      {/* Seating Relationships */}
+      <div className="mb-5">
+        <button
+          onClick={() => setShowRelationships(!showRelationships)}
+          className="flex items-center gap-2 text-xs font-medium text-stone-500 hover:text-stone-700 transition-colors mb-3"
+        >
+          <Link2 size={13} />
+          Seating Relationships ({relationships.length})
+          <ChevronDown size={12} className={`transition-transform ${showRelationships ? "rotate-180" : ""}`} />
+        </button>
+
+        {showRelationships && (
+          <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft space-y-4">
+            <p className="text-xs text-stone-400">
+              Define which guests should sit together or apart. The auto-seating algorithm will respect these constraints.
+            </p>
+
+            {/* Add relationship form */}
+            <div className="flex flex-col sm:flex-row gap-2 items-end">
+              <div className="flex-1 min-w-0">
+                <label className="block text-[10px] font-medium text-stone-400 uppercase tracking-wider mb-1">Guest 1</label>
+                <select
+                  value={relGuest1}
+                  onChange={(e) => setRelGuest1(e.target.value)}
+                  className="w-full appearance-none border border-stone-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-rose-400"
+                >
+                  <option value="">Select guest...</option>
+                  {guests.map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="shrink-0">
+                <label className="block text-[10px] font-medium text-stone-400 uppercase tracking-wider mb-1">Rule</label>
+                <select
+                  value={relType}
+                  onChange={(e) => setRelType(e.target.value as RelationshipType)}
+                  className="appearance-none border border-stone-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-rose-400"
+                >
+                  <option value="together">Keep Together</option>
+                  <option value="apart">Keep Apart</option>
+                </select>
+              </div>
+              <div className="flex-1 min-w-0">
+                <label className="block text-[10px] font-medium text-stone-400 uppercase tracking-wider mb-1">Guest 2</label>
+                <select
+                  value={relGuest2}
+                  onChange={(e) => setRelGuest2(e.target.value)}
+                  className="w-full appearance-none border border-stone-200 rounded-xl px-3 py-2 text-sm bg-white outline-none focus:border-rose-400"
+                >
+                  <option value="">Select guest...</option>
+                  {guests.filter((g) => g.id !== relGuest1).map((g) => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
+              </div>
+              <button
+                onClick={addRelationship}
+                disabled={!relGuest1 || !relGuest2 || relGuest1 === relGuest2}
+                className="shrink-0 flex items-center gap-1.5 bg-violet-500 hover:bg-violet-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-medium px-4 py-2 rounded-xl transition-colors"
+              >
+                <Plus size={12} />
+                Add
+              </button>
+            </div>
+
+            {/* Existing relationships */}
+            {relationships.length > 0 && (
+              <div className="space-y-1.5">
+                {relationships.map((rel) => {
+                  const g1 = guests.find((g) => g.id === rel.guestId1);
+                  const g2 = guests.find((g) => g.id === rel.guestId2);
+                  return (
+                    <div
+                      key={`${rel.guestId1}-${rel.guestId2}`}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl ${
+                        rel.type === "together" ? "bg-emerald-50" : "bg-red-50"
+                      }`}
+                    >
+                      {rel.type === "together" ? (
+                        <Link2 size={12} className="text-emerald-500 shrink-0" />
+                      ) : (
+                        <Link2Off size={12} className="text-red-500 shrink-0" />
+                      )}
+                      <span className="text-xs font-medium text-stone-700">
+                        {g1?.name ?? "Unknown"}
+                      </span>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${
+                        rel.type === "together"
+                          ? "bg-emerald-100 text-emerald-600"
+                          : "bg-red-100 text-red-600"
+                      }`}>
+                        {rel.type === "together" ? "together" : "apart"}
+                      </span>
+                      <span className="text-xs font-medium text-stone-700">
+                        {g2?.name ?? "Unknown"}
+                      </span>
+                      <div className="flex-1" />
+                      <button
+                        onClick={() => removeRelationship(rel)}
+                        className="p-1 text-stone-400 hover:text-red-500 hover:bg-red-100 rounded-lg transition-colors"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {relationships.length === 0 && (
+              <p className="text-xs text-stone-400 italic">No relationships defined yet.</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Search & Filter */}
@@ -732,7 +897,25 @@ function GuestForm({
             className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none"
           />
         </div>
+        <div>
+          <label className="block text-xs font-medium text-stone-500 mb-1">Group</label>
+          <input
+            value={form.group}
+            onChange={(e) => onChange({ ...form, group: e.target.value })}
+            placeholder="e.g. Bride's Family"
+            className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none"
+          />
+        </div>
         <div className="col-span-2 flex items-center gap-4">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={form.vip}
+              onChange={(e) => onChange({ ...form, vip: e.target.checked })}
+              className="rounded border-stone-300 text-amber-500 focus:ring-amber-400/30"
+            />
+            <span className="text-sm text-stone-600">VIP</span>
+          </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"

@@ -8,6 +8,7 @@ import type {
   Vendor,
   VendorPaymentItem,
   Guest,
+  GuestRelationship,
   QuestionnaireAssignment,
   Invoice,
   InvoiceLineItem,
@@ -314,6 +315,8 @@ function guestToRow(g: Guest, eventId: string) {
     plus_one: g.plusOne,
     plus_one_name: g.plusOneName,
     dietary_notes: g.dietaryNotes,
+    guest_group: g.group,
+    vip: g.vip,
   };
 }
 
@@ -329,6 +332,8 @@ function guestFromRow(r: any): Guest {
     plusOne: r.plus_one,
     plusOneName: r.plus_one_name,
     dietaryNotes: r.dietary_notes,
+    group: r.guest_group ?? "",
+    vip: r.vip ?? false,
   };
 }
 
@@ -1046,6 +1051,92 @@ export async function replaceGuests(
       .insert(guests.map((g) => guestToRow(g, eventId)));
     if (insError)
       throw new Error(`replaceGuests (insert): ${insError.message}`);
+  }
+}
+
+// ── Guest Relationships ──
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function guestRelationshipFromRow(r: any): GuestRelationship {
+  return {
+    guestId1: r.guest_id_1,
+    guestId2: r.guest_id_2,
+    type: r.type,
+  };
+}
+
+function guestRelationshipToRow(
+  rel: GuestRelationship,
+  eventId: string
+) {
+  return {
+    event_id: eventId,
+    guest_id_1: rel.guestId1,
+    guest_id_2: rel.guestId2,
+    type: rel.type,
+  };
+}
+
+export async function fetchGuestRelationships(
+  eventId: string
+): Promise<GuestRelationship[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("guest_relationships")
+    .select("*")
+    .eq("event_id", eventId);
+  if (error)
+    throw new Error(`fetchGuestRelationships: ${error.message}`);
+  return (data ?? []).map(guestRelationshipFromRow);
+}
+
+export async function upsertGuestRelationship(
+  eventId: string,
+  rel: GuestRelationship
+): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("guest_relationships")
+    .upsert(guestRelationshipToRow(rel, eventId), {
+      onConflict: "guest_id_1,guest_id_2",
+    });
+  if (error)
+    throw new Error(`upsertGuestRelationship: ${error.message}`);
+}
+
+export async function deleteGuestRelationship(
+  eventId: string,
+  guestId1: string,
+  guestId2: string
+): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("guest_relationships")
+    .delete()
+    .eq("event_id", eventId)
+    .eq("guest_id_1", guestId1)
+    .eq("guest_id_2", guestId2);
+  if (error)
+    throw new Error(`deleteGuestRelationship: ${error.message}`);
+}
+
+export async function replaceGuestRelationships(
+  eventId: string,
+  relationships: GuestRelationship[]
+): Promise<void> {
+  const supabase = createClient();
+  const { error: delError } = await supabase
+    .from("guest_relationships")
+    .delete()
+    .eq("event_id", eventId);
+  if (delError)
+    throw new Error(`replaceGuestRelationships (delete): ${delError.message}`);
+  if (relationships.length > 0) {
+    const { error: insError } = await supabase
+      .from("guest_relationships")
+      .insert(relationships.map((r) => guestRelationshipToRow(r, eventId)));
+    if (insError)
+      throw new Error(`replaceGuestRelationships (insert): ${insError.message}`);
   }
 }
 
@@ -1779,6 +1870,7 @@ function clientEventFromRow(r: any): Event {
       mealChoice: g.meal_choice ?? '', tableAssignment: g.table_assignment ?? '',
       plusOne: g.plus_one ?? false, plusOneName: g.plus_one_name ?? '',
       dietaryNotes: g.dietary_notes ?? '',
+      group: g.guest_group ?? '', vip: g.vip ?? false,
     })),
     questionnaires: (r.questionnaire_assignments ?? []).map((qa: any) => ({
       questionnaireId: qa.questionnaire_id, questionnaireName: qa.questionnaire_name,

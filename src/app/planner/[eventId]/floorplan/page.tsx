@@ -4,10 +4,12 @@ import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import { useEvent, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
-import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown } from "lucide-react";
-import { useCallback, useState } from "react";
-import { FloorPlan, Guest, LightingZone } from "@/lib/types";
+import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown, FileDown } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { FloorPlan, Guest, GuestRelationship, LightingZone } from "@/lib/types";
 import { v4 as uuid } from "uuid";
+import { fetchGuestRelationships } from "@/lib/supabase/db";
+import { exportFloorPlanPDF } from "@/lib/floorplan-export-pdf";
 import SeatingPanel from "@/components/floorplan/SeatingPanel";
 import LightingPanel from "@/components/floorplan/LightingPanel";
 
@@ -34,6 +36,12 @@ export default function FloorPlanPage() {
   const [showLighting, setShowLighting] = useState(false);
   const [mobileLightingExpanded, setMobileLightingExpanded] = useState(true);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
+  const [guestRelationships, setGuestRelationships] = useState<GuestRelationship[]>([]);
+  const getCanvasDataURLRef = useRef<(() => string | null) | null>(null);
+
+  useEffect(() => {
+    fetchGuestRelationships(eventId).then(setGuestRelationships).catch(() => {});
+  }, [eventId]);
 
   const handleSave = useCallback(
     (json: string) => {
@@ -64,6 +72,21 @@ export default function FloorPlanPage() {
       fp.id === activePlan.id ? { ...fp, lightingZones: zones } : fp
     );
     updateEvent(eventId, { floorPlans: updatedPlans });
+  }
+
+  function handleExportPDF() {
+    const dataURL = getCanvasDataURLRef.current?.();
+    if (!dataURL || !activePlan || !event) return;
+    exportFloorPlanPDF({
+      planName: activePlan.name,
+      eventName: event.name,
+      floorPlanJSON: activePlan.json,
+      lightingZones,
+      guests: event.guests ?? [],
+      canvasDataURL: dataURL,
+      canvasWidth: 800,
+      canvasHeight: 600,
+    });
   }
 
   function toggleLighting() {
@@ -111,6 +134,16 @@ export default function FloorPlanPage() {
           {event.name}
         </h2>
         <div className="flex-1" />
+
+        {/* PDF Export */}
+        <button
+          onClick={handleExportPDF}
+          className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg text-stone-400 hover:text-stone-600 hover:bg-stone-50 border border-transparent transition-colors"
+          title="Export Floor Plan PDF"
+        >
+          <FileDown size={13} />
+          <span className="hidden sm:inline">PDF</span>
+        </button>
 
         {/* Lighting toggle */}
         <button
@@ -205,6 +238,7 @@ export default function FloorPlanPage() {
               onUpdateZones={handleUpdateLightingZones}
               selectedZoneId={selectedZoneId}
               onSelectZone={setSelectedZoneId}
+              onCanvasReady={(getDataURL) => { getCanvasDataURLRef.current = getDataURL; }}
             />
           )}
         </div>
@@ -282,6 +316,7 @@ export default function FloorPlanPage() {
                 floorPlanJSON={activePlan?.json ?? null}
                 guests={event.guests ?? []}
                 onUpdateGuests={(guests: Guest[]) => updateEvent(eventId, { guests })}
+                relationships={guestRelationships}
               />
             </div>
             {/* Desktop: side panel */}
@@ -290,6 +325,7 @@ export default function FloorPlanPage() {
                 floorPlanJSON={activePlan?.json ?? null}
                 guests={event.guests ?? []}
                 onUpdateGuests={(guests: Guest[]) => updateEvent(eventId, { guests })}
+                relationships={guestRelationships}
               />
             </div>
           </>
