@@ -1,15 +1,30 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Canvas, Rect, Circle, Group, FabricText, FabricObject, Polygon } from "fabric";
+import {
+  Canvas,
+  Rect,
+  Circle,
+  Group,
+  FabricText,
+  FabricObject,
+  Polygon,
+  Gradient,
+  Shadow,
+} from "fabric";
 import { GRID_SIZE, ROOM_PRESETS } from "@/lib/constants";
+import {
+  unwrapCanvasJSON,
+  serializeFloorPlan,
+} from "@/lib/floorplan-schema";
 
 // Ensure custom 'data' property is serialized
 const origToObject = FabricObject.prototype.toObject;
 FabricObject.prototype.toObject = function (propertiesToInclude?: string[]) {
   return origToObject.call(this, [...(propertiesToInclude || []), "data"]);
 };
-import { FurnitureItemDef, RoomPreset } from "@/lib/types";
+
+import { FurnitureItemDef, LightingZone, RoomPreset } from "@/lib/types";
 import { getFurnitureById } from "./furniture-items";
 import FurniturePalette from "./FurniturePalette";
 import Toolbar from "./Toolbar";
@@ -20,7 +35,13 @@ interface Props {
   eventId: string;
   initialJSON: string | null;
   onSave: (json: string) => void;
-  canvasOverlay?: React.ReactNode;
+  // Lighting integration — zones rendered directly on canvas
+  lightingZones?: LightingZone[];
+  lightingEnabled?: boolean;
+  onUpdateZones?: (zones: LightingZone[]) => void;
+  selectedZoneId?: string | null;
+  onSelectZone?: (id: string | null) => void;
+  readOnly?: boolean; // client portal: makes lighting non-interactive
 }
 
 interface SelectedInfo {
@@ -31,6 +52,94 @@ interface SelectedInfo {
   height: number;
   angle: number;
   furnitureId: string;
+}
+
+// ── Lighting helpers ──
+
+/** Create a Fabric.js Circle for a lighting zone. */
+function createLightingObject(zone: LightingZone, canvasW: number, canvasH: number, isSelected: boolean, interactive: boolean = true): Group {
+  const pixelX = (zone.x / 100) * canvasW;
+  const pixelY = (zone.y / 100) * canvasH;
+  const opacity = zone.intensity / 100;
+  const glowRadius = zone.size * 1.8;
+
+  // Outer glow circle
+  const glow = new Circle({
+    radius: glowRadius,
+    originX: "center",
+    originY: "center",
+    fill: new Gradient({
+      type: "radial",
+      coords: {
+        x1: 0,
+        y1: 0,
+        r1: 0,
+        x2: 0,
+        y2: 0,
+        r2: glowRadius,
+      },
+      colorStops: [
+        { offset: 0, color: zone.color + Math.round(opacity * 80).toString(16).padStart(2, "0") },
+        { offset: 0.6, color: zone.color + "15" },
+        { offset: 1, color: "transparent" },
+      ],
+    }),
+    selectable: false,
+    evented: false,
+  });
+
+  // Core circle
+  const coreRadius = zone.size * 0.4;
+  const core = new Circle({
+    radius: coreRadius,
+    originX: "center",
+    originY: "center",
+    fill: zone.color + "25",
+    stroke: isSelected ? "#fb7185" : "rgba(255,255,255,0.4)",
+    strokeWidth: isSelected ? 2.5 : 1.5,
+    selectable: false,
+    evented: false,
+  });
+
+  // Label
+  const labelSize = zone.size < 30 ? 7 : zone.size < 50 ? 8 : 9;
+  const maxChars = zone.size < 50 ? 6 : 12;
+  const displayName = zone.name.length > maxChars ? zone.name.slice(0, maxChars - 2) + "…" : zone.name;
+  const label = new FabricText(zone.size >= 20 ? displayName : "", {
+    fontSize: labelSize,
+    fill: "rgba(255,255,255,0.9)",
+    fontFamily: "sans-serif",
+    fontWeight: "600",
+    originX: "center",
+    originY: "center",
+    selectable: false,
+    evented: false,
+  });
+
+  const group = new Group([glow, core, label], {
+    left: pixelX,
+    top: pixelY,
+    originX: "center",
+    originY: "center",
+    selectable: interactive,
+    evented: interactive,
+    hasControls: false,
+    hasBorders: false,
+    lockRotation: true,
+    data: { isLighting: true, zoneId: zone.id },
+  });
+
+  // Selection ring for selected zone
+  if (isSelected) {
+    group.set("shadow", new Shadow({
+      color: "rgba(251,113,133,0.4)",
+      blur: 12,
+      offsetX: 0,
+      offsetY: 0,
+    }));
+  }
+
+  return group;
 }
 
 // Small SVG preview for room shape picker
@@ -54,7 +163,17 @@ function RoomShapePreview({ preset }: { preset: RoomPreset }) {
   );
 }
 
-export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOverlay }: Props) {
+export default function FloorPlanEditor({
+  eventId,
+  initialJSON,
+  onSave,
+  lightingZones = [],
+  lightingEnabled = false,
+  onUpdateZones,
+  selectedZoneId = null,
+  onSelectZone,
+  readOnly = false,
+}: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
@@ -66,26 +185,179 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
   const [showMobilePalette, setShowMobilePalette] = useState(false);
   const [showRoomPicker, setShowRoomPicker] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const undoDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLoadingRef = useRef(false);
+  const gridObjectsRef = useRef<FabricObject[]>([]);
+  const lightingOverlayRef = useRef<Rect | null>(null);
+  const lightingObjectsRef = useRef<Map<string, Group>>(new Map());
 
+  // ── Refs for latest values (used in closures) ──
+  const lightingZonesRef = useRef(lightingZones);
+  const lightingEnabledRef = useRef(lightingEnabled);
+  const selectedZoneIdRef = useRef(selectedZoneId);
+  const onUpdateZonesRef = useRef(onUpdateZones);
+  const onSelectZoneRef = useRef(onSelectZone);
+  const readOnlyRef = useRef(readOnly);
+  const snapEnabledRef = useRef(snapEnabled);
+  useEffect(() => {
+    lightingZonesRef.current = lightingZones;
+    lightingEnabledRef.current = lightingEnabled;
+    selectedZoneIdRef.current = selectedZoneId;
+    onUpdateZonesRef.current = onUpdateZones;
+    onSelectZoneRef.current = onSelectZone;
+    readOnlyRef.current = readOnly;
+    snapEnabledRef.current = snapEnabled;
+  });
+
+  // ── Serialize canvas excluding lighting objects ──
+  const getCanvasJSON = useCallback(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return null;
+
+    // Temporarily remove non-content objects so they don't get serialized
+    const lightingObjs = canvas.getObjects().filter((o: any) => o.data?.isLighting);
+    const gridObjs = gridObjectsRef.current.filter((o) => canvas.getObjects().includes(o));
+    const overlayObj = lightingOverlayRef.current;
+    lightingObjs.forEach((o) => canvas.remove(o));
+    gridObjs.forEach((o) => canvas.remove(o));
+    if (overlayObj) canvas.remove(overlayObj);
+
+    const rawJSON = canvas.toJSON();
+
+    // Re-add non-content objects
+    gridObjs.forEach((o) => { canvas.add(o); canvas.sendObjectToBack(o); });
+    if (overlayObj && lightingEnabledRef.current) canvas.add(overlayObj);
+    lightingObjs.forEach((o) => canvas.add(o));
+
+    return rawJSON;
+  }, []);
+
+  // ── Undo (debounced — prevents rapid-fire state pushes) ──
   const pushUndo = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas || isLoadingRef.current) return;
-    const json = JSON.stringify(canvas.toJSON());
-    setUndoStack((prev) => [...prev.slice(-29), json]);
-    setRedoStack([]);
-  }, []);
 
+    if (undoDebounceRef.current) clearTimeout(undoDebounceRef.current);
+    undoDebounceRef.current = setTimeout(() => {
+      const json = getCanvasJSON();
+      if (!json) return;
+      const str = JSON.stringify(json);
+      setUndoStack((prev) => [...prev.slice(-29), str]);
+      setRedoStack([]);
+    }, 150);
+  }, [getCanvasJSON]);
+
+  // ── Auto-save with schema versioning + validation ──
   const triggerAutoSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      const canvas = fabricRef.current;
-      if (canvas) {
-        onSave(JSON.stringify(canvas.toJSON()));
+      const json = getCanvasJSON();
+      if (!json) return;
+      const serialized = serializeFloorPlan(json as Record<string, unknown>);
+      if (serialized) {
+        onSave(serialized);
       }
     }, 800);
-  }, [onSave]);
+  }, [onSave, getCanvasJSON]);
 
+  // ── Grid: create once, reposition on resize ──
+  function createGrid(canvas: Canvas, w: number, h: number) {
+    // Remove old grid
+    gridObjectsRef.current.forEach((o) => canvas.remove(o));
+    gridObjectsRef.current = [];
+
+    const lines: FabricObject[] = [];
+    for (let i = 0; i <= w; i += GRID_SIZE) {
+      const line = new Rect({
+        left: i,
+        top: 0,
+        width: 0.5,
+        height: h,
+        fill: "#e7e5e4",
+        selectable: false,
+        evented: false,
+        data: { isGrid: true },
+        objectCaching: true,
+      });
+      canvas.add(line);
+      canvas.sendObjectToBack(line);
+      lines.push(line);
+    }
+    for (let i = 0; i <= h; i += GRID_SIZE) {
+      const line = new Rect({
+        left: 0,
+        top: i,
+        width: w,
+        height: 0.5,
+        fill: "#e7e5e4",
+        selectable: false,
+        evented: false,
+        data: { isGrid: true },
+        objectCaching: true,
+      });
+      canvas.add(line);
+      canvas.sendObjectToBack(line);
+      lines.push(line);
+    }
+    gridObjectsRef.current = lines;
+  }
+
+  // ── Lighting: sync Fabric objects from zone state ──
+  const syncLightingToCanvas = useCallback(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+
+    const w = canvas.getWidth();
+    const h = canvas.getHeight();
+    const enabled = lightingEnabledRef.current;
+    const zones = lightingZonesRef.current;
+    const selZoneId = selectedZoneIdRef.current;
+
+    // Manage dark overlay
+    if (enabled && !lightingOverlayRef.current) {
+      const overlay = new Rect({
+        left: 0,
+        top: 0,
+        width: w,
+        height: h,
+        fill: "rgba(10, 10, 30, 0.45)",
+        selectable: false,
+        evented: false,
+        data: { isLightingOverlay: true },
+        objectCaching: true,
+      });
+      canvas.add(overlay);
+      lightingOverlayRef.current = overlay;
+    } else if (!enabled && lightingOverlayRef.current) {
+      canvas.remove(lightingOverlayRef.current);
+      lightingOverlayRef.current = null;
+    }
+
+    // Update overlay size
+    if (lightingOverlayRef.current) {
+      lightingOverlayRef.current.set({ width: w, height: h });
+    }
+
+    // Remove old lighting zone objects
+    lightingObjectsRef.current.forEach((obj) => canvas.remove(obj));
+    lightingObjectsRef.current.clear();
+
+    if (!enabled) {
+      canvas.requestRenderAll();
+      return;
+    }
+
+    // Add updated lighting zone objects
+    zones.forEach((zone) => {
+      const obj = createLightingObject(zone, w, h, zone.id === selZoneId, !readOnlyRef.current);
+      canvas.add(obj);
+      lightingObjectsRef.current.set(zone.id, obj);
+    });
+
+    canvas.requestRenderAll();
+  }, []);
+
+  // ── Canvas initialization ──
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
     const container = containerRef.current;
@@ -101,12 +373,29 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
     });
 
     fabricRef.current = canvas;
-    drawGrid(canvas, w, h);
+    createGrid(canvas, w, h);
 
     canvas.on("object:moving", (e) => {
-      if (!snapEnabled) return;
+      if (!snapEnabledRef.current) return;
       const obj = e.target;
       if (!obj) return;
+
+      // Lighting zones: convert pixel position back to percentage
+      if (obj.data?.isLighting) {
+        const cw = canvas.getWidth();
+        const ch = canvas.getHeight();
+        const zoneId = obj.data.zoneId;
+        const x = Math.max(0, Math.min(100, ((obj.left || 0) / cw) * 100));
+        const y = Math.max(0, Math.min(100, ((obj.top || 0) / ch) * 100));
+        if (onUpdateZonesRef.current && lightingZonesRef.current) {
+          onUpdateZonesRef.current(
+            lightingZonesRef.current.map((z) => (z.id === zoneId ? { ...z, x, y } : z))
+          );
+        }
+        return;
+      }
+
+      // Furniture: snap to grid
       obj.set({
         left: Math.round((obj.left || 0) / GRID_SIZE) * GRID_SIZE,
         top: Math.round((obj.top || 0) / GRID_SIZE) * GRID_SIZE,
@@ -115,8 +404,18 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
 
     const updateSelection = () => {
       const active = canvas.getActiveObject();
-      // Skip grid lines and room outline — only show props for furniture
-      if (active && active.data && !active.data.isGrid && !active.data.isRoom) {
+
+      // Lighting zone selected
+      if (active?.data?.isLighting) {
+        setSelectedInfo(null);
+        if (onSelectZoneRef.current) {
+          onSelectZoneRef.current(active.data.zoneId);
+        }
+        return;
+      }
+
+      // Furniture selected
+      if (active && active.data && !active.data.isGrid && !active.data.isRoom && !active.data.isLighting && !active.data.isLightingOverlay) {
         const bound = active.getBoundingRect();
         setSelectedInfo({
           label: active.data?.label || "",
@@ -127,6 +426,9 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
           angle: active.angle || 0,
           furnitureId: active.data?.furnitureId || "",
         });
+        if (onSelectZoneRef.current) {
+          onSelectZoneRef.current(null);
+        }
       } else {
         setSelectedInfo(null);
       }
@@ -134,19 +436,46 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
 
     canvas.on("selection:created", updateSelection);
     canvas.on("selection:updated", updateSelection);
-    canvas.on("selection:cleared", () => setSelectedInfo(null));
-    canvas.on("object:modified", () => {
+    canvas.on("selection:cleared", () => {
+      setSelectedInfo(null);
+      if (onSelectZoneRef.current) {
+        onSelectZoneRef.current(null);
+      }
+    });
+
+    canvas.on("object:modified", (e) => {
+      const obj = e.target;
+
+      // If lighting zone was moved, sync position
+      if (obj?.data?.isLighting) {
+        const cw = canvas.getWidth();
+        const ch = canvas.getHeight();
+        const zoneId = obj.data.zoneId;
+        const x = Math.max(0, Math.min(100, ((obj.left || 0) / cw) * 100));
+        const y = Math.max(0, Math.min(100, ((obj.top || 0) / ch) * 100));
+        if (onUpdateZonesRef.current && lightingZonesRef.current) {
+          onUpdateZonesRef.current(
+            lightingZonesRef.current.map((z) => (z.id === zoneId ? { ...z, x, y } : z))
+          );
+        }
+        return; // Don't push undo or save for lighting changes
+      }
+
       pushUndo();
       triggerAutoSave();
       updateSelection();
     });
 
+    // Load initial JSON with schema migration
     if (initialJSON) {
       isLoadingRef.current = true;
-      canvas.loadFromJSON(JSON.parse(initialJSON)).then(() => {
+      const canvasJSON = unwrapCanvasJSON(initialJSON);
+      canvas.loadFromJSON(canvasJSON).then(() => {
         canvas.requestRenderAll();
         isLoadingRef.current = false;
-        setUndoStack([JSON.stringify(canvas.toJSON())]);
+        // Initial undo state (excluding lighting)
+        const rawJSON = canvas.toJSON();
+        setUndoStack([JSON.stringify(rawJSON)]);
       });
     } else {
       setUndoStack([JSON.stringify(canvas.toJSON())]);
@@ -155,23 +484,44 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === "Delete" || e.key === "Backspace") {
         const active = canvas.getActiveObject();
-        if (active && !active.data?.isGrid) {
-          canvas.remove(active);
+        if (!active) return;
+
+        // Don't delete grid or overlay
+        if (active.data?.isGrid || active.data?.isLightingOverlay) return;
+
+        // Delete lighting zone
+        if (active.data?.isLighting) {
+          const zoneId = active.data.zoneId;
+          if (onUpdateZonesRef.current && lightingZonesRef.current) {
+            onUpdateZonesRef.current(lightingZonesRef.current.filter((z) => z.id !== zoneId));
+          }
+          if (onSelectZoneRef.current) onSelectZoneRef.current(null);
           canvas.discardActiveObject();
-          pushUndo();
-          triggerAutoSave();
+          return;
         }
+
+        // Delete furniture
+        canvas.remove(active);
+        canvas.discardActiveObject();
+        pushUndo();
+        triggerAutoSave();
       }
     };
     window.addEventListener("keydown", handleKey);
 
+    // Resize: reposition grid (cached objects) instead of recreating
     const resizeObserver = new ResizeObserver(() => {
       const newW = container.clientWidth;
       const newH = container.clientHeight;
       canvas.setDimensions({ width: newW, height: newH });
-      const gridObjects = canvas.getObjects().filter((o: any) => o.data?.isGrid);
-      gridObjects.forEach((o: any) => canvas.remove(o));
-      drawGrid(canvas, newW, newH);
+
+      // Recreate grid for new dimensions
+      createGrid(canvas, newW, newH);
+
+      // Re-sync lighting (percentage-based positions need recalculation)
+      syncLightingToCanvas();
+
+      canvas.requestRenderAll();
     });
     resizeObserver.observe(container);
 
@@ -179,51 +529,31 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
       window.removeEventListener("keydown", handleKey);
       resizeObserver.disconnect();
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (undoDebounceRef.current) clearTimeout(undoDebounceRef.current);
       canvas.dispose();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Sync grid visibility when snap changes ──
   useEffect(() => {
-    const canvas = fabricRef.current;
-    if (!canvas) return;
-    const gridObjects = canvas.getObjects().filter((o: any) => o.data?.isGrid);
-    gridObjects.forEach((o: any) => o.set("visible", snapEnabled));
-    canvas.requestRenderAll();
+    gridObjectsRef.current.forEach((o) => o.set("visible", snapEnabled));
+    fabricRef.current?.requestRenderAll();
   }, [snapEnabled]);
 
-  function drawGrid(canvas: Canvas, w: number, h: number) {
-    for (let i = 0; i <= w; i += GRID_SIZE) {
-      const line = new Rect({
-        left: i, top: 0, width: 0.5, height: h,
-        fill: "#e7e5e4",
-        selectable: false, evented: false, data: { isGrid: true },
-      });
-      canvas.add(line);
-      canvas.sendObjectToBack(line);
-    }
-    for (let i = 0; i <= h; i += GRID_SIZE) {
-      const line = new Rect({
-        left: 0, top: i, width: w, height: 0.5,
-        fill: "#e7e5e4",
-        selectable: false, evented: false, data: { isGrid: true },
-      });
-      canvas.add(line);
-      canvas.sendObjectToBack(line);
-    }
-  }
+  // ── Sync lighting zones to canvas when zones/selection/enabled changes ──
+  useEffect(() => {
+    syncLightingToCanvas();
+  }, [lightingZones, lightingEnabled, selectedZoneId, syncLightingToCanvas]);
 
   function applyRoomPreset(preset: RoomPreset) {
     const canvas = fabricRef.current;
     if (!canvas) return;
 
-    // Remove any existing room shape
     const existing = canvas.getObjects().filter((o: any) => o.data?.isRoom);
     existing.forEach((o: any) => canvas.remove(o));
 
     const cw = canvas.getWidth();
     const ch = canvas.getHeight();
-
-    // Points are relative to preset's own 0,0 origin
     const points = preset.points.map(([x, y]) => ({ x, y }));
 
     const polygon = new Polygon(points, {
@@ -239,11 +569,8 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
     });
 
     canvas.add(polygon);
-
-    // Layer order: grid (bottom) → room → furniture (top)
     canvas.sendObjectToBack(polygon);
-    const gridObjs = canvas.getObjects().filter((o: any) => o.data?.isGrid);
-    gridObjs.forEach((o: any) => canvas.sendObjectToBack(o));
+    gridObjectsRef.current.forEach((o) => canvas.sendObjectToBack(o));
 
     canvas.requestRenderAll();
     pushUndo();
@@ -272,26 +599,39 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
     if (item.shape === "circle") {
       shape = new Circle({
         radius: item.defaultRadius || item.defaultWidth / 2,
-        fill: item.fill, stroke: item.stroke, strokeWidth: 1.5,
-        originX: "center", originY: "center",
+        fill: item.fill,
+        stroke: item.stroke,
+        strokeWidth: 1.5,
+        originX: "center",
+        originY: "center",
       });
     } else {
       shape = new Rect({
-        width: item.defaultWidth, height: item.defaultHeight,
-        fill: item.fill, stroke: item.stroke, strokeWidth: 1.5,
-        rx: 4, ry: 4, originX: "center", originY: "center",
+        width: item.defaultWidth,
+        height: item.defaultHeight,
+        fill: item.fill,
+        stroke: item.stroke,
+        strokeWidth: 1.5,
+        rx: 4,
+        ry: 4,
+        originX: "center",
+        originY: "center",
       });
     }
 
     const label = new FabricText(item.name, {
-      fontSize: 9, fill: "#57534e", originX: "center", originY: "center",
+      fontSize: 9,
+      fill: "#57534e",
+      originX: "center",
+      originY: "center",
       fontFamily: "sans-serif",
     });
 
     const group = new Group([shape, label], {
       left: Math.round(centerX / GRID_SIZE) * GRID_SIZE,
       top: Math.round(centerY / GRID_SIZE) * GRID_SIZE,
-      originX: "center", originY: "center",
+      originX: "center",
+      originY: "center",
       data: { furnitureId: item.id, label: item.name },
     });
 
@@ -319,29 +659,42 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
   function handleUndo() {
     const canvas = fabricRef.current;
     if (!canvas || undoStack.length <= 1) return;
+    // Flush pending debounced undo push
+    if (undoDebounceRef.current) { clearTimeout(undoDebounceRef.current); undoDebounceRef.current = null; }
     const current = undoStack[undoStack.length - 1];
     const previous = undoStack[undoStack.length - 2];
     setRedoStack((prev) => [...prev, current]);
     setUndoStack((prev) => prev.slice(0, -1));
     isLoadingRef.current = true;
+    // Clear stale refs — loadFromJSON removes all canvas objects
+    lightingOverlayRef.current = null;
+    lightingObjectsRef.current.clear();
     canvas.loadFromJSON(JSON.parse(previous)).then(() => {
+      // Re-add grid (loadFromJSON cleared it)
+      createGrid(canvas, canvas.getWidth(), canvas.getHeight());
       canvas.requestRenderAll();
       isLoadingRef.current = false;
       triggerAutoSave();
+      syncLightingToCanvas();
     });
   }
 
   function handleRedo() {
     const canvas = fabricRef.current;
     if (!canvas || redoStack.length === 0) return;
+    if (undoDebounceRef.current) { clearTimeout(undoDebounceRef.current); undoDebounceRef.current = null; }
     const next = redoStack[redoStack.length - 1];
     setRedoStack((prev) => prev.slice(0, -1));
     setUndoStack((prev) => [...prev, next]);
     isLoadingRef.current = true;
+    lightingOverlayRef.current = null;
+    lightingObjectsRef.current.clear();
     canvas.loadFromJSON(JSON.parse(next)).then(() => {
+      createGrid(canvas, canvas.getWidth(), canvas.getHeight());
       canvas.requestRenderAll();
       isLoadingRef.current = false;
       triggerAutoSave();
+      syncLightingToCanvas();
     });
   }
 
@@ -364,15 +717,20 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
   function handleExport() {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const gridObjects = canvas.getObjects().filter((o: any) => o.data?.isGrid);
-    gridObjects.forEach((o: any) => o.set("visible", false));
+
+    // Hide grid
+    gridObjectsRef.current.forEach((o) => o.set("visible", false));
+
+    // Lighting zones are already on the canvas — they'll be included in export!
     canvas.requestRenderAll();
     const dataURL = canvas.toDataURL({ format: "png", multiplier: 2 });
     const link = document.createElement("a");
     link.download = `floorplan-${eventId}.png`;
     link.href = dataURL;
     link.click();
-    gridObjects.forEach((o: any) => o.set("visible", snapEnabled));
+
+    // Restore grid
+    gridObjectsRef.current.forEach((o) => o.set("visible", snapEnabled));
     canvas.requestRenderAll();
   }
 
@@ -380,20 +738,35 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
     const canvas = fabricRef.current;
     if (!canvas) return;
     const active = canvas.getActiveObject();
-    if (active && !active.data?.isGrid) {
-      canvas.remove(active);
+    if (!active) return;
+
+    // Don't delete grid or overlay
+    if (active.data?.isGrid || active.data?.isLightingOverlay) return;
+
+    // Lighting zone
+    if (active.data?.isLighting) {
+      const zoneId = active.data.zoneId;
+      if (onUpdateZones) {
+        onUpdateZones(lightingZones.filter((z) => z.id !== zoneId));
+      }
+      if (onSelectZone) onSelectZone(null);
       canvas.discardActiveObject();
-      setSelectedInfo(null);
-      pushUndo();
-      triggerAutoSave();
+      return;
     }
+
+    // Furniture
+    canvas.remove(active);
+    canvas.discardActiveObject();
+    setSelectedInfo(null);
+    pushUndo();
+    triggerAutoSave();
   }
 
   function handleRotateSelected() {
     const canvas = fabricRef.current;
     if (!canvas) return;
     const active = canvas.getActiveObject();
-    if (active) {
+    if (active && !active.data?.isLighting) {
       active.rotate((active.angle || 0) + 45);
       canvas.requestRenderAll();
       pushUndo();
@@ -456,7 +829,6 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
           onDrop={handleDrop}
         >
           <canvas ref={canvasRef} />
-          {canvasOverlay}
         </div>
 
         <div className="hidden md:block">
@@ -522,16 +894,12 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
       {/* ─── Room Shape Picker Modal ─── */}
       {showRoomPicker && (
         <>
-          {/* Backdrop */}
           <div
             className="fixed inset-0 bg-stone-900/30 backdrop-blur-sm z-50"
             onClick={() => setShowRoomPicker(false)}
           />
-
-          {/* Modal — bottom sheet on mobile, centered card on desktop */}
           <div className="fixed inset-x-0 bottom-0 md:inset-0 md:flex md:items-center md:justify-center z-50 pointer-events-none">
             <div className="pointer-events-auto w-full md:w-auto md:min-w-[520px] md:max-w-lg bg-white rounded-t-2xl md:rounded-2xl shadow-2xl overflow-hidden">
-              {/* Header */}
               <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
                 <div className="w-10 h-1 bg-stone-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-2 md:hidden" />
                 <h2 className="font-heading text-base font-semibold text-stone-800 pt-1 md:pt-0">
@@ -544,8 +912,6 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
                   <X size={18} />
                 </button>
               </div>
-
-              {/* Shape grid */}
               <div className="p-5">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {ROOM_PRESETS.map((preset) => (
@@ -561,8 +927,6 @@ export default function FloorPlanEditor({ eventId, initialJSON, onSave, canvasOv
                     </button>
                   ))}
                 </div>
-
-                {/* Clear option */}
                 <button
                   onClick={clearRoomShape}
                   className="mt-3 w-full py-2.5 text-sm text-stone-400 hover:text-stone-600 hover:bg-stone-50 rounded-xl border border-dashed border-stone-200 hover:border-stone-300 transition-all"

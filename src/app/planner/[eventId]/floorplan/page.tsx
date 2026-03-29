@@ -9,7 +9,6 @@ import { useCallback, useState } from "react";
 import { FloorPlan, Guest, LightingZone } from "@/lib/types";
 import { v4 as uuid } from "uuid";
 import SeatingPanel from "@/components/floorplan/SeatingPanel";
-import LightingOverlay from "@/components/floorplan/LightingOverlay";
 import LightingPanel from "@/components/floorplan/LightingPanel";
 
 const FloorPlanEditor = dynamic(
@@ -73,7 +72,7 @@ export default function FloorPlanPage() {
       setSelectedZoneId(null);
     } else {
       setShowLighting(true);
-      setShowSeating(false); // close seating when opening lighting
+      setShowSeating(false);
     }
   }
 
@@ -82,7 +81,7 @@ export default function FloorPlanPage() {
       setShowSeating(false);
     } else {
       setShowSeating(true);
-      setShowLighting(false); // close lighting when opening seating
+      setShowLighting(false);
       setSelectedZoneId(null);
     }
   }
@@ -156,7 +155,7 @@ export default function FloorPlanPage() {
             {plan.name}
             {(plan.lightingZones ?? []).length > 0 && showLighting && (
               <span className="ml-1.5 text-[9px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-semibold">
-                {plan.lightingZones.length}
+                {(plan.lightingZones ?? []).length}
               </span>
             )}
           </button>
@@ -192,7 +191,7 @@ export default function FloorPlanPage() {
         )}
       </div>
 
-      {/* Editor + Overlays */}
+      {/* Editor + Side Panels */}
       <div className="flex-1 relative overflow-hidden flex">
         <div className="flex-1 relative">
           {activePlan && (
@@ -201,15 +200,11 @@ export default function FloorPlanPage() {
               eventId={eventId}
               initialJSON={activePlan.json}
               onSave={handleSave}
-              canvasOverlay={
-                <LightingOverlay
-                  zones={lightingZones}
-                  onUpdateZones={handleUpdateLightingZones}
-                  selectedZoneId={selectedZoneId}
-                  onSelectZone={setSelectedZoneId}
-                  enabled={showLighting}
-                />
-              }
+              lightingZones={lightingZones}
+              lightingEnabled={showLighting}
+              onUpdateZones={handleUpdateLightingZones}
+              selectedZoneId={selectedZoneId}
+              onSelectZone={setSelectedZoneId}
             />
           )}
         </div>
@@ -217,7 +212,7 @@ export default function FloorPlanPage() {
         {/* Lighting Panel */}
         {showLighting && (
           <>
-            {/* Desktop: absolute side panel (like SeatingPanel) */}
+            {/* Desktop: absolute side panel */}
             <div className="absolute top-0 right-0 bottom-0 z-40 hidden md:block shadow-xl">
               <LightingPanel
                 zones={lightingZones}
@@ -226,7 +221,7 @@ export default function FloorPlanPage() {
                 onSelectZone={setSelectedZoneId}
               />
             </div>
-            {/* Mobile: collapsible bottom sheet — minimizes to a bar so floor plan stays fully usable */}
+            {/* Mobile: collapsible bottom sheet */}
             <div
               className={`absolute left-0 right-0 bottom-0 z-40 md:hidden bg-white rounded-t-2xl shadow-2xl border-t border-stone-200 transition-all duration-300 ${
                 mobileLightingExpanded ? "max-h-[45%]" : "max-h-[52px]"

@@ -8,7 +8,6 @@ import { ArrowLeft, Users, Lightbulb } from "lucide-react";
 import { useState } from "react";
 
 import SeatingPanel from "@/components/floorplan/SeatingPanel";
-import LightingOverlay from "@/components/floorplan/LightingOverlay";
 
 const FloorPlanEditor = dynamic(
   () => import("@/components/floorplan/FloorPlanEditor"),
@@ -29,7 +28,6 @@ export default function ClientFloorPlanPage() {
   const [showSeating, setShowSeating] = useState(false);
   const [showLighting, setShowLighting] = useState(false);
 
-
   if (!event) {
     return (
       <div className="p-8">
@@ -42,7 +40,6 @@ export default function ClientFloorPlanPage() {
   const activePlan = plans.find((p) => p.id === activePlanId) || plans[0];
   const lightingZones = activePlan?.lightingZones ?? [];
   const hasLighting = lightingZones.length > 0;
-
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-stone-50">
@@ -103,14 +100,14 @@ export default function ClientFloorPlanPage() {
             {plan.name}
             {(plan.lightingZones ?? []).length > 0 && showLighting && (
               <span className="ml-1.5 text-[9px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-semibold">
-                {plan.lightingZones.length}
+                {(plan.lightingZones ?? []).length}
               </span>
             )}
           </button>
         ))}
       </div>
 
-      {/* Editor + Seating */}
+      {/* Editor + Seating — lighting rendered natively on canvas (read-only) */}
       <div className="flex-1 relative overflow-hidden">
         {activePlan && (
           <FloorPlanEditor
@@ -118,22 +115,16 @@ export default function ClientFloorPlanPage() {
             eventId={eventId}
             initialJSON={activePlan.json}
             onSave={() => {}}
-            canvasOverlay={
-              showLighting ? (
-                <LightingOverlay
-                  zones={lightingZones}
-                  onUpdateZones={() => {}} // read-only for client
-                  selectedZoneId={null}
-                  onSelectZone={() => {}}
-                  enabled={showLighting}
-                />
-              ) : undefined
-            }
+            lightingZones={lightingZones}
+            lightingEnabled={showLighting}
+            onUpdateZones={() => {}}
+            selectedZoneId={null}
+            onSelectZone={() => {}}
+            readOnly
           />
         )}
         {showSeating && (
           <>
-            {/* Mobile: full-screen overlay */}
             <div className="absolute inset-0 z-40 md:hidden bg-white overflow-y-auto">
               <div className="sticky top-0 z-10 bg-white border-b border-stone-200 flex items-center justify-between px-4 py-3">
                 <h3 className="text-sm font-heading font-semibold text-stone-800">Seating</h3>
@@ -150,7 +141,6 @@ export default function ClientFloorPlanPage() {
                 onUpdateGuests={() => {}}
               />
             </div>
-            {/* Desktop: side panel */}
             <div className="absolute top-0 right-0 bottom-0 z-40 hidden md:block shadow-xl">
               <SeatingPanel
                 floorPlanJSON={activePlan?.json ?? null}

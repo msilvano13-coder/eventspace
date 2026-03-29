@@ -2,7 +2,7 @@
 
 import { LightingZone, LightingType } from "@/lib/types";
 import { Trash2, Lightbulb } from "lucide-react";
-import { TYPE_DEFAULTS } from "./LightingOverlay";
+import { LIGHTING_TYPE_DEFAULTS as TYPE_DEFAULTS } from "@/lib/constants";
 
 interface Props {
   zones: LightingZone[];

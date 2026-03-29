@@ -1,4 +1,4 @@
-import { FurnitureItemDef, RoomPreset } from "./types";
+import { FurnitureItemDef, LightingType, RoomPreset } from "./types";
 
 export const GRID_SIZE = 20;
 
@@ -341,3 +341,15 @@ export const ROOM_PRESETS: RoomPreset[] = [
     ],
   },
 ];
+
+// ── Lighting type defaults ──
+
+export const LIGHTING_TYPE_DEFAULTS: Record<LightingType, { name: string; color: string; size: number; intensity: number }> = {
+  uplight:   { name: "Uplight",      color: "#c084fc", size: 50,  intensity: 80 },
+  spotlight: { name: "Spotlight",    color: "#fbbf24", size: 60,  intensity: 70 },
+  pinspot:   { name: "Pin Spot",     color: "#f5f5f4", size: 30,  intensity: 60 },
+  gobo:      { name: "Gobo",         color: "#fb7185", size: 45,  intensity: 50 },
+  wash:      { name: "Wash Light",   color: "#60a5fa", size: 80,  intensity: 65 },
+  string:    { name: "String Light", color: "#fde68a", size: 40,  intensity: 75 },
+  candles:   { name: "Candles",      color: "#f59e0b", size: 20,  intensity: 40 },
+};

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { StaticCanvas } from "fabric";
+import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 
 interface Props {
   floorPlanJSON: string;
@@ -23,7 +24,9 @@ export default function ClientFloorPlanView({ floorPlanJSON }: Props) {
       backgroundColor: "#ffffff",
     });
 
-    canvas.loadFromJSON(JSON.parse(floorPlanJSON)).then(() => {
+    // Unwrap handles both legacy (raw Fabric JSON) and versioned envelopes
+    const canvasJSON = unwrapCanvasJSON(floorPlanJSON);
+    canvas.loadFromJSON(canvasJSON).then(() => {
       canvas.requestRenderAll();
     });
 

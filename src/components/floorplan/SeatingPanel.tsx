@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Guest } from "@/lib/types";
 import { Users, UserPlus, X, ChevronDown, ChevronUp } from "lucide-react";
 import { FURNITURE_CATALOG } from "@/lib/constants";
+import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 
 interface TableInfo {
   label: string;
@@ -20,8 +21,8 @@ interface Props {
 function extractTables(json: string | null): TableInfo[] {
   if (!json) return [];
   try {
-    const parsed = JSON.parse(json);
-    const objects = parsed.objects || [];
+    const canvas = unwrapCanvasJSON(json);
+    const objects = (canvas as Record<string, unknown>).objects as any[] || [];
     const tables: TableInfo[] = [];
     for (const obj of objects) {
       const data = obj.data;
