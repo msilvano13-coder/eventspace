@@ -47,18 +47,18 @@ export const LAYOUT_TEMPLATES: LayoutTemplate[] = [
       // Bar top-right
       { itemId: "bar", x: 650, y: 80 },
       // Sweetheart table front-center
-      { itemId: "sweetheart-2", isGroup: true, x: 250, y: 330 },
+      { itemId: "sweetheart-2", isGroup: true, x: 250, y: 310 },
       // Round tables in two rows
       { itemId: "round-60-8", isGroup: true, x: 480, y: 160 },
       { itemId: "round-60-8", isGroup: true, x: 630, y: 160 },
       { itemId: "round-60-8", isGroup: true, x: 480, y: 280 },
       { itemId: "round-60-8", isGroup: true, x: 630, y: 280 },
-      { itemId: "round-60-8", isGroup: true, x: 100, y: 350 },
-      { itemId: "round-60-8", isGroup: true, x: 400, y: 350 },
+      { itemId: "round-60-8", isGroup: true, x: 120, y: 330 },
+      { itemId: "round-60-8", isGroup: true, x: 400, y: 310 },
       // Buffet along right wall
-      { itemId: "buffet", x: 750, y: 250, angle: 90 },
+      { itemId: "buffet", x: 740, y: 200, angle: 90 },
       // Cake table
-      { itemId: "cake-table", x: 750, y: 350 },
+      { itemId: "cake-table", x: 740, y: 310 },
     ],
   },
 
@@ -82,9 +82,9 @@ export const LAYOUT_TEMPLATES: LayoutTemplate[] = [
       // Row 3
       { itemId: "rect-6-6", isGroup: true, x: 150, y: 310 },
       { itemId: "rect-6-6", isGroup: true, x: 300, y: 310 },
-      { itemId: "rect-6-6", isGroup: true, x: 450, y: 310 },
+      { itemId: "rect-6-6", isGroup: true, x: 430, y: 310 },
       // Coffee station back wall
-      { itemId: "coffee-station", x: 300, y: 380 },
+      { itemId: "coffee-station", x: 300, y: 360 },
     ],
   },
 
@@ -172,12 +172,12 @@ export const LAYOUT_TEMPLATES: LayoutTemplate[] = [
       { itemId: "rect-8-8", isGroup: true, x: 120, y: 200, angle: 90 },
       { itemId: "rect-8-8", isGroup: true, x: 120, y: 310, angle: 90 },
       // Right arm
-      { itemId: "rect-8-8", isGroup: true, x: 380, y: 200, angle: 90 },
-      { itemId: "rect-8-8", isGroup: true, x: 380, y: 310, angle: 90 },
+      { itemId: "rect-8-8", isGroup: true, x: 360, y: 200, angle: 90 },
+      { itemId: "rect-8-8", isGroup: true, x: 360, y: 310, angle: 90 },
       // Presenter area
       { itemId: "cocktail-table", x: 250, y: 50 },
       // Coffee station back
-      { itemId: "coffee-station", x: 250, y: 460 },
+      { itemId: "coffee-station", x: 250, y: 440 },
     ],
   },
 
@@ -190,29 +190,29 @@ export const LAYOUT_TEMPLATES: LayoutTemplate[] = [
     placements: [
       // Two bars
       { itemId: "bar", x: 150, y: 80 },
-      { itemId: "bar", x: 650, y: 80 },
+      { itemId: "bar", x: 640, y: 80 },
       // High-top tables scattered
       { itemId: "high-top-table", x: 200, y: 180 },
       { itemId: "high-top-table", x: 350, y: 150 },
       { itemId: "high-top-table", x: 500, y: 180 },
-      { itemId: "high-top-table", x: 650, y: 200 },
+      { itemId: "high-top-table", x: 630, y: 200 },
       { itemId: "high-top-table", x: 200, y: 300 },
       { itemId: "high-top-table", x: 400, y: 280 },
-      { itemId: "high-top-table", x: 600, y: 310 },
+      { itemId: "high-top-table", x: 580, y: 280 },
       // Lounge sofas
-      { itemId: "sofa", x: 100, y: 350, angle: 0 },
-      { itemId: "sofa", x: 700, y: 350, angle: 0 },
+      { itemId: "sofa", x: 110, y: 310, angle: 0 },
+      { itemId: "sofa", x: 690, y: 310, angle: 0 },
       // Cocktail tables near sofas
-      { itemId: "cocktail-table", x: 100, y: 310 },
-      { itemId: "cocktail-table", x: 700, y: 310 },
+      { itemId: "cocktail-table", x: 110, y: 270 },
+      { itemId: "cocktail-table", x: 690, y: 270 },
       // Dance floor
       { itemId: "dance-floor", x: 400, y: 200 },
       // DJ booth
       { itemId: "dj-booth", x: 400, y: 60 },
       // Photo booth
-      { itemId: "photo-booth", x: 750, y: 350 },
+      { itemId: "photo-booth", x: 730, y: 320 },
       // Dessert station
-      { itemId: "dessert-station", x: 400, y: 380 },
+      { itemId: "dessert-station", x: 400, y: 340 },
     ],
   },
 ];
