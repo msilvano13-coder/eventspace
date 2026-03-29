@@ -146,7 +146,35 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
       return;
     }
 
-    if (!data) return;
+    // Bare shape (no data) inside a table set group — infer as chair or table from shape properties
+    if (!data) {
+      const shapeType = (obj.type || "").toLowerCase();
+      if (shapeType === "circle" || shapeType === "rect" || shapeType === "rectangle") {
+        const scaleX = obj.scaleX || 1;
+        const scaleY = obj.scaleY || 1;
+        const w = (obj.width || 20) * scaleX;
+        const h = (obj.height || 20) * scaleY;
+        const r = obj.radius ? obj.radius * scaleX : undefined;
+        // Small items are likely chairs, larger items are tables
+        const isSmallItem = w <= 20 && h <= 20;
+        const inferredId = isSmallItem ? "chair" : (shapeType === "circle" ? "round-table-60" : "rect-table-6");
+        parsed.push({
+          type: "furniture",
+          furnitureId: inferredId,
+          label: "",
+          shape: shapeType === "circle" ? "circle" : "rect",
+          x: absX,
+          y: absY,
+          width: w,
+          height: h,
+          radius: r,
+          angle: absAngle,
+          fill: obj.fill || "#f5f0e8",
+          stroke: obj.stroke || "#c4b5a0",
+        });
+      }
+      return;
+    }
     if (data.isGrid || data.isLighting || data.isLightingOverlay || data.isGuide) return;
 
     if (data.isRoom) {

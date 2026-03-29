@@ -1374,37 +1374,63 @@ export async function replaceFloorPlans(
 ): Promise<void> {
   const supabase = createClient();
 
-  // Delete ALL existing floor plans for this event (cascade deletes lighting_zones)
-  const { error: delError } = await supabase
-    .from("floor_plans")
-    .delete()
-    .eq("event_id", eventId);
-  if (delError)
-    throw new Error(`replaceFloorPlans (delete): ${delError.message}`);
+  const planIds = plans.map((fp) => fp.id);
 
-  // Insert fresh floor plans
+  // Upsert floor plans (avoids delete+insert race condition with duplicate keys)
   if (plans.length > 0) {
-    const { error: insError } = await supabase
+    const { error: upsertError } = await supabase
       .from("floor_plans")
-      .insert(plans.map((fp, i) => floorPlanToRow(fp, eventId, i)));
-    if (insError)
+      .upsert(plans.map((fp, i) => floorPlanToRow(fp, eventId, i)), {
+        onConflict: "id",
+      });
+    if (upsertError)
       throw new Error(
-        `replaceFloorPlans (insert plans): ${insError.message}`
+        `replaceFloorPlans (upsert plans): ${upsertError.message}`
       );
+  }
 
-    // Collect and insert all lighting zones
-    const allZones = plans.flatMap((fp) =>
-      fp.lightingZones.map((lz) => lightingZoneToRow(lz, fp.id))
-    );
-    if (allZones.length > 0) {
-      const { error: lzError } = await supabase
-        .from("lighting_zones")
-        .insert(allZones);
-      if (lzError)
-        throw new Error(
-          `replaceFloorPlans (insert zones): ${lzError.message}`
-        );
-    }
+  // Delete floor plans that were removed (not in current set)
+  if (planIds.length > 0) {
+    const { error: delError } = await supabase
+      .from("floor_plans")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${planIds.join(",")})`);
+    if (delError)
+      throw new Error(`replaceFloorPlans (delete removed): ${delError.message}`);
+  } else {
+    // No plans — delete all
+    const { error: delError } = await supabase
+      .from("floor_plans")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError)
+      throw new Error(`replaceFloorPlans (delete all): ${delError.message}`);
+  }
+
+  // Replace lighting zones: delete all for these plans, then re-insert
+  for (const fp of plans) {
+    const { error: delZoneError } = await supabase
+      .from("lighting_zones")
+      .delete()
+      .eq("floor_plan_id", fp.id);
+    if (delZoneError)
+      throw new Error(
+        `replaceFloorPlans (delete zones): ${delZoneError.message}`
+      );
+  }
+
+  const allZones = plans.flatMap((fp) =>
+    fp.lightingZones.map((lz) => lightingZoneToRow(lz, fp.id))
+  );
+  if (allZones.length > 0) {
+    const { error: lzError } = await supabase
+      .from("lighting_zones")
+      .insert(allZones);
+    if (lzError)
+      throw new Error(
+        `replaceFloorPlans (insert zones): ${lzError.message}`
+      );
   }
 }
 

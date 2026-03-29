@@ -834,11 +834,37 @@ export default function FloorPlanEditor({
     setShowRoomPicker(false);
   }
 
+  /** Find a non-overlapping position near the canvas center for new items */
+  function findOpenPosition(canvas: any, preferX: number, preferY: number): { x: number; y: number } {
+    const objects = canvas.getObjects().filter((o: any) => o.data && !o.data.isGrid && !o.data.isLighting && !o.data.isLightingOverlay && !o.data.isGuide && !o.data.isRoom);
+    const step = GRID_SIZE * 5; // 100px offset per step
+    let x = preferX;
+    let y = preferY;
+    for (let attempt = 0; attempt < 20; attempt++) {
+      const snappedX = Math.round(x / GRID_SIZE) * GRID_SIZE;
+      const snappedY = Math.round(y / GRID_SIZE) * GRID_SIZE;
+      const tooClose = objects.some((obj: any) => {
+        const ox = obj.left || 0;
+        const oy = obj.top || 0;
+        return Math.abs(ox - snappedX) < step && Math.abs(oy - snappedY) < step;
+      });
+      if (!tooClose) return { x: snappedX, y: snappedY };
+      // Spiral outward: right, then down-right, etc.
+      x = preferX + step * ((attempt % 4 < 2 ? 1 : -1) * Math.ceil((attempt + 1) / 2));
+      y = preferY + step * ((attempt % 2 === 0 ? 0 : 1) * Math.ceil((attempt + 1) / 2));
+    }
+    return { x: Math.round(x / GRID_SIZE) * GRID_SIZE, y: Math.round(y / GRID_SIZE) * GRID_SIZE };
+  }
+
   function addFurnitureToCanvas(item: FurnitureItemDef, x?: number, y?: number) {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const centerX = x ?? canvas.getWidth() / 2;
-    const centerY = y ?? canvas.getHeight() / 2;
+    const defaultX = canvas.getWidth() / 2;
+    const defaultY = canvas.getHeight() / 2;
+    // If no explicit position, find an open spot near center
+    const pos = (x != null && y != null) ? { x, y } : findOpenPosition(canvas, defaultX, defaultY);
+    const centerX = pos.x;
+    const centerY = pos.y;
 
     let shape: FabricObject;
     if (item.shape === "circle") {
@@ -864,8 +890,12 @@ export default function FloorPlanEditor({
       });
     }
 
+    // Scale font to fit inside the shape — clamp between 5 and 9
+    const itemWidth = item.defaultWidth || 40;
+    const labelFontSize = Math.max(5, Math.min(9, Math.floor(itemWidth / 8)));
+
     const label = new FabricText(item.name, {
-      fontSize: 9,
+      fontSize: labelFontSize,
       fill: "#57534e",
       originX: "center",
       originY: "center",
@@ -1035,6 +1065,20 @@ export default function FloorPlanEditor({
       active.rotate((active.angle || 0) + step);
     }
     canvas.requestRenderAll();
+
+    // Update properties panel to reflect new angle
+    if (selectedInfo && !(active instanceof ActiveSelection)) {
+      const bound = active.getBoundingRect();
+      setSelectedInfo({
+        ...selectedInfo,
+        angle: active.angle || 0,
+        x: active.left || 0,
+        y: active.top || 0,
+        width: bound.width / (canvas.getZoom?.() || 1),
+        height: bound.height / (canvas.getZoom?.() || 1),
+      });
+    }
+
     pushUndo();
     triggerAutoSave();
   }
@@ -1071,8 +1115,11 @@ export default function FloorPlanEditor({
   function addFurnitureGroup(group: FurnitureGroup, x?: number, y?: number) {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const centerX = x ?? canvas.getWidth() / 2;
-    const centerY = y ?? canvas.getHeight() / 2;
+    const defaultX = canvas.getWidth() / 2;
+    const defaultY = canvas.getHeight() / 2;
+    const pos = (x != null && y != null) ? { x, y } : findOpenPosition(canvas, defaultX, defaultY);
+    const centerX = pos.x;
+    const centerY = pos.y;
 
     // Build all sub-objects relative to (0,0), then wrap in one Group
     const subObjects: FabricObject[] = [];
@@ -1125,6 +1172,7 @@ export default function FloorPlanEditor({
           originX: "center",
           originY: "center",
           angle: entry.angle || 0,
+          data: { furnitureId: item.id, label: item.name },
         });
         subObjects.push(itemGroup);
       } else {
@@ -1135,6 +1183,7 @@ export default function FloorPlanEditor({
           originX: "center",
           originY: "center",
           angle: entry.angle || 0,
+          data: { furnitureId: item.id },
         });
         subObjects.push(chairGroup);
       }
