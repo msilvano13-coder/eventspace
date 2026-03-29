@@ -751,13 +751,15 @@ function RoomFloor({ obj, originX, originY }: { obj: ParsedObject; originX: numb
     return new Shape(shapePoints);
   }, [obj.points, obj.x, obj.y, originX, originY]);
 
-  // Compute wall segments from polygon edges (negate Y to match floor)
+  // Compute wall segments from polygon edges in world space.
+  // Walls are placed directly in world coords (not via Shape rotation),
+  // so Z uses the same sign as furniture: +(canvasY - originY) * S.
   const wallSegments = useMemo(() => {
     if (!obj.points || obj.points.length < 3) return [];
     const segments: { x1: number; z1: number; x2: number; z2: number; length: number; angle: number; cx: number; cz: number }[] = [];
     const pts = obj.points.map(([x, y]) => ({
       x: (x + obj.x - originX) * S,
-      z: -(y + obj.y - originY) * S,
+      z: (y + obj.y - originY) * S,
     }));
     for (let i = 0; i < pts.length; i++) {
       const a = pts[i];
