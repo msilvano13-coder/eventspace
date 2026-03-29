@@ -140,11 +140,30 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
   const fabricObjects = (canvasJSON as any).objects || [];
   const parsed: ParsedObject[] = [];
 
-  function processObject(obj: any, parentX = 0, parentY = 0, parentAngle = 0) {
+  /**
+   * Recursively process Fabric.js objects into 3D-renderable ParsedObjects.
+   *
+   * Coordinate system notes (Fabric.js v6 with originX/Y: "center"):
+   * - Group left/top = center position on canvas (or parent)
+   * - Children left/top = relative to group center
+   * - absX/absY accumulates through nesting: parent center + child offset * parent scale
+   */
+  function processObject(
+    obj: any,
+    parentX = 0,
+    parentY = 0,
+    parentAngle = 0,
+    parentScaleX = 1,
+    parentScaleY = 1,
+  ) {
     const data = obj.data;
-    const absX = parentX + (obj.left || 0);
-    const absY = parentY + (obj.top || 0);
+    // Apply parent scale to child positions within groups
+    const absX = parentX + (obj.left || 0) * parentScaleX;
+    const absY = parentY + (obj.top || 0) * parentScaleY;
     const absAngle = parentAngle + (obj.angle || 0);
+    // Compound scale: parent scale * own scale
+    const ownScaleX = (obj.scaleX || 1) * parentScaleX;
+    const ownScaleY = (obj.scaleY || 1) * parentScaleY;
 
     // Table set groups or plain groups: recurse into children
     // Fabric.js v6 serializes type as "Group" (capital G)
@@ -153,7 +172,7 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
       // If this is a table set, recurse into sub-objects to render each piece
       if (data?.isTableSet) {
         for (const child of obj.objects) {
-          processObject(child, absX, absY, absAngle);
+          processObject(child, absX, absY, absAngle, ownScaleX, ownScaleY);
         }
         return;
       }
@@ -162,11 +181,10 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
       if (data?.furnitureId) {
         const catalogItem = FURNITURE_CATALOG.find((f) => f.id === data.furnitureId);
         const shape = catalogItem?.shape || "rect";
-        const scaleX = obj.scaleX || 1;
-        const scaleY = obj.scaleY || 1;
-        const w = (obj.width || catalogItem?.defaultWidth || 40) * scaleX;
-        const h = (obj.height || catalogItem?.defaultHeight || 40) * scaleY;
-        const r = catalogItem?.defaultRadius ? catalogItem.defaultRadius * scaleX : undefined;
+        // Prefer catalog dimensions over group bounding box (group bbox includes text label)
+        const w = (catalogItem?.defaultWidth || obj.width || 40) * ownScaleX;
+        const h = (catalogItem?.defaultHeight || obj.height || 40) * ownScaleY;
+        const r = catalogItem?.defaultRadius ? catalogItem.defaultRadius * ownScaleX : undefined;
 
         parsed.push({
           type: "furniture",
@@ -187,7 +205,7 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
 
       // Unknown group without data — recurse to find nested items
       for (const child of obj.objects) {
-        processObject(child, absX, absY, absAngle);
+        processObject(child, absX, absY, absAngle, ownScaleX, ownScaleY);
       }
       return;
     }
@@ -196,11 +214,9 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
     if (!data) {
       const shapeType = (obj.type || "").toLowerCase();
       if (shapeType === "circle" || shapeType === "rect" || shapeType === "rectangle") {
-        const scaleX = obj.scaleX || 1;
-        const scaleY = obj.scaleY || 1;
-        const w = (obj.width || 20) * scaleX;
-        const h = (obj.height || 20) * scaleY;
-        const r = obj.radius ? obj.radius * scaleX : undefined;
+        const w = (obj.width || 20) * ownScaleX;
+        const h = (obj.height || 20) * ownScaleY;
+        const r = obj.radius ? obj.radius * ownScaleX : undefined;
         // Small items are likely chairs, larger items are tables
         const isSmallItem = w <= 20 && h <= 20;
         const inferredId = isSmallItem ? "chair" : (shapeType === "circle" ? "round-table-60" : "rect-table-6");
@@ -232,8 +248,8 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
         shape: "rect",
         x: absX,
         y: absY,
-        width: (obj.width || 0) * (obj.scaleX || 1),
-        height: (obj.height || 0) * (obj.scaleY || 1),
+        width: (obj.width || 0) * ownScaleX,
+        height: (obj.height || 0) * ownScaleY,
         angle: absAngle,
         fill: "#faf7f0",
         stroke: "#a89070",
@@ -245,11 +261,10 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
     if (data.furnitureId) {
       const catalogItem = FURNITURE_CATALOG.find((f) => f.id === data.furnitureId);
       const shape = catalogItem?.shape || "rect";
-      const scaleX = obj.scaleX || 1;
-      const scaleY = obj.scaleY || 1;
-      const w = (obj.width || catalogItem?.defaultWidth || 40) * scaleX;
-      const h = (obj.height || catalogItem?.defaultHeight || 40) * scaleY;
-      const r = catalogItem?.defaultRadius ? catalogItem.defaultRadius * scaleX : undefined;
+      // Prefer catalog dimensions over raw object dimensions
+      const w = (catalogItem?.defaultWidth || obj.width || 40) * ownScaleX;
+      const h = (catalogItem?.defaultHeight || obj.height || 40) * ownScaleY;
+      const r = catalogItem?.defaultRadius ? catalogItem.defaultRadius * ownScaleX : undefined;
 
       parsed.push({
         type: "furniture",
@@ -852,7 +867,9 @@ function FloorPlan3DScene({
   floorPlanJSON,
   lightingZones,
   lightingEnabled,
-}: FloorPlan3DViewProps) {
+  centerX: cx,
+  centerZ: cz,
+}: FloorPlan3DViewProps & { centerX: number; centerZ: number }) {
   const { objects, canvasWidth, canvasHeight } = useMemo(
     () => parseCanvasJSON(floorPlanJSON),
     [floorPlanJSON]
@@ -876,7 +893,7 @@ function FloorPlan3DScene({
       {/* Scene lighting */}
       <ambientLight intensity={lightingEnabled ? 0.15 : 0.4} />
       <directionalLight
-        position={[10, 20, 10]}
+        position={[cx + 10, 20, cz + 10]}
         intensity={lightingEnabled ? 0.3 : 0.8}
         castShadow
         shadow-mapSize-width={2048}
@@ -888,13 +905,13 @@ function FloorPlan3DScene({
         shadow-bias={-0.0001}
       />
       {/* Fill light from opposite side */}
-      <directionalLight position={[-8, 12, -8]} intensity={0.15} />
+      <directionalLight position={[cx - 8, 12, cz - 8]} intensity={0.15} />
       {/* Rim light for edge definition */}
-      <directionalLight position={[0, 8, -15]} intensity={0.1} />
+      <directionalLight position={[cx, 8, cz - 15]} intensity={0.1} />
 
       {/* Ground plane (fallback if no room) */}
       {rooms.length === 0 && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.01, cz]} receiveShadow>
           <planeGeometry args={[maxDim * 1.5, maxDim * 1.5]} />
           <meshStandardMaterial color="#e7e5e4" roughness={0.9} metalness={0} />
         </mesh>
@@ -902,7 +919,7 @@ function FloorPlan3DScene({
 
       {/* Contact shadows for soft ground shadows */}
       <ContactShadows
-        position={[0, -0.005, 0]}
+        position={[cx, -0.005, cz]}
         opacity={0.35}
         scale={maxDim * 1.5}
         blur={2.5}
@@ -935,10 +952,10 @@ function FloorPlan3DScene({
           />
         ))}
 
-      {/* Grid on the ground */}
+      {/* Grid on the ground — centered on furniture */}
       <gridHelper
         args={[maxDim * 1.5, Math.ceil(maxDim * 1.5 / (20 * S)), "#d6d3d1", "#e7e5e4"]}
-        position={[0, -0.005, 0]}
+        position={[cx, -0.005, cz]}
       />
 
       <OrbitControls
@@ -946,6 +963,7 @@ function FloorPlan3DScene({
         enablePan
         enableZoom
         enableRotate
+        target={[cx, 0, cz]}
         maxPolarAngle={Math.PI / 2 - 0.05}
         minDistance={1}
         maxDistance={maxDim * 3}
@@ -957,33 +975,48 @@ function FloorPlan3DScene({
 export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
   const { floorPlanJSON } = props;
 
-  // Compute camera position to frame the actual furniture, not the full canvas
-  const camConfig = useMemo(() => {
+  // Compute camera position + centroid to frame the actual furniture
+  const { camConfig, centerX, centerZ } = useMemo(() => {
     const parsed = parseCanvasJSON(floorPlanJSON);
-    const furniture = parsed.objects.filter((o) => o.type === "furniture");
+    const originX = parsed.canvasWidth / 2;
+    const originY = parsed.canvasHeight / 2;
+    const allObjs = parsed.objects.filter((o) => o.type === "furniture" || o.type === "room");
+
     let span: number;
-    if (furniture.length > 0) {
-      // Compute bounding box of all furniture
-      let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-      for (const obj of furniture) {
+    let cX = 0;
+    let cZ = 0;
+
+    if (allObjs.length > 0) {
+      // Compute bounding box of all visible objects in world coords
+      let minWX = Infinity, maxWX = -Infinity, minWZ = Infinity, maxWZ = -Infinity;
+      for (const obj of allObjs) {
         const hw = (obj.width || 40) / 2;
         const hh = (obj.height || 40) / 2;
-        minX = Math.min(minX, obj.x - hw);
-        maxX = Math.max(maxX, obj.x + hw);
-        minY = Math.min(minY, obj.y - hh);
-        maxY = Math.max(maxY, obj.y + hh);
+        const wx = (obj.x - originX) * S;
+        const wz = (obj.y - originY) * S;
+        minWX = Math.min(minWX, wx - hw * S);
+        maxWX = Math.max(maxWX, wx + hw * S);
+        minWZ = Math.min(minWZ, wz - hh * S);
+        maxWZ = Math.max(maxWZ, wz + hh * S);
       }
-      span = Math.max(maxX - minX, maxY - minY) * S;
+      span = Math.max(maxWX - minWX, maxWZ - minWZ);
+      cX = (minWX + maxWX) / 2;
+      cZ = (minWZ + maxWZ) / 2;
     } else {
       span = Math.max(parsed.canvasWidth, parsed.canvasHeight) * S;
     }
+
     // Camera distance: close enough to see furniture detail with room context
     const dist = Math.max(span * 0.75, 8);
     return {
-      position: [dist * 0.5, dist * 0.45, dist * 0.7] as [number, number, number],
-      fov: 45,
-      near: 0.1,
-      far: 1000,
+      camConfig: {
+        position: [cX + dist * 0.5, dist * 0.45, cZ + dist * 0.7] as [number, number, number],
+        fov: 45,
+        near: 0.1,
+        far: 1000,
+      },
+      centerX: cX,
+      centerZ: cZ,
     };
   }, [floorPlanJSON]);
 
@@ -1017,7 +1050,7 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
           gl={{ antialias: true, powerPreference: "default" }}
         >
           <Suspense fallback={null}>
-            <FloorPlan3DScene {...props} />
+            <FloorPlan3DScene {...props} centerX={centerX} centerZ={centerZ} />
           </Suspense>
         </Canvas>
       </div>
