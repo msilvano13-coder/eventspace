@@ -163,19 +163,36 @@ class EventStore {
 
     fetcher(eventId)
       .then((data) => {
-        const evt = this.events.get(eventId);
-        if (evt) {
-          this.events.set(eventId, { ...evt, [key]: data });
-          this.rebuildCache();
+        // If the event isn't in the store yet (hydration still in-flight),
+        // wait up to 5s for it to appear before giving up.
+        const apply = () => {
+          const evt = this.events.get(eventId);
+          if (evt) {
+            this.events.set(eventId, { ...evt, [key]: data });
+            this.rebuildCache();
 
-          let loadedSet = this.loadedEntities.get(eventId);
-          if (!loadedSet) {
-            loadedSet = new Set();
-            this.loadedEntities.set(eventId, loadedSet);
+            let loadedSet = this.loadedEntities.get(eventId);
+            if (!loadedSet) {
+              loadedSet = new Set();
+              this.loadedEntities.set(eventId, loadedSet);
+            }
+            loadedSet.add(key);
+
+            this.emit();
+            return true;
           }
-          loadedSet.add(key);
+          return false;
+        };
 
-          this.emit();
+        if (!apply()) {
+          // Event not ready — poll briefly for hydration to finish
+          let attempts = 0;
+          const interval = setInterval(() => {
+            attempts++;
+            if (apply() || attempts >= 10) {
+              clearInterval(interval);
+            }
+          }, 500);
         }
       })
       .catch((err) => console.error(`[EventStore] load ${key} failed:`, err))
