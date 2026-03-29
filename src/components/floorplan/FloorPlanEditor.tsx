@@ -412,8 +412,10 @@ export default function FloorPlanEditor({
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
     const container = containerRef.current;
-    const w = container.clientWidth;
-    const h = container.clientHeight;
+    // Use larger of container size or minimum working area so there's
+    // always plenty of space around the room shape
+    const w = Math.max(container.clientWidth, 1400);
+    const h = Math.max(container.clientHeight, 900);
 
     const canvas = new Canvas(canvasRef.current, {
       width: w,
@@ -780,8 +782,8 @@ export default function FloorPlanEditor({
 
     // Resize: reposition grid (cached objects) instead of recreating
     const resizeObserver = new ResizeObserver(() => {
-      const newW = container.clientWidth;
-      const newH = container.clientHeight;
+      const newW = Math.max(container.clientWidth, 1400);
+      const newH = Math.max(container.clientHeight, 900);
       canvas.setDimensions({ width: newW, height: newH });
 
       // Recreate grid for new dimensions
@@ -887,12 +889,22 @@ export default function FloorPlanEditor({
       applyRoomPreset(roomPreset, true);
     }
 
-    // 3. Place all furniture items (skipSave — batch operation)
+    // 3. Compute room offset — template coordinates are relative to room origin (0,0)
+    //    so we need to offset them by where the room was actually placed on the canvas
+    const cw = canvas.getWidth();
+    const ch = canvas.getHeight();
+    const roomOffX = roomPreset ? Math.round((cw - roomPreset.width) / 2 / GRID_SIZE) * GRID_SIZE : 0;
+    const roomOffY = roomPreset ? Math.round((ch - roomPreset.height) / 2 / GRID_SIZE) * GRID_SIZE : 0;
+
+    // 4. Place all furniture items (skipSave — batch operation)
     for (const placement of template.placements) {
+      const absX = placement.x + roomOffX;
+      const absY = placement.y + roomOffY;
+
       if (placement.isGroup) {
         const group = FURNITURE_GROUPS.find((g) => g.id === placement.itemId);
         if (group) {
-          addFurnitureGroup(group, placement.x, placement.y, true);
+          addFurnitureGroup(group, absX, absY, true);
           // Apply rotation if specified
           if (placement.angle) {
             const objects = canvas.getObjects();
@@ -906,7 +918,7 @@ export default function FloorPlanEditor({
       } else {
         const item = getFurnitureById(placement.itemId);
         if (item) {
-          addFurnitureToCanvas(item, placement.x, placement.y, true);
+          addFurnitureToCanvas(item, absX, absY, true);
           if (placement.angle) {
             const objects = canvas.getObjects();
             const lastObj = objects[objects.length - 1];
@@ -1414,7 +1426,7 @@ export default function FloorPlanEditor({
 
         <div
           ref={containerRef}
-          className="flex-1 bg-stone-100 overflow-hidden relative"
+          className="flex-1 bg-stone-100 overflow-auto relative"
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
         >
