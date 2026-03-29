@@ -1,143 +1,195 @@
 # EventSpace Handoff — March 29, 2026
 
-## Current State: Production-Ready + Phase 2 Floor Plan Complete
-All code committed, pushed, deploying on Vercel. No pending changes.
-- **Latest commit:** Phase 2: Smart seating, lighting snap, floor plan PDF export
+## Current State: Phase 3 + Client Portal Fixes — Deployed
+All code committed, pushed, deployed to Vercel production.
+- **Latest commit:** `81fd13f` — Phase 3: rotation snapping, layout templates, 3D polish + client portal fixes
 - **Branch:** `main`
-- **Build:** Clean (warnings only — img alt props, no errors)
+- **Build:** Clean
+- **Deploy:** `eventspace-k23dvxljn-msilvano13-coders-projects.vercel.app`
 
 ---
 
 ## What Was Done Today (March 29)
 
-### Session: Floor Plan Phase 2 — Smart Seating, Lighting Snap, PDF Export
+### Session 3: Floor Plan Phase 3 + Client Portal Bugs
 
-**Three major features:**
+**Test event:** Silvano Summer Gala 2026 (`218e9e36-bed1-4cba-8b99-fd30a3473366`)
 
-1. **Smart Seating Algorithm — fully wired**
-   - `seating-algorithm.ts`: Greedy constraint-based auto-seater (VIP priority, group cohesion, dietary clustering, keep-together/keep-apart)
-   - DB functions in `db.ts`: `fetchGuestRelationships`, `upsertGuestRelationship`, `deleteGuestRelationship`, `replaceGuestRelationships` with row mappers
-   - `guest_relationships` table + RLS policies in migration.sql
-   - SeatingPanel now accepts `relationships` prop (was hardcoded `[]`)
-   - Floor plan page fetches relationships from Supabase on mount, passes to SeatingPanel
-   - **Guests page**: New collapsible "Seating Relationships" section — Guest 1 / Rule (Together|Apart) / Guest 2 dropdowns, add/remove, color-coded badges
+#### Phase 3 Features
 
-2. **Lighting-Furniture Snap**
-   - `LightingZone` type extended with optional `snappedToFurnitureId`
-   - FloorPlanEditor `object:moving` handler detects proximity (40px) to furniture objects, auto-snaps lighting zones to furniture center
-   - LightingPanel shows violet "snapped to" badge per zone in list
-   - Edit panel shows snap target with Unsnap button, or guidance text when not snapped
+**Feature 1: Configurable Rotation Snapping**
+- Files: `FloorPlanEditor.tsx`, `Toolbar.tsx`, `PropertiesPanel.tsx`
+- Magnet button cycles through 15° → 30° → 45° → 90° → Off
+- `RotationSnapValue` type: `15 | 30 | 45 | 90 | false`
+- Properties panel rotation slider step dynamically matches snap angle
+- Tooltip shows current snap angle
 
-3. **Floor Plan PDF Export**
-   - New `floorplan-export-pdf.ts` — multi-page jsPDF export:
-     - Page 1: Event header, plan name, scale note, floor plan canvas image
-     - Page 2: Furniture legend (item, category, dimensions, seats) + lighting zones (color swatches, type, intensity, snap targets, notes)
-     - Page 3: Seating chart (guests grouped by table with meal/dietary info)
-     - Footer with page numbers on all pages
-   - PDF button added to floor plan top bar (FileDown icon)
-   - `onCanvasReady` callback on FloorPlanEditor exposes data URL getter (hides grid for clean export)
+**Feature 2: Layout Templates**
+- New file: `src/lib/layout-templates.ts`
+- 5 pre-built layouts: Banquet Reception, Classroom, Theater/Ceremony, U-Shape Conference, Cocktail Party
+- Each template specifies room preset + furniture placements (x, y, angle, isGroup)
+- Atomic application via `skipSave` parameter on sub-functions (prevents cascading undo/save)
+- Layout picker modal in FloorPlanEditor with 2-column grid
 
-**Also included:**
-- `group` and `vip` fields added to Guest type + client portal CSV import compatibility fix
-- `guest_group` and `vip` columns added to guests table in migration.sql
+**Feature 3: 3D View Polish**
+- File: `FloorPlan3DView.tsx`
+- PBR materials per furniture category (roughness/metalness via `FURNITURE_PBR` map)
+- `<Environment preset="apartment" />` for realistic lighting
+- `<ContactShadows>` for ground shadows
+- Scene fog for depth
+- Shadow map resolution: 1024 → 2048, DPR: 1.5 → 2
+- Rim light added, rect label font size increased
+
+#### Critical Bug Fixes
+
+**Bug: Floor plans not persisting** (root cause in `store.ts`)
+- File: `src/lib/store.ts` — `getById()` method
+- Root cause: `SUB_ENTITY_KEYS` filter was blocking `floorPlans` from being merged during `fetchEventCore`. Floor plans from DB were never loaded into the store. Page always saw empty floorPlans, created new defaults with new UUIDs, saved empty canvas, overwriting real DB data.
+- Fix: Added `CORE_SUB_ENTITIES = new Set(["floorPlans"])` allowlist:
+```typescript
+const CORE_SUB_ENTITIES = new Set(["floorPlans"]);
+const coreFields: Record<string, unknown> = {};
+for (const [k, v] of Object.entries(full)) {
+  if (!SUB_ENTITY_KEYS.has(k) || CORE_SUB_ENTITIES.has(k)) {
+    coreFields[k] = v;
+  }
+}
+```
+
+**Bug: Lights can't be dragged**
+- File: `FloorPlanEditor.tsx`
+- Root cause: `syncLightingToCanvas` removes/recreates lighting objects when state changes. `object:moving` handler calls `onUpdateZones` → state change → sync destroys drag target mid-drag.
+- Fix: `isDraggingLightRef` flag prevents sync during active drag, cleared on `mouse:up` and `object:modified`.
+
+**Bug: Manual Save button added**
+- Files: `FloorPlanEditor.tsx`, `Toolbar.tsx`
+- Visual feedback states: idle → saving → saved (green) / error (red)
+- `doSave()` function wraps `getCanvasJSON` + `serializeFloorPlan` + `onSaveRef`
+
+#### Client Portal Fixes
+
+**Bug: Client couldn't see contracts, invoices, budget, vendors**
+- File: `src/app/client/[eventId]/page.tsx` line 62
+- Root cause: `useEventSubEntities` only loaded 5 of 12 sub-entities
+- Fix: Expanded to load all: `["timeline", "schedule", "vendors", "guests", "messages", "contracts", "invoices", "budget", "files", "questionnaires", "discoveredVendors"]`
+
+**Bug: No assigned vendors section for clients**
+- File: `src/app/client/[eventId]/page.tsx`
+- Added "Your Vendors" section showing `event.vendors` with name, category badge, contact person, phone, email, notes
+- Placed before "Discovered Vendors" section
+
+**Bug: Files couldn't be downloaded or properly uploaded**
+- File: `src/app/client/[eventId]/files/page.tsx` — full rewrite
+- Upload now uses Supabase Storage via `uploadClientFile` API
+- Download via signed URLs from `getClientSignedUrl` API
+- File type inference from filename (contract, photo, moodboard, other)
+- Error toasts for failed uploads/downloads (not silent failures)
+- Loading spinner states during upload and download
+- Stale reference fix: re-reads `event.files` before batch update
+
+#### QA Audit Findings (5 issues, all fixed)
+| Issue | Severity | Fix |
+|-------|----------|-----|
+| `inferFileType` never returned "moodboard" | High | Added filename checks for moodboard/inspiration |
+| Silent failure when shareToken missing | Medium | Early return with error toast |
+| No user feedback on upload errors | Medium | Error toast with failed file count |
+| Download silently fails | Low | Error toast + handles empty URL |
+| Stale `files` reference during upload | Low | Re-read event.files before update |
 
 ---
 
-## Previous Work
+### Session 2: Floor Plan Phase 2 + Sub-Entity QA
 
-### March 28 — Session 1: Security Audit + Fixes
+#### Floor Plan Phase 2
+1. **Smart Seating Algorithm** — `seating-algorithm.ts`: Greedy constraint-based auto-seater (VIP priority, group cohesion, dietary clustering, keep-together/keep-apart). `guest_relationships` table + RLS.
+2. **Lighting-Furniture Snap** — `LightingZone` extended with `snappedToFurnitureId`. 40px proximity auto-snap.
+3. **Floor Plan PDF Export** — `floorplan-export-pdf.ts`: Multi-page jsPDF.
+
+#### Sub-Entity Persistence Bugs (5 found, 5 fixed)
+| Commit | Bug |
+|--------|-----|
+| `74594ce` | `fetchEventCore` overwrites sub-entity data with empty arrays |
+| `74594ce` | `useSyncExternalStore` not detecting sub-entity changes (missing `updatedAt` bump) |
+| `6717012` | Sub-entity loading race condition (data discarded before hydration completes) |
+| `fb1e567` | Timeline page loading wrong sub-entity (`"timeline"` instead of `"schedule"`) |
+| SQL fix | `guests` table missing `guest_group` and `vip` columns |
+
+### Session 1: Security Audit + Floor Plan Phase 1
 | Commit | What |
 |--------|------|
-| `f60b8a2` | Server-side event limits, path traversal guards, payment verification, account deletion cleanup |
-| `613410b` | Mobile sign-out button in "More" sheet |
-| `4a839fd` | Critical column name fix: `planner_id` → `user_id` in 4 queries |
-
-### March 28 — Session 2: Floor Plan Phase 1a — Technical Debt
-**Commit `3823ff9`** — Major refactor:
-1. **Lighting zones moved onto Fabric.js canvas** (was separate HTML overlay)
-2. **Schema versioning** — `{ version: 1, canvas: {...} }` envelope
-3. **JSON validation** — 10MB limit, structure checks, max 5000 objects
-4. **Grid performance** — cached refs, excluded from saves
-5. **Undo debouncing** — 150ms debounce, flush before undo/redo
-
-### March 28 — Session 2: Floor Plan Phase 1b — UX Features
-**Commit `159e00f`** — Four new features:
-1. **Table capacity limits** — `maxSeats` on all table types, color-coded badges
-2. **Real-world dimensions** — 1px = 1 inch scale, properties panel shows feet/inches
-3. **Multi-select + batch ops** — Ctrl+A, Ctrl+C/V, batch delete/rotate
-4. **Furniture groups** — 5 presets (Round 60"+8, Round 72"+10, Rect 6'+6, Rect 8'+8, Sweetheart+2)
+| `f60b8a2` | Server-side event limits, path traversal guards, payment verification |
+| `613410b` | Mobile sign-out button |
+| `4a839fd` | Critical column name fix: `planner_id` → `user_id` |
+| `3823ff9` | Phase 1a: Lighting on canvas, schema versioning, grid perf, undo debouncing |
+| `159e00f` | Phase 1b: Table capacity limits, real-world dimensions, multi-select, furniture groups |
 
 ---
 
-## Floor Plan Roadmap — Where We Are
+## Key Architectural Insight: The Lazy Loading Flow
+
+```
+Page renders → useEvent(id)        → store.getById(id)
+                                        ↓
+                                  triggers fetchEventCore() (core fields + floorPlans)
+                                        ↓
+            useEventSubEntities()  → store.ensureSubEntity(id, "guests")
+                                        ↓
+                                  triggers fetchEventGuests() (sub-entity only)
+                                        ↓
+                              Both resolve → merge into event → emit → React re-renders
+```
+
+**Critical invariants:**
+1. `getById()` must NEVER overwrite sub-entity keys (except `CORE_SUB_ENTITIES` like floorPlans)
+2. `ensureSubEntity()` must ALWAYS bump `updatedAt` to trigger React re-renders
+3. Every page must load ALL sub-entities it renders via `useEventSubEntities()`
+
+---
+
+## Known Issues (Not Blocking)
+
+### Should Address Soon
+
+1. **Missing DB columns for storage features** — Several tables reference `storage_path` columns in `db.ts` that may not exist in production:
+   - `event_contracts`: `storage_path`, `storage_signed_path`, `storage_planner_sig`, `storage_client_sig`
+   - `mood_board_images`: `storage_path`, `storage_thumb`
+   - `shared_files`: `storage_path`
+   - `contract_templates`: `storage_path`
+
+   **Fix:** Run ALTER TABLE statements from migration.sql + `NOTIFY pgrst, 'reload schema'`
+
+2. **`replaceGuests` delete-then-insert is dangerous** — All `replace*()` functions do DELETE ALL then INSERT. If INSERT fails, all data is permanently lost. Consider transactions or upsert.
+
+3. **`eventFromRow` initializes empty sub-entity arrays** — Used for both full-event loads and core-only loads. Consider splitting into `eventCoreFromRow()` and `eventFullFromRow()`.
+
+4. **Event creation spinning** — User previously reported pinwheel. Not fully debugged.
+5. **Webhook idempotency** — No deduplication by Stripe event ID.
+
+---
+
+## All Commits (March 29)
+
+| Commit | Description |
+|--------|-------------|
+| `81fd13f` | Phase 3: rotation snapping, layout templates, 3D polish + client portal fixes |
+| `e122939` | Improve 3D view scale to match floor plan proportions |
+| `8d5ad4e` | Fix 5 floor plan UX/UI issues from QA audit |
+| `89dbe93` | Fix dead relationship manager button and moodboard double render |
+| `74594ce` | Fix sub-entity data being wiped by fetchEventCore race condition |
+| `fb1e567` | Fix timeline page loading wrong sub-entity |
+| `6717012` | Fix sub-entity loading race condition (retry/poll for hydration) |
+
+---
+
+## Floor Plan Roadmap
 
 ```
 ✅ Phase 1a: Technical debt (lighting on canvas, schema, validation, grid, undo)
 ✅ Phase 1b: UX features (capacity, dimensions, multi-select, furniture groups)
 ✅ Phase 2:  Smart seating algorithm, lighting-furniture snap, PDF export
-⬜ Phase 3:  3D perspective, layout templates, rotation snapping
+✅ Phase 3:  3D polish, layout templates, rotation snapping
 ⬜ Phase 4:  Venue library, mobile editor, real-time collaboration
 ```
-
-### Phase 3 Details (Next Up)
-1. **3D perspective view** — Toggle between 2D editor and 3D preview of the floor plan
-2. **Layout templates** — Pre-built room layouts (banquet, classroom, theater, U-shape) users can start from
-3. **Rotation snapping** — 15° or 45° increments when rotating furniture, with visual guides
-
----
-
-## Architecture Overview
-
-### Plans & Billing
-- **Trial:** 3 active events, full Pro features, time-limited
-- **DIY:** 1 active event, $149 one-time, limited features
-- **Professional:** 999 events, $49/mo, all features
-- **Expired:** 0 events, must upgrade
-
-### Floor Plan System
-- **Canvas:** Fabric.js v6.9.1 (2D HTML5 Canvas)
-- **Scale:** 1px = 1 inch (explicit in `PIXELS_PER_INCH`)
-- **Grid:** 20px (20 inches) snap
-- **Objects:** 28 individual items + 5 furniture groups
-- **Lighting:** 7 zone types, rendered as native Fabric objects, snap-to-furniture (40px threshold)
-- **Seating:** Greedy constraint algorithm with keep-together/apart, VIP priority, group cohesion
-- **Schema:** Versioned envelope `{ version: 1, canvas: {...} }`
-- **Save:** 800ms debounced auto-save, validated before write
-- **Undo:** 150ms debounced, max 30 states, grid+lighting excluded
-- **Export:** PNG (canvas.toDataURL) + PDF (jsPDF with legend, seating chart, lighting notes)
-
-### Storage (Supabase Storage)
-- 3 buckets: `event-files` (private), `contract-templates` (private), `brand-assets` (public)
-- Dual-read: `storagePath` ?? base64 fallback
-- Client portal: API routes with share token validation
-
-### Security
-- Middleware: plan-based route gating, auth checks, trial expiry
-- `safeProfileToRow()`: strips privileged fields
-- Storage APIs: bucket whitelist, path traversal guards, 10MB limit
-- Stripe webhook: `invoice.payment_failed` → expires after 8 attempts
-- Account deletion: Storage → Stripe → DB → Auth cascade
-
-### Database
-- All tables use `user_id` (NOT `planner_id`)
-- 24 tables with RLS policies (added `guest_relationships`)
-- Migration includes: `guest_group` + `vip` columns on guests, `guest_relationships` table
-
----
-
-## Known Issues / Future Work
-
-### Should Address Soon
-1. **Event creation spinning** — User reported pinwheel. Not fully debugged.
-2. **Webhook idempotency** — No deduplication by Stripe event ID.
-3. **`LightingOverlay.tsx` dead code** — Can be deleted (replaced by canvas-native rendering).
-4. **Export doesn't reset zoom** — PNG export includes zoom transform.
-5. **Initial undo baseline includes grid objects** — Minor, first undo may be slightly off.
-
-### Remaining Phase 1a Audit Items (Low Severity)
-- Hex shorthand edge case in lighting gradient colors
-- `ClientFloorPlanView.tsx` may be dead code (client uses FloorPlanEditor with readOnly)
-- Cleanup effect doesn't clear refs on unmount (only matters in strict mode)
 
 ---
 
@@ -145,31 +197,29 @@ All code committed, pushed, deploying on Vercel. No pending changes.
 
 | Purpose | File |
 |---------|------|
-| Floor plan editor (main) | `src/components/floorplan/FloorPlanEditor.tsx` |
+| **Event store (core bug fixes here)** | `src/lib/store.ts` |
+| **Store React hooks** | `src/hooks/useStore.ts` |
+| **Database layer** | `src/lib/supabase/db.ts` |
+| **DB migration/schema** | `supabase/migration.sql` |
+| Floor plan editor | `src/components/floorplan/FloorPlanEditor.tsx` |
+| Floor plan 3D view | `src/components/floorplan/FloorPlan3DView.tsx` |
+| Floor plan toolbar | `src/components/floorplan/Toolbar.tsx` |
+| Floor plan properties | `src/components/floorplan/PropertiesPanel.tsx` |
+| Layout templates | `src/lib/layout-templates.ts` |
 | Floor plan schema/validation | `src/lib/floorplan-schema.ts` |
-| Furniture catalog + groups | `src/lib/constants.ts` |
-| Lighting panel | `src/components/floorplan/LightingPanel.tsx` |
-| Seating panel (capacity) | `src/components/floorplan/SeatingPanel.tsx` |
 | Seating algorithm | `src/lib/seating-algorithm.ts` |
 | Floor plan PDF export | `src/lib/floorplan-export-pdf.ts` |
-| Event summary PDF export | `src/lib/export-pdf.ts` |
-| Properties panel (dimensions) | `src/components/floorplan/PropertiesPanel.tsx` |
-| Furniture palette (+ groups) | `src/components/floorplan/FurniturePalette.tsx` |
-| Toolbar (copy/paste/etc) | `src/components/floorplan/Toolbar.tsx` |
-| Planner floor plan page | `src/app/planner/[eventId]/floorplan/page.tsx` |
-| Planner guests page | `src/app/planner/[eventId]/guests/page.tsx` |
-| Client floor plan page | `src/app/client/[eventId]/floorplan/page.tsx` |
-| Type definitions | `src/lib/types.ts` |
-| Database layer | `src/lib/supabase/db.ts` |
+| Floor plan page (planner) | `src/app/planner/[eventId]/floorplan/page.tsx` |
+| Client portal | `src/app/client/[eventId]/page.tsx` |
+| Client files page | `src/app/client/[eventId]/files/page.tsx` |
 | Auth middleware | `src/lib/supabase/middleware.ts` |
-| Stripe webhook | `src/app/api/stripe/webhook/route.ts` |
-| Account deletion | `src/app/api/account/delete/route.ts` |
 
 ---
 
 ## Environment
 - **Vercel:** Auto-deploys from `main`
 - **Supabase:** Service role key in `.env.local`
-- **Stripe:** Live mode, Smart Retry (8 attempts), email receipts on
-- **Test account:** msilvano13@gmail.com (DIY plan)
-- **Contact email:** michael@michaelsilvano.com
+- **Stripe:** Live mode, Smart Retry (8 attempts)
+- **Test account (Pro):** ashley@ashleysilvanohair.com / skater87
+- **Test account (DIY):** msilvano13@gmail.com
+- **Contact:** michael@michaelsilvano.com
