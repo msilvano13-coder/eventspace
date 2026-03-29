@@ -505,18 +505,10 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
 
   // ── Service counters (bar, buffet, dessert station, coffee station) ──
   if (category === "service-counter") {
-    // Slightly darker fill for visual weight
-    const darkerFill = getCachedColor(obj.stroke);
     return (
       <group position={[posX, h3d / 2, posZ]} rotation={[0, rotY, 0]}>
-        {/* Solid counter block — no legs */}
         <mesh castShadow receiveShadow>
           <boxGeometry args={[w, h3d, d]} />
-          <meshStandardMaterial color={darkerFill} roughness={pbr.roughness} metalness={pbr.metalness} />
-        </mesh>
-        {/* Lighter top surface */}
-        <mesh position={[0, h3d / 2 - 0.5 * S, 0]} castShadow receiveShadow>
-          <boxGeometry args={[w + 0.5 * S, 1 * S, d + 0.5 * S]} />
           <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
         <FurnitureLabel label={obj.label} y={h3d / 2 + 2 * S} />
@@ -557,11 +549,6 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
         <mesh castShadow receiveShadow>
           <boxGeometry args={[w, h3d, d]} />
           <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
-        </mesh>
-        {/* Top surface / console panel */}
-        <mesh position={[0, h3d / 2 - 0.5 * S, 0]} castShadow receiveShadow>
-          <boxGeometry args={[w * 0.9, 1 * S, d * 0.8]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
         <FurnitureLabel label={obj.label} y={h3d / 2 + 2 * S} />
       </group>
@@ -749,13 +736,13 @@ function RoomFloor({ obj, originX, originY }: { obj: ParsedObject; originX: numb
     return new Shape(shapePoints);
   }, [obj.points, obj.x, obj.y, originX, originY]);
 
-  // Compute wall segments from polygon edges
+  // Compute wall segments from polygon edges (negate Y to match floor)
   const wallSegments = useMemo(() => {
     if (!obj.points || obj.points.length < 3) return [];
     const segments: { x1: number; z1: number; x2: number; z2: number; length: number; angle: number; cx: number; cz: number }[] = [];
     const pts = obj.points.map(([x, y]) => ({
       x: (x + obj.x - originX) * S,
-      z: (y + obj.y - originY) * S,
+      z: -(y + obj.y - originY) * S,
     }));
     for (let i = 0; i < pts.length; i++) {
       const a = pts[i];
@@ -786,22 +773,23 @@ function RoomFloor({ obj, originX, originY }: { obj: ParsedObject; originX: numb
         <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
         <meshStandardMaterial color="#faf7f0" side={DoubleSide} roughness={0.85} metalness={0} />
       </mesh>
-      {/* Walls */}
+      {/* Walls — slightly transparent so interior is visible */}
       {wallSegments.map((seg, i) => (
         <mesh
           key={`wall-${i}`}
           position={[seg.cx, WALL_HEIGHT / 2, seg.cz]}
           rotation={[0, -seg.angle, 0]}
-          castShadow
           receiveShadow
+          renderOrder={1}
         >
           <boxGeometry args={[seg.length, WALL_HEIGHT, wallThickness]} />
           <meshStandardMaterial
-            color="#f0ece4"
+            color="#e8e4dc"
             roughness={0.9}
             metalness={0}
             transparent
-            opacity={0.35}
+            opacity={0.25}
+            depthWrite={false}
           />
         </mesh>
       ))}
