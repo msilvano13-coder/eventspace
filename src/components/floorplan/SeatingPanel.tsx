@@ -37,8 +37,10 @@ function extractTables(json: string | null): TableInfo[] {
       if (!data.furnitureId) continue;
       const catalogItem = FURNITURE_CATALOG.find((f) => f.id === data.furnitureId);
       if (catalogItem && catalogItem.category === "table") {
-        // Use persisted tableId if available, otherwise generate a deterministic fallback
-        const tableId = data.tableId || `__legacy_${data.furnitureId}_${fallbackIdx++}`;
+        // Use persisted tableId if available, otherwise use position-based fallback
+        // for legacy objects that predate the tableId field
+        const posKey = `${Math.round(obj.left ?? 0)}_${Math.round(obj.top ?? 0)}`;
+        const tableId = data.tableId || `__legacy_${data.furnitureId}_${posKey}_${fallbackIdx++}`;
         tables.push({
           tableId,
           label: data.label || catalogItem.name,
@@ -61,7 +63,8 @@ function extractTables(json: string | null): TableInfo[] {
       }
     }
     return tables;
-  } catch {
+  } catch (err) {
+    console.error("[SeatingPanel] extractTables failed:", err);
     return [];
   }
 }
@@ -176,7 +179,7 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
           Seating Chart
         </h3>
         <p className="text-[10px] text-stone-400 mt-1">
-          {totalSeated}/{totalCapacity} seated · {unassigned.length} unassigned
+          {totalSeated}/{totalCapacity} seated · {unassigned.reduce((sum, g) => sum + 1 + (g.plusOne ? 1 : 0), 0)} unassigned
         </p>
 
         {/* Auto-Seat + Clear buttons */}

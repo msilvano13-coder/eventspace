@@ -994,7 +994,7 @@ export default function FloorPlanEditor({
     let shape: FabricObject;
     if (item.shape === "circle") {
       shape = new Circle({
-        radius: item.defaultRadius || item.defaultWidth / 2,
+        radius: item.defaultRadius || (item.defaultWidth ?? 40) / 2,
         fill: item.fill,
         stroke: item.stroke,
         strokeWidth: 1.5,
@@ -1271,7 +1271,7 @@ export default function FloorPlanEditor({
       let shape: FabricObject;
       if (item.shape === "circle") {
         shape = new Circle({
-          radius: item.defaultRadius || item.defaultWidth / 2,
+          radius: item.defaultRadius || (item.defaultWidth ?? 40) / 2,
           fill: item.fill,
           stroke: item.stroke,
           strokeWidth: isChair ? 1 : 1.5,

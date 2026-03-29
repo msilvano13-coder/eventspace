@@ -60,9 +60,9 @@ export function autoSeat(
   const units: GuestUnit[] = accepted.map((g) => ({
     guestId: g.id,
     seats: 1 + (g.plusOne ? 1 : 0),
-    group: g.group.trim(),
-    vip: g.vip,
-    dietary: g.dietaryNotes.trim().toLowerCase(),
+    group: (g.group ?? "").trim(),
+    vip: g.vip ?? false,
+    dietary: (g.dietaryNotes ?? "").trim().toLowerCase(),
   }));
 
   // Merge keep-together relationships into synthetic groups
@@ -197,28 +197,25 @@ function findBestTable(
   remaining.forEach((capacity, label) => {
     if (capacity < needed) return;
 
-    let tableScore = 0;
+    // Prefer tighter fit — normalize to 0-10 range to avoid negative scores
+    // dominating the conflict penalty
+    let tableScore = Math.max(0, 10 - (capacity - needed));
 
-    // Prefer tighter fit (less remaining space after seating)
-    tableScore += (10 - (capacity - needed));
-
-    // Check keep-apart constraints
+    // Check keep-apart constraints (hard constraint: skip table entirely)
     let hasConflict = false;
     assignments.forEach((existingTable, existingGuestId) => {
       if (existingTable !== label) return;
       guestIdList.forEach((gId) => {
         if (keepApart.get(gId)?.has(existingGuestId)) {
           hasConflict = true;
-          tableScore -= 50;
         }
       });
     });
 
-    // Prefer tables without conflicts
-    if (!hasConflict && tableScore > bestScore) {
-      bestScore = tableScore;
-      bestTable = label;
-    } else if (tableScore > bestScore) {
+    // Skip tables with keep-apart conflicts entirely
+    if (hasConflict) return;
+
+    if (tableScore > bestScore) {
       bestScore = tableScore;
       bestTable = label;
     }
