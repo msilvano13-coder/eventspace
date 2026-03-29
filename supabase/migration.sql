@@ -1161,6 +1161,9 @@ COMMENT ON TABLE public.stripe_webhook_events IS 'Tracks processed Stripe webhoo
 CREATE INDEX IF NOT EXISTS idx_stripe_webhook_events_stripe_id
   ON public.stripe_webhook_events (stripe_event_id);
 
+-- Only accessed via service_role (bypasses RLS), but enable to satisfy security linter
+ALTER TABLE public.stripe_webhook_events ENABLE ROW LEVEL SECURITY;
+
 -- =============================================================================
 -- 26. STORAGE BUCKETS & POLICIES
 -- =============================================================================
