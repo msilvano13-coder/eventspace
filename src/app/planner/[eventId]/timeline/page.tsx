@@ -18,7 +18,7 @@ function fmt12(time: string) {
 export default function TimelinePage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
-  useEventSubEntities(eventId, ["timeline"]);
+  useEventSubEntities(eventId, ["schedule"]);
   const { updateEvent } = useStoreActions();
 
   const [editingId, setEditingId] = useState<string | null>(null);
