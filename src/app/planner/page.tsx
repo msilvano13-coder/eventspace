@@ -5,6 +5,7 @@ import { Plus, Calendar, MapPin, User, ChevronRight, Archive, RotateCcw, Search,
 import Link from "next/link";
 import { useState, useMemo } from "react";
 import { canCreateEvent } from "@/lib/plan-features";
+import { createDefaultFloorPlans } from "@/lib/types";
 
 const statusColors: Record<string, string> = {
   planning: "bg-amber-50 text-amber-700",
@@ -424,12 +425,7 @@ function NewEventModal({
                 ...form,
                 status: "planning" as const,
                 floorPlanJSON: null,
-                floorPlans: [
-                  { id: "ceremony", name: "Ceremony", json: null, lightingZones: [] },
-                  { id: "cocktail", name: "Cocktail Hour", json: null, lightingZones: [] },
-                  { id: "reception", name: "Reception", json: null, lightingZones: [] },
-                  { id: "dancefloor", name: "Dance Floor", json: null, lightingZones: [] },
-                ],
+                floorPlans: createDefaultFloorPlans(),
                 files: [],
                 timeline: [],
                 schedule: [],

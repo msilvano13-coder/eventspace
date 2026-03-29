@@ -119,7 +119,9 @@ class EventStore {
       fetchEventCore(id)
         .then((full) => {
           if (full) {
-            this.events.set(id, { ...evt, ...full });
+            // Use current event state (not stale capture) to preserve any optimistic updates
+            const current = this.events.get(id) || evt;
+            this.events.set(id, { ...current, ...full });
             this.rebuildCache();
             this.coreLoaded.add(id);
             this.emit();
@@ -243,6 +245,10 @@ class EventStore {
     } catch (err) {
       console.error("[EventStore] delete failed:", err);
     }
+  }
+
+  isCoreLoaded(id: string): boolean {
+    return this.coreLoaded.has(id);
   }
 
   subscribe(listener: Listener): () => void {

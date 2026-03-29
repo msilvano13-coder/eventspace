@@ -1,4 +1,4 @@
-import { Event } from "./types";
+import { Event, createDefaultFloorPlans } from "./types";
 
 export function getSeedData(): Event[] {
   return [
@@ -12,10 +12,7 @@ export function getSeedData(): Event[] {
       status: "confirmed",
       floorPlanJSON: null,
       floorPlans: [
-        { id: "ceremony", name: "Ceremony", json: null, lightingZones: [] },
-        { id: "cocktail", name: "Cocktail Hour", json: null, lightingZones: [] },
-        { id: "reception", name: "Reception", json: null, lightingZones: [] },
-        { id: "dancefloor", name: "Dance Floor", json: null, lightingZones: [] },
+        ...createDefaultFloorPlans(),
       ],
       files: [
         {
@@ -83,10 +80,7 @@ export function getSeedData(): Event[] {
       status: "planning",
       floorPlanJSON: null,
       floorPlans: [
-        { id: "ceremony", name: "Ceremony", json: null, lightingZones: [] },
-        { id: "cocktail", name: "Cocktail Hour", json: null, lightingZones: [] },
-        { id: "reception", name: "Reception", json: null, lightingZones: [] },
-        { id: "dancefloor", name: "Dance Floor", json: null, lightingZones: [] },
+        ...createDefaultFloorPlans(),
       ],
       files: [],
       timeline: [
@@ -128,10 +122,7 @@ export function getSeedData(): Event[] {
       status: "confirmed",
       floorPlanJSON: null,
       floorPlans: [
-        { id: "ceremony", name: "Ceremony", json: null, lightingZones: [] },
-        { id: "cocktail", name: "Cocktail Hour", json: null, lightingZones: [] },
-        { id: "reception", name: "Reception", json: null, lightingZones: [] },
-        { id: "dancefloor", name: "Dance Floor", json: null, lightingZones: [] },
+        ...createDefaultFloorPlans(),
       ],
       files: [
         {

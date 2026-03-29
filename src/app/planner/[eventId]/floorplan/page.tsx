@@ -2,11 +2,11 @@
 
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
-import { useEvent, useEventSubEntities, useStoreActions } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useEventCoreLoaded, useStoreActions } from "@/hooks/useStore";
 import Link from "next/link";
 import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown, FileDown, Box } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FloorPlan, Guest, GuestRelationship, LightingZone } from "@/lib/types";
+import { FloorPlan, Guest, GuestRelationship, LightingZone, createDefaultFloorPlans } from "@/lib/types";
 import { v4 as uuid } from "uuid";
 import { fetchGuestRelationships } from "@/lib/supabase/db";
 import { exportFloorPlanPDF } from "@/lib/floorplan-export-pdf";
@@ -40,9 +40,10 @@ const FloorPlan3DView = dynamic(
 export default function FloorPlanPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
+  const coreLoaded = useEventCoreLoaded(eventId);
   useEventSubEntities(eventId, ["guests"]);
   const { updateEvent } = useStoreActions();
-  const [activePlanId, setActivePlanId] = useState<string>("ceremony");
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
   const [showAddTab, setShowAddTab] = useState(false);
   const [newTabName, setNewTabName] = useState("");
   const [showSeating, setShowSeating] = useState(false);
@@ -52,21 +53,38 @@ export default function FloorPlanPage() {
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [guestRelationships, setGuestRelationships] = useState<GuestRelationship[]>([]);
   const getCanvasDataURLRef = useRef<(() => string | null) | null>(null);
+  const autoCreatedRef = useRef(false);
 
   useEffect(() => {
     fetchGuestRelationships(eventId).then(setGuestRelationships).catch(() => {});
   }, [eventId]);
 
+  // Resolve the effective active plan ID (fallback to first plan)
+  const resolvedPlanId = activePlanId ?? event?.floorPlans?.[0]?.id ?? null;
+
   const handleSave = useCallback(
     (json: string) => {
-      if (!event) return;
+      if (!event || !resolvedPlanId) return;
       const updated = event.floorPlans.map((fp) =>
-        fp.id === activePlanId ? { ...fp, json } : fp
+        fp.id === resolvedPlanId ? { ...fp, json } : fp
       );
       updateEvent(eventId, { floorPlans: updated });
     },
-    [eventId, activePlanId, updateEvent, event]
+    [eventId, resolvedPlanId, updateEvent, event]
   );
+
+  // Filter out any floor plans with non-UUID IDs (legacy bug)
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const validPlans = (event?.floorPlans || []).filter((fp) => UUID_RE.test(fp.id));
+
+  // Auto-create default floor plans if none valid exist (wait for core data from DB)
+  useEffect(() => {
+    if (autoCreatedRef.current || !event || !coreLoaded) return;
+    if (validPlans.length === 0) {
+      autoCreatedRef.current = true;
+      updateEvent(eventId, { floorPlans: createDefaultFloorPlans() });
+    }
+  }, [event, eventId, updateEvent, validPlans.length, coreLoaded]);
 
   if (!event) {
     return (
@@ -76,8 +94,8 @@ export default function FloorPlanPage() {
     );
   }
 
-  const plans = event.floorPlans || [];
-  const activePlan = plans.find((p) => p.id === activePlanId) || plans[0];
+  const plans = validPlans;
+  const activePlan = plans.find((p) => p.id === resolvedPlanId) || plans[0];
   const lightingZones = activePlan?.lightingZones ?? [];
 
   function handleUpdateLightingZones(zones: LightingZone[]) {

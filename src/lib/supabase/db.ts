@@ -1119,17 +1119,12 @@ export async function createEvent(
 
   if (error) throw new Error(`createEvent: ${error.message}`);
 
-  // Create 4 default floor plans
-  const defaultPlans = [
-    { id: "ceremony", name: "Ceremony" },
-    { id: "cocktail", name: "Cocktail Hour" },
-    { id: "reception", name: "Reception" },
-    { id: "dancefloor", name: "Dance Floor" },
-  ];
+  // Create 4 default floor plans (DB auto-generates UUIDs)
+  const defaultPlanNames = ["Ceremony", "Cocktail Hour", "Reception", "Dance Floor"];
 
-  const floorPlanRows = defaultPlans.map((fp, i) => ({
+  const floorPlanRows = defaultPlanNames.map((name, i) => ({
     event_id: created.id,
-    name: fp.name,
+    name,
     json: null,
     sort_order: i,
   }));

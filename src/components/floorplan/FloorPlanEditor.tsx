@@ -200,6 +200,7 @@ export default function FloorPlanEditor({
   const angleGuideRef = useRef<{ line: FabricObject; text: FabricText } | null>(null);
 
   // ── Refs for latest values (used in closures) ──
+  const onSaveRef = useRef(onSave);
   const lightingZonesRef = useRef(lightingZones);
   const lightingEnabledRef = useRef(lightingEnabled);
   const selectedZoneIdRef = useRef(selectedZoneId);
@@ -209,6 +210,7 @@ export default function FloorPlanEditor({
   const snapEnabledRef = useRef(snapEnabled);
   const rotationSnapRef = useRef(rotationSnap);
   useEffect(() => {
+    onSaveRef.current = onSave;
     lightingZonesRef.current = lightingZones;
     lightingEnabledRef.current = lightingEnabled;
     selectedZoneIdRef.current = selectedZoneId;
@@ -746,8 +748,27 @@ export default function FloorPlanEditor({
       window.removeEventListener("keydown", handleKey);
       resizeObserver.disconnect();
       clearAngleGuide();
+      // Cancel pending debounces
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (undoDebounceRef.current) clearTimeout(undoDebounceRef.current);
+      // Flush save — persist current canvas state before disposing
+      try {
+        const lightingObjs = canvas.getObjects().filter((o: any) => o.data?.isLighting);
+        const guideObjs = canvas.getObjects().filter((o: any) => o.data?.isGuide);
+        const gridObjs = gridObjectsRef.current.filter((o) => canvas.getObjects().includes(o));
+        const overlayObj = lightingOverlayRef.current;
+        lightingObjs.forEach((o) => canvas.remove(o));
+        guideObjs.forEach((o) => canvas.remove(o));
+        gridObjs.forEach((o) => canvas.remove(o));
+        if (overlayObj) canvas.remove(overlayObj);
+        const rawJSON = canvas.toJSON();
+        const serialized = serializeFloorPlan(rawJSON as Record<string, unknown>);
+        if (serialized) {
+          onSaveRef.current(serialized);
+        }
+      } catch {
+        // Canvas may already be partially disposed — best-effort save
+      }
       canvas.dispose();
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

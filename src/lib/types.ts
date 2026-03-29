@@ -1,3 +1,5 @@
+import { v4 as uuid } from "uuid";
+
 // ── Planner Profile ──
 
 export type PlanType = "trial" | "diy" | "professional" | "expired";
@@ -40,12 +42,14 @@ export interface FloorPlan {
   lightingZones: LightingZone[];
 }
 
-export const DEFAULT_FLOOR_PLANS: Omit<FloorPlan, "json" | "lightingZones">[] = [
-  { id: "ceremony", name: "Ceremony" },
-  { id: "cocktail", name: "Cocktail Hour" },
-  { id: "reception", name: "Reception" },
-  { id: "dancefloor", name: "Dance Floor" },
-];
+export function createDefaultFloorPlans(): FloorPlan[] {
+  return [
+    { id: uuid(), name: "Ceremony", json: null, lightingZones: [] },
+    { id: uuid(), name: "Cocktail Hour", json: null, lightingZones: [] },
+    { id: uuid(), name: "Reception", json: null, lightingZones: [] },
+    { id: uuid(), name: "Dance Floor", json: null, lightingZones: [] },
+  ];
+}
 
 export interface Event {
   id: string;

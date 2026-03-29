@@ -103,6 +103,16 @@ export function useEventSubEntities(eventId: string, keys: string[]): void {
   }, [eventId, ...keys]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
+export function useEventCoreLoaded(eventId: string): boolean {
+  const [loaded, setLoaded] = useState(() => store.isCoreLoaded(eventId));
+  useEffect(() => {
+    const check = () => setLoaded(store.isCoreLoaded(eventId));
+    check();
+    return store.subscribe(check);
+  }, [eventId]);
+  return loaded;
+}
+
 export function useStoreActions() {
   const createEvent = useCallback(
     (data: Omit<Event, "id" | "createdAt" | "updatedAt">) => store.create(data),
