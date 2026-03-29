@@ -13,27 +13,64 @@ export interface SeatingResult {
   score: number;                    // higher = better (for comparing solutions)
 }
 
+// ── Union-Find for transitive group merging ──
+
+class UnionFind {
+  private parent = new Map<string, string>();
+  private rank = new Map<string, number>();
+
+  find(x: string): string {
+    if (!this.parent.has(x)) {
+      this.parent.set(x, x);
+      this.rank.set(x, 0);
+    }
+    if (this.parent.get(x) !== x) {
+      this.parent.set(x, this.find(this.parent.get(x)!)); // path compression
+    }
+    return this.parent.get(x)!;
+  }
+
+  union(a: string, b: string): void {
+    const ra = this.find(a);
+    const rb = this.find(b);
+    if (ra === rb) return;
+    const rankA = this.rank.get(ra) ?? 0;
+    const rankB = this.rank.get(rb) ?? 0;
+    if (rankA < rankB) {
+      this.parent.set(ra, rb);
+    } else if (rankA > rankB) {
+      this.parent.set(rb, ra);
+    } else {
+      this.parent.set(rb, ra);
+      this.rank.set(ra, rankA + 1);
+    }
+  }
+}
+
 // ── Algorithm ──
 
 /**
- * Smart seating algorithm that assigns accepted guests to tables while
+ * Smart seating algorithm that assigns guests to tables while
  * respecting capacity, groups, relationships, dietary clustering, and VIP priority.
  *
  * Strategy (greedy, constraint-based):
  * 1. Build guest "units" — each guest + their plus-one is one unit (takes 1 or 2 seats)
- * 2. Cluster units into groups (explicit group field, then dietary, then ungrouped)
- * 3. Sort groups: VIP-heavy groups first, then largest groups first
- * 4. For each group, find the best-fit table (most remaining capacity that still fits)
- * 5. Apply keep-together constraints (boost) and keep-apart penalties
- * 6. Spill oversized groups across multiple tables, keeping sub-clusters together
+ * 2. Transitively merge keep-together relationships via union-find
+ * 3. Cluster units into groups (explicit group → keep-together → dietary → ungrouped)
+ * 4. Sort groups: VIP-heavy groups first, then largest groups first
+ * 5. For each group, find the best-fit table (tightest fit that still works)
+ * 6. Apply keep-apart as hard constraints (skip conflicting tables)
+ * 7. Spill oversized groups across multiple tables, keeping sub-clusters together
+ *
+ * Note: Callers should pre-filter guests (e.g., only unassigned, only accepted).
+ * The algorithm seats ALL guests passed to it.
  */
 export function autoSeat(
   guests: Guest[],
   tables: TableSlot[],
   relationships: GuestRelationship[] = []
 ): SeatingResult {
-  const accepted = guests.filter((g) => g.rsvp === "accepted");
-  if (accepted.length === 0 || tables.length === 0) {
+  if (guests.length === 0 || tables.length === 0) {
     return { assignments: new Map(), unassigned: [], score: 0 };
   }
 
@@ -57,7 +94,7 @@ export function autoSeat(
     dietary: string;
   }
 
-  const units: GuestUnit[] = accepted.map((g) => ({
+  const units: GuestUnit[] = guests.map((g) => ({
     guestId: g.id,
     seats: 1 + (g.plusOne ? 1 : 0),
     group: (g.group ?? "").trim(),
@@ -65,30 +102,59 @@ export function autoSeat(
     dietary: (g.dietaryNotes ?? "").trim().toLowerCase(),
   }));
 
-  // Merge keep-together relationships into synthetic groups
-  // If two guests have a "together" relationship and different groups, unify them
-  const groupOverrides = new Map<string, string>();
+  // ── Transitive group merging via union-find ──
+  // If A keep-together B, and B keep-together C, all three should be in one group
+  const uf = new UnionFind();
+
+  // First, union guests that share an explicit group name
+  const groupMembers = new Map<string, string[]>();
+  for (const unit of units) {
+    if (unit.group) {
+      if (!groupMembers.has(unit.group)) groupMembers.set(unit.group, []);
+      groupMembers.get(unit.group)!.push(unit.guestId);
+    }
+  }
+  groupMembers.forEach((members) => {
+    for (let i = 1; i < members.length; i++) {
+      uf.union(members[0], members[i]);
+    }
+  });
+
+  // Then union keep-together relationships (transitively merges across groups)
   for (const rel of relationships.filter((r) => r.type === "together")) {
     const u1 = units.find((u) => u.guestId === rel.guestId1);
     const u2 = units.find((u) => u.guestId === rel.guestId2);
     if (u1 && u2) {
-      // Use the non-empty group, or create a synthetic one
-      const targetGroup = u1.group || u2.group || `__together_${rel.guestId1}`;
-      groupOverrides.set(u1.guestId, targetGroup);
-      groupOverrides.set(u2.guestId, targetGroup);
-    }
-  }
-  for (const unit of units) {
-    if (groupOverrides.has(unit.guestId)) {
-      unit.group = groupOverrides.get(unit.guestId)!;
+      uf.union(u1.guestId, u2.guestId);
     }
   }
 
-  // Cluster units by group
-  const groupMap = new Map<string, GuestUnit[]>();
-  let ungroupedIdx = 0;
+  // Assign each unit to its union-find root as the group key
   for (const unit of units) {
-    const key = unit.group || `__ungrouped_${ungroupedIdx++}`;
+    const root = uf.find(unit.guestId);
+    // Use an explicit group name from any member if available
+    const rootUnit = units.find((u) => u.guestId === root);
+    const explicitGroup = rootUnit?.group || unit.group;
+    unit.group = explicitGroup || `__uf_${root}`;
+  }
+
+  // ── Cluster ungrouped guests by dietary notes ──
+  // Instead of giving each ungrouped guest a unique key, cluster by diet
+  const groupMap = new Map<string, GuestUnit[]>();
+  for (const unit of units) {
+    let key = unit.group;
+    // If still ungrouped (no explicit group, no keep-together), cluster by dietary
+    if (key.startsWith("__uf_")) {
+      // Check if this "group" has only one member (truly ungrouped)
+      const existingMembers = groupMap.get(key);
+      if (!existingMembers || existingMembers.length === 0) {
+        // First member — check if we should cluster by diet instead
+        if (unit.dietary) {
+          key = `__diet_${unit.dietary}`;
+        }
+        // else stays as __uf_ key (solo ungrouped, no dietary)
+      }
+    }
     if (!groupMap.has(key)) groupMap.set(key, []);
     groupMap.get(key)!.push(unit);
   }
@@ -142,8 +208,12 @@ export function autoSeat(
     }
   }
 
-  // Score: +10 per seated guest, +5 bonus for group cohesion, -20 for keep-apart violations
-  let score = assignments.size * 10;
+  // Score: +10 per seated head (counting plus-ones), +5 bonus for group cohesion, -20 for keep-apart violations
+  const unitMap = new Map(units.map((u) => [u.guestId, u]));
+  let score = 0;
+  assignments.forEach((_, guestId) => {
+    score += (unitMap.get(guestId)?.seats ?? 1) * 10;
+  });
   // Group cohesion bonus
   for (const [, groupUnits] of sortedGroups) {
     const tableSet = new Set<string>();
@@ -178,8 +248,7 @@ function totalSeats(units: SeatUnit[]): number {
 /**
  * Find the best table for a set of units, considering:
  * - Must have enough capacity
- * - Prefer tables that already have group-mates (cohesion)
- * - Avoid tables with keep-apart guests
+ * - Avoid tables with keep-apart guests (hard constraint — skip entirely)
  * - Prefer tighter fit (less wasted space)
  */
 function findBestTable(
@@ -197,9 +266,8 @@ function findBestTable(
   remaining.forEach((capacity, label) => {
     if (capacity < needed) return;
 
-    // Prefer tighter fit — normalize to 0-10 range to avoid negative scores
-    // dominating the conflict penalty
-    let tableScore = Math.max(0, 10 - (capacity - needed));
+    // Prefer tighter fit — normalize to 0-10 range
+    const tableScore = Math.max(0, 10 - (capacity - needed));
 
     // Check keep-apart constraints (hard constraint: skip table entirely)
     let hasConflict = false;

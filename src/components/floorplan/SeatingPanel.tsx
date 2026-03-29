@@ -23,7 +23,10 @@ interface Props {
   relationships?: GuestRelationship[];
 }
 
-/** Parse floor plan JSON to extract table objects with stable unique IDs */
+/** Parse floor plan JSON to extract table objects with stable unique IDs.
+ *  Recurses into nested Fabric.js Groups to find table sub-objects within table sets.
+ *  For table-set groups (isTableSet), uses the group's tableId and counts chairs for maxSeats.
+ */
 function extractTables(json: string | null): TableInfo[] {
   if (!json) return [];
   try {
@@ -31,24 +34,52 @@ function extractTables(json: string | null): TableInfo[] {
     const objects = (canvas as Record<string, unknown>).objects as any[] || [];
     const tables: TableInfo[] = [];
     let fallbackIdx = 0;
-    for (const obj of objects) {
+
+    const processObject = (obj: any) => {
       const data = obj.data;
-      if (!data || data.isGrid || data.isRoom) continue;
-      if (!data.furnitureId) continue;
-      const catalogItem = FURNITURE_CATALOG.find((f) => f.id === data.furnitureId);
-      if (catalogItem && catalogItem.category === "table") {
-        // Use persisted tableId if available, otherwise use position-based fallback
-        // for legacy objects that predate the tableId field
-        const posKey = `${Math.round(obj.left ?? 0)}_${Math.round(obj.top ?? 0)}`;
-        const tableId = data.tableId || `__legacy_${data.furnitureId}_${posKey}_${fallbackIdx++}`;
+      if (!data || data.isGrid || data.isRoom) return;
+
+      // Table-set groups (e.g., Round 60" + 8 Chairs) — count chairs for accurate maxSeats
+      if (data.isTableSet && data.tableId) {
+        const chairCount = countChairs(obj);
+        const catalogItem = FURNITURE_CATALOG.find((f) => f.id === data.furnitureId);
         tables.push({
-          tableId,
-          label: data.label || catalogItem.name,
+          tableId: data.tableId,
+          label: data.label || catalogItem?.name || "Table",
           furnitureId: data.furnitureId,
-          maxSeats: catalogItem.maxSeats ?? 0,
+          maxSeats: chairCount > 0 ? chairCount : (catalogItem?.maxSeats ?? 0),
         });
+        return; // Don't recurse further — the group is the table unit
       }
+
+      // Individual table objects (not in a group)
+      if (data.furnitureId) {
+        const catalogItem = FURNITURE_CATALOG.find((f) => f.id === data.furnitureId);
+        if (catalogItem && catalogItem.category === "table") {
+          const posKey = `${Math.round(obj.left ?? 0)}_${Math.round(obj.top ?? 0)}`;
+          const tableId = data.tableId || `__legacy_${data.furnitureId}_${posKey}_${fallbackIdx++}`;
+          tables.push({
+            tableId,
+            label: data.label || catalogItem.name,
+            furnitureId: data.furnitureId,
+            maxSeats: catalogItem.maxSeats ?? 0,
+          });
+          return;
+        }
+      }
+
+      // Recurse into nested groups (e.g., ungrouped sub-groups)
+      if (obj.objects && Array.isArray(obj.objects)) {
+        for (const child of obj.objects) {
+          processObject(child);
+        }
+      }
+    };
+
+    for (const obj of objects) {
+      processObject(obj);
     }
+
     // Ensure unique display labels — append #N for duplicates
     const labelCounts = new Map<string, number>();
     for (const t of tables) {
@@ -67,6 +98,21 @@ function extractTables(json: string | null): TableInfo[] {
     console.error("[SeatingPanel] extractTables failed:", err);
     return [];
   }
+}
+
+/** Count chairs inside a table-set group (recursively) */
+function countChairs(obj: any): number {
+  let count = 0;
+  if (obj.objects && Array.isArray(obj.objects)) {
+    for (const child of obj.objects) {
+      if (child.data?.furnitureId === "chair") {
+        count++;
+      } else if (child.objects) {
+        count += countChairs(child);
+      }
+    }
+  }
+  return count;
 }
 
 export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, relationships: relsProp }: Props) {
@@ -314,26 +360,44 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
                   {/* Assign from unassigned pool */}
                   {unassigned.length > 0 && (
                     <div className="pt-1">
-                      <p className="text-[10px] text-stone-400 mb-1">Add to this table:</p>
-                      <div className="max-h-32 overflow-y-auto space-y-1">
-                        {unassigned.map((guest) => (
-                          <button
-                            key={guest.id}
-                            onClick={() => assignGuest(guest.id, table.tableId)}
-                            className="w-full flex items-center gap-1.5 text-left bg-stone-50 hover:bg-rose-50 rounded-lg px-2.5 py-1.5 transition-colors group"
-                          >
-                            <UserPlus size={10} className="text-stone-300 group-hover:text-rose-400 flex-shrink-0" />
-                            {guest.vip && <Star size={8} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
-                            <span className="text-xs text-stone-600 truncate">{guest.name}</span>
-                            {guest.group && (
-                              <span className="text-[8px] bg-stone-100 text-stone-400 px-1 py-0.5 rounded-full flex-shrink-0">
-                                {guest.group}
-                              </span>
-                            )}
-                            {guest.plusOne && <span className="text-[10px] text-stone-400 flex-shrink-0">+1</span>}
-                          </button>
-                        ))}
-                      </div>
+                      {table.maxSeats > 0 && count >= table.maxSeats ? (
+                        <p className="text-[10px] text-red-400 italic px-1">Table is at capacity ({count}/{table.maxSeats})</p>
+                      ) : (
+                        <>
+                          <p className="text-[10px] text-stone-400 mb-1">
+                            Add to this table{table.maxSeats > 0 ? ` (${table.maxSeats - count} seats left)` : ""}:
+                          </p>
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {unassigned.map((guest) => {
+                              const guestSeats = 1 + (guest.plusOne ? 1 : 0);
+                              const wouldExceed = table.maxSeats > 0 && count + guestSeats > table.maxSeats;
+                              return (
+                                <button
+                                  key={guest.id}
+                                  onClick={() => !wouldExceed && assignGuest(guest.id, table.tableId)}
+                                  disabled={wouldExceed}
+                                  className={`w-full flex items-center gap-1.5 text-left rounded-lg px-2.5 py-1.5 transition-colors group ${
+                                    wouldExceed
+                                      ? "bg-stone-50 opacity-40 cursor-not-allowed"
+                                      : "bg-stone-50 hover:bg-rose-50"
+                                  }`}
+                                  title={wouldExceed ? `Not enough seats (needs ${guestSeats}, ${table.maxSeats - count} left)` : undefined}
+                                >
+                                  <UserPlus size={10} className="text-stone-300 group-hover:text-rose-400 flex-shrink-0" />
+                                  {guest.vip && <Star size={8} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
+                                  <span className="text-xs text-stone-600 truncate">{guest.name}</span>
+                                  {guest.group && (
+                                    <span className="text-[8px] bg-stone-100 text-stone-400 px-1 py-0.5 rounded-full flex-shrink-0">
+                                      {guest.group}
+                                    </span>
+                                  )}
+                                  {guest.plusOne && <span className="text-[10px] text-stone-400 flex-shrink-0">+1</span>}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
 

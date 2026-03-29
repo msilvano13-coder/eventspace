@@ -888,11 +888,19 @@ export default function FloorPlanEditor({
     const canvas = fabricRef.current;
     if (!canvas) return;
 
-    // 1. Clear existing furniture (keep grid, lighting, guides)
-    const toRemove = canvas.getObjects().filter((o: any) =>
+    // Confirm before clearing existing furniture
+    const existingFurniture = canvas.getObjects().filter((o: any) =>
       o.data && !o.data.isGrid && !o.data.isLighting && !o.data.isLightingOverlay && !o.data.isGuide && !o.data.isRoom
     );
-    toRemove.forEach((o: any) => canvas.remove(o));
+    if (existingFurniture.length > 0) {
+      const ok = window.confirm(
+        `Applying "${template.name}" will replace ${existingFurniture.length} existing furniture item(s). Continue?`
+      );
+      if (!ok) return;
+    }
+
+    // 1. Clear existing furniture (keep grid, lighting, guides)
+    existingFurniture.forEach((o: any) => canvas.remove(o));
 
     // 2. Apply room preset (skipSave — we save once at the end)
     const roomPreset = ROOM_PRESETS.find((p) => p.id === template.roomPreset);
@@ -915,28 +923,19 @@ export default function FloorPlanEditor({
       if (placement.isGroup) {
         const group = FURNITURE_GROUPS.find((g) => g.id === placement.itemId);
         if (group) {
-          addFurnitureGroup(group, absX, absY, true);
-          // Apply rotation if specified
-          if (placement.angle) {
-            const objects = canvas.getObjects();
-            const lastObj = objects[objects.length - 1];
-            if (lastObj) {
-              lastObj.rotate(placement.angle);
-              lastObj.setCoords();
-            }
+          const obj = addFurnitureGroup(group, absX, absY, true);
+          if (obj && placement.angle) {
+            obj.rotate(placement.angle);
+            obj.setCoords();
           }
         }
       } else {
         const item = getFurnitureById(placement.itemId);
         if (item) {
-          addFurnitureToCanvas(item, absX, absY, true);
-          if (placement.angle) {
-            const objects = canvas.getObjects();
-            const lastObj = objects[objects.length - 1];
-            if (lastObj) {
-              lastObj.rotate(placement.angle);
-              lastObj.setCoords();
-            }
+          const obj = addFurnitureToCanvas(item, absX, absY, true);
+          if (obj && placement.angle) {
+            obj.rotate(placement.angle);
+            obj.setCoords();
           }
         }
       }
@@ -963,11 +962,20 @@ export default function FloorPlanEditor({
   function findOpenPosition(canvas: any, preferX: number, preferY: number): { x: number; y: number } {
     const objects = canvas.getObjects().filter((o: any) => o.data && !o.data.isGrid && !o.data.isLighting && !o.data.isLightingOverlay && !o.data.isGuide && !o.data.isRoom);
     const step = GRID_SIZE * 5; // 100px offset per step
+    const canvasW = canvas.getWidth();
+    const canvasH = canvas.getHeight();
     let x = preferX;
     let y = preferY;
     for (let attempt = 0; attempt < 20; attempt++) {
       const snappedX = Math.round(x / GRID_SIZE) * GRID_SIZE;
       const snappedY = Math.round(y / GRID_SIZE) * GRID_SIZE;
+      // Bounds check: keep items within canvas boundaries (with 50px margin)
+      if (snappedX < 50 || snappedX > canvasW - 50 || snappedY < 50 || snappedY > canvasH - 50) {
+        // Skip out-of-bounds positions, continue spiraling
+        x = preferX + step * ((attempt % 4 < 2 ? 1 : -1) * Math.ceil((attempt + 1) / 2));
+        y = preferY + step * ((attempt % 2 === 0 ? 0 : 1) * Math.ceil((attempt + 1) / 2));
+        continue;
+      }
       const tooClose = objects.some((obj: any) => {
         const ox = obj.left || 0;
         const oy = obj.top || 0;
@@ -978,12 +986,15 @@ export default function FloorPlanEditor({
       x = preferX + step * ((attempt % 4 < 2 ? 1 : -1) * Math.ceil((attempt + 1) / 2));
       y = preferY + step * ((attempt % 2 === 0 ? 0 : 1) * Math.ceil((attempt + 1) / 2));
     }
-    return { x: Math.round(x / GRID_SIZE) * GRID_SIZE, y: Math.round(y / GRID_SIZE) * GRID_SIZE };
+    // Clamp final fallback position within canvas bounds
+    const finalX = Math.max(50, Math.min(canvasW - 50, Math.round(x / GRID_SIZE) * GRID_SIZE));
+    const finalY = Math.max(50, Math.min(canvasH - 50, Math.round(y / GRID_SIZE) * GRID_SIZE));
+    return { x: finalX, y: finalY };
   }
 
-  function addFurnitureToCanvas(item: FurnitureItemDef, x?: number, y?: number, skipSave = false) {
+  function addFurnitureToCanvas(item: FurnitureItemDef, x?: number, y?: number, skipSave = false): FabricObject | null {
     const canvas = fabricRef.current;
-    if (!canvas) return;
+    if (!canvas) return null;
     const defaultX = canvas.getWidth() / 2;
     const defaultY = canvas.getHeight() / 2;
     // If no explicit position, find an open spot near center
@@ -1003,8 +1014,8 @@ export default function FloorPlanEditor({
       });
     } else {
       shape = new Rect({
-        width: item.defaultWidth,
-        height: item.defaultHeight,
+        width: item.defaultWidth ?? 40,
+        height: item.defaultHeight ?? 24,
         fill: item.fill,
         stroke: item.stroke,
         strokeWidth: 1.5,
@@ -1016,7 +1027,7 @@ export default function FloorPlanEditor({
     }
 
     // Scale font to fit inside the shape — clamp between 5 and 9
-    const itemWidth = item.defaultWidth || 40;
+    const itemWidth = item.defaultWidth ?? 40;
     const labelFontSize = Math.max(5, Math.min(9, Math.floor(itemWidth / 8)));
 
     const label = new FabricText(item.name, {
@@ -1043,6 +1054,7 @@ export default function FloorPlanEditor({
       triggerAutoSave();
       setShowMobilePalette(false);
     }
+    return group;
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -1247,9 +1259,9 @@ export default function FloorPlanEditor({
     });
   }
 
-  function addFurnitureGroup(group: FurnitureGroup, x?: number, y?: number, skipSave = false) {
+  function addFurnitureGroup(group: FurnitureGroup, x?: number, y?: number, skipSave = false): FabricObject | null {
     const canvas = fabricRef.current;
-    if (!canvas) return;
+    if (!canvas) return null;
     const defaultX = canvas.getWidth() / 2;
     const defaultY = canvas.getHeight() / 2;
     const pos = (x != null && y != null) ? { x, y } : findOpenPosition(canvas, defaultX, defaultY);
@@ -1280,8 +1292,8 @@ export default function FloorPlanEditor({
         });
       } else {
         shape = new Rect({
-          width: item.defaultWidth,
-          height: item.defaultHeight,
+          width: item.defaultWidth ?? 40,
+          height: item.defaultHeight ?? 24,
           fill: item.fill,
           stroke: item.stroke,
           strokeWidth: isChair ? 1 : 1.5,
@@ -1307,7 +1319,7 @@ export default function FloorPlanEditor({
           originX: "center",
           originY: "center",
           angle: entry.angle || 0,
-          data: { furnitureId: item.id, label: item.name },
+          data: { furnitureId: item.id, label: item.name, tableId: uuid() },
         });
         subObjects.push(itemGroup);
       } else {
@@ -1324,7 +1336,7 @@ export default function FloorPlanEditor({
       }
     });
 
-    if (subObjects.length === 0) return;
+    if (subObjects.length === 0) return null;
 
     // Wrap everything in a single group that moves/selects together
     const snappedX = Math.round(centerX / GRID_SIZE) * GRID_SIZE;
@@ -1352,6 +1364,7 @@ export default function FloorPlanEditor({
       triggerAutoSave();
       setShowMobilePalette(false);
     }
+    return combinedGroup;
   }
 
   function handleUpdateLabel(label: string) {
