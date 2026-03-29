@@ -202,6 +202,16 @@ export function usePlannerProfile(): PlannerProfile {
   );
 }
 
+export function usePlannerProfileLoading(): boolean {
+  const [loading, setLoading] = useState(plannerStore.isLoading);
+  useEffect(() => {
+    const check = () => setLoading(plannerStore.isLoading);
+    check();
+    return plannerStore.subscribe(check);
+  }, []);
+  return loading;
+}
+
 // ── Inquiry hooks ──
 
 function inqSubscribeAndHydrate(cb: () => void) {
