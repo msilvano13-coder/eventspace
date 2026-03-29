@@ -13,13 +13,21 @@ import {
   Copy,
   ClipboardPaste,
   Magnet,
+  Save,
+  Check,
+  AlertCircle,
 } from "lucide-react";
+
+/** Rotation snap angles the user can cycle through */
+export const ROTATION_SNAP_OPTIONS = [15, 30, 45, 90] as const;
+export type RotationSnapValue = (typeof ROTATION_SNAP_OPTIONS)[number] | false;
 
 interface Props {
   snapEnabled: boolean;
   onToggleSnap: () => void;
-  rotationSnap: boolean;
-  onToggleRotationSnap: () => void;
+  rotationSnap: RotationSnapValue;
+  onCycleRotationSnap: () => void;
+  onLayoutTemplate: () => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onUndo: () => void;
@@ -35,13 +43,16 @@ interface Props {
   onCopy: () => void;
   onPaste: () => void;
   canPaste: boolean;
+  onManualSave: () => void;
+  saveStatus: "idle" | "saving" | "saved" | "error";
 }
 
 export default function Toolbar({
   snapEnabled,
   onToggleSnap,
   rotationSnap,
-  onToggleRotationSnap,
+  onCycleRotationSnap,
+  onLayoutTemplate,
   onZoomIn,
   onZoomOut,
   onUndo,
@@ -57,6 +68,8 @@ export default function Toolbar({
   onCopy,
   onPaste,
   canPaste,
+  onManualSave,
+  saveStatus,
 }: Props) {
   return (
     <div className="h-11 bg-white border-b border-stone-200 flex items-center px-3 gap-1 overflow-x-auto flex-nowrap">
@@ -84,18 +97,26 @@ export default function Toolbar({
         <LayoutTemplate size={13} />
         <span>Room</span>
       </button>
+      <button
+        onClick={onLayoutTemplate}
+        title="Start from a layout template"
+        className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-stone-500 hover:text-violet-600 hover:bg-violet-50 rounded-md transition-colors shrink-0 border border-stone-200 hover:border-violet-200"
+      >
+        <Grid3X3 size={13} />
+        <span>Layout</span>
+      </button>
       <Divider />
       <ToolButton
         icon={RotateCw}
         onClick={onRotateSelected}
         disabled={!hasSelection}
-        tooltip={rotationSnap ? "Rotate 15°" : "Rotate 45°"}
+        tooltip={rotationSnap ? `Rotate ${rotationSnap}°` : "Rotate 45°"}
       />
       <ToolButton
         icon={Magnet}
-        onClick={onToggleRotationSnap}
-        active={rotationSnap}
-        tooltip={rotationSnap ? "Rotation Snap: 15°" : "Rotation Snap: Off"}
+        onClick={onCycleRotationSnap}
+        active={rotationSnap !== false}
+        tooltip={rotationSnap ? `Snap: ${rotationSnap}°  (click to cycle)` : "Snap: Off  (click to enable)"}
       />
       <ToolButton
         icon={Trash2}
@@ -118,6 +139,23 @@ export default function Toolbar({
         tooltip="Paste (Ctrl+V)"
       />
       <div className="flex-1" />
+      <button
+        onClick={onManualSave}
+        title={saveStatus === "saved" ? "Saved!" : saveStatus === "error" ? "Save failed — try again" : "Save Now"}
+        className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-colors shrink-0 border ${
+          saveStatus === "saved"
+            ? "text-emerald-600 bg-emerald-50 border-emerald-200"
+            : saveStatus === "error"
+              ? "text-red-500 bg-red-50 border-red-200"
+              : saveStatus === "saving"
+                ? "text-stone-400 border-stone-200 cursor-wait"
+                : "text-stone-500 hover:text-rose-600 hover:bg-rose-50 border-stone-200 hover:border-rose-200"
+        }`}
+      >
+        {saveStatus === "saved" ? <Check size={13} /> : saveStatus === "error" ? <AlertCircle size={13} /> : <Save size={13} />}
+        <span>{saveStatus === "saved" ? "Saved" : saveStatus === "error" ? "Error" : saveStatus === "saving" ? "Saving…" : "Save"}</span>
+      </button>
+      <Divider />
       <ToolButton icon={Download} onClick={onExport} tooltip="Export PNG" />
     </div>
   );

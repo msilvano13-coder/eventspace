@@ -129,11 +129,12 @@ class EventStore {
           if (full) {
             // Use current event state (not stale capture) to preserve any optimistic updates
             const current = this.events.get(id) || evt;
-            // Only merge core fields — skip sub-entity keys so we don't overwrite
-            // data that was loaded by ensureSubEntity with empty arrays from eventFromRow
+            // Merge core fields + floor plans (which are fetched as part of core).
+            // Skip other sub-entity keys so we don't overwrite data loaded by ensureSubEntity.
+            const CORE_SUB_ENTITIES = new Set(["floorPlans"]);
             const coreFields: Record<string, unknown> = {};
             for (const [k, v] of Object.entries(full)) {
-              if (!SUB_ENTITY_KEYS.has(k)) {
+              if (!SUB_ENTITY_KEYS.has(k) || CORE_SUB_ENTITIES.has(k)) {
                 coreFields[k] = v;
               }
             }

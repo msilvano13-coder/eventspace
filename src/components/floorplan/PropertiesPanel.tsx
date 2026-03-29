@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Trash2 } from "lucide-react";
 import { pxToFeetInches } from "@/lib/constants";
 import { getFurnitureById } from "./furniture-items";
+import type { RotationSnapValue } from "./Toolbar";
 
 export interface SelectedObjectInfo {
   label: string;
@@ -21,7 +22,7 @@ interface Props {
   onUpdateAngle: (angle: number) => void;
   onDelete: () => void;
   mobile?: boolean;
-  rotationSnap?: boolean;
+  rotationSnap?: RotationSnapValue;
 }
 
 export default function PropertiesPanel({
@@ -30,7 +31,7 @@ export default function PropertiesPanel({
   onUpdateAngle,
   onDelete,
   mobile,
-  rotationSnap = false,
+  rotationSnap = false as RotationSnapValue,
 }: Props) {
   const [label, setLabel] = useState("");
 
@@ -103,14 +104,14 @@ export default function PropertiesPanel({
 
       <div>
         <label className="block text-[10px] font-medium text-stone-400 uppercase tracking-wider mb-1.5">
-          Rotation{rotationSnap ? " (15° snap)" : ""}
+          Rotation{rotationSnap ? ` (${rotationSnap}° snap)` : ""}
         </label>
         <input
           type="range"
           min={0}
           max={360}
-          step={rotationSnap ? 15 : 1}
-          value={rotationSnap ? Math.round(selected.angle / 15) * 15 : selected.angle}
+          step={rotationSnap ? rotationSnap : 1}
+          value={rotationSnap ? Math.round(selected.angle / rotationSnap) * rotationSnap : selected.angle}
           onChange={(e) => onUpdateAngle(Number(e.target.value))}
           className="w-full accent-rose-400"
         />

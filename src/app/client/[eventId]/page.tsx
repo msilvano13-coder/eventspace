@@ -59,7 +59,7 @@ const INV_STATUS_COLORS: Record<string, string> = {
 export default function ClientPortalPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
-  useEventSubEntities(eventId, ["timeline", "schedule", "vendors", "guests", "messages"]);
+  useEventSubEntities(eventId, ["timeline", "schedule", "vendors", "guests", "messages", "contracts", "invoices", "budget", "files", "questionnaires", "discoveredVendors"]);
   const { updateEvent } = useStoreActions();
   const allQuestionnaires = useQuestionnaires();
   const profile = usePlannerProfile();
@@ -317,6 +317,53 @@ export default function ClientPortalPage() {
           event={event}
           onUpdate={(budget) => updateEvent(event.id, { budget })}
         />
+
+        {/* Assigned Vendors (wedding team) */}
+        {(event.vendors ?? []).length > 0 && (
+          <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
+            <div className="flex items-center gap-2 px-5 pt-5 pb-4 border-b border-stone-100">
+              <Users size={15} className="text-rose-400" />
+              <h2 className="font-heading font-semibold text-stone-800">Your Vendors</h2>
+              <span className="text-xs text-stone-400 ml-1">({(event.vendors ?? []).length})</span>
+            </div>
+            <div className="divide-y divide-stone-100">
+              {(event.vendors ?? []).map((vendor) => (
+                <div key={vendor.id} className="px-5 py-4">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <h3 className="text-sm font-semibold text-stone-800">{vendor.name}</h3>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-rose-50 text-rose-500 capitalize shrink-0">
+                          {vendor.category}
+                        </span>
+                      </div>
+                      {vendor.contact && vendor.contact !== vendor.name && (
+                        <p className="text-xs text-stone-500">Contact: {vendor.contact}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
+                    {vendor.phone && (
+                      <a href={`tel:${vendor.phone}`} className="flex items-center gap-1.5 text-xs text-stone-500 hover:text-rose-500 transition-colors">
+                        <Phone size={11} className="text-stone-400 shrink-0" />
+                        {vendor.phone}
+                      </a>
+                    )}
+                    {vendor.email && (
+                      <a href={`mailto:${vendor.email}`} className="flex items-center gap-1.5 text-xs text-stone-500 hover:text-rose-500 transition-colors">
+                        <span className="text-stone-400 shrink-0 text-[10px]">✉</span>
+                        {vendor.email}
+                      </a>
+                    )}
+                  </div>
+                  {vendor.notes && (
+                    <p className="text-xs text-stone-400 mt-1.5 italic">{vendor.notes}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Discovered Vendors */}
         {(event.discoveredVendors ?? []).length > 0 && (

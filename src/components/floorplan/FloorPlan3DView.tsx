@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback, useEffect, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Text } from "@react-three/drei";
+import { OrbitControls, Text, Environment, ContactShadows } from "@react-three/drei";
 import { Color, Vector2, Shape, DoubleSide } from "three";
 import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 import { LightingZone } from "@/lib/types";
@@ -59,6 +59,52 @@ const FURNITURE_HEIGHTS: Record<string, number> = {
 
 function getHeight(furnitureId: string): number {
   return FURNITURE_HEIGHTS[furnitureId] ?? 30;
+}
+
+/** PBR material properties per furniture category */
+interface PBRProps {
+  roughness: number;
+  metalness: number;
+}
+
+const FURNITURE_PBR: Record<string, PBRProps> = {
+  // Wood tables — warm, slightly rough
+  "round-table-60": { roughness: 0.7, metalness: 0.0 },
+  "round-table-72": { roughness: 0.7, metalness: 0.0 },
+  "rect-table-6": { roughness: 0.7, metalness: 0.0 },
+  "rect-table-8": { roughness: 0.7, metalness: 0.0 },
+  "sweetheart-table": { roughness: 0.6, metalness: 0.0 },
+  "gift-table": { roughness: 0.7, metalness: 0.0 },
+  "cake-table": { roughness: 0.6, metalness: 0.0 },
+  "guest-book-table": { roughness: 0.7, metalness: 0.0 },
+  // High-gloss surfaces
+  "cocktail-table": { roughness: 0.3, metalness: 0.1 },
+  "high-top-table": { roughness: 0.3, metalness: 0.1 },
+  // Seating — fabric/upholstery
+  "chair": { roughness: 0.85, metalness: 0.0 },
+  "sofa": { roughness: 0.9, metalness: 0.0 },
+  // Metal/service items
+  "bar": { roughness: 0.4, metalness: 0.3 },
+  "buffet": { roughness: 0.5, metalness: 0.1 },
+  "dj-booth": { roughness: 0.5, metalness: 0.2 },
+  // Flat surfaces
+  "dance-floor": { roughness: 0.2, metalness: 0.05 },
+  "stage": { roughness: 0.6, metalness: 0.0 },
+  "aisle-runner": { roughness: 0.95, metalness: 0.0 },
+  // Structures
+  "photo-booth": { roughness: 0.5, metalness: 0.1 },
+  "arch": { roughness: 0.6, metalness: 0.0 },
+  "draping": { roughness: 0.95, metalness: 0.0 },
+  // Service stations
+  "dessert-station": { roughness: 0.5, metalness: 0.1 },
+  "coffee-station": { roughness: 0.4, metalness: 0.2 },
+  // Decor
+  "flower-arrangement": { roughness: 0.9, metalness: 0.0 },
+  "uplighting": { roughness: 0.3, metalness: 0.5 },
+};
+
+function getPBR(furnitureId: string): PBRProps {
+  return FURNITURE_PBR[furnitureId] ?? { roughness: 0.6, metalness: 0.0 };
 }
 
 // ── Color cache (avoid allocating THREE.Color on every render, bounded to prevent leaks) ──
@@ -242,6 +288,7 @@ const S = SCALE; // alias for compact geometry args
 function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: number; originY: number }) {
   const h3d = getHeight(obj.furnitureId) * S;
   const halfH = h3d / 2;
+  const pbr = getPBR(obj.furnitureId);
 
   // Convert 2D canvas position to 3D world position
   const posX = (obj.x - originX) * S;
@@ -257,11 +304,11 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
       <group position={[posX, halfH, posZ]} rotation={[0, rotY, 0]}>
         <mesh position={[0, halfH - 1 * S, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[radius, radius, 2 * S, 32]} />
-          <meshStandardMaterial color={fillColor} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
         <mesh position={[0, -halfH / 2, 0]} castShadow>
           <cylinderGeometry args={[1.5 * S, 2 * S, h3d - 2 * S, 8]} />
-          <meshStandardMaterial color={strokeColor} />
+          <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.1} />
         </mesh>
         <Text
           position={[0, h3d + 2 * S, 0]}
@@ -287,7 +334,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
       <group position={[posX, 0.5 * S, posZ]} rotation={[0, rotY, 0]}>
         <mesh receiveShadow>
           <boxGeometry args={[w, 1 * S, d]} />
-          <meshStandardMaterial color={fillColor} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
       </group>
     );
@@ -305,17 +352,17 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
     <group position={[posX, halfH, posZ]} rotation={[0, rotY, 0]}>
       <mesh position={[0, halfH - 1 * S, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, 2 * S, d]} />
-        <meshStandardMaterial color={fillColor} />
+        <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
       </mesh>
       {legPositions.map((pos, i) => (
         <mesh key={i} position={pos} castShadow>
           <boxGeometry args={[1.5 * S, h3d - 2 * S, 1.5 * S]} />
-          <meshStandardMaterial color={strokeColor} />
+          <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.1} />
         </mesh>
       ))}
       <Text
         position={[0, h3d + 2 * S, 0]}
-        fontSize={0.12}
+        fontSize={0.25}
         color="#57534e"
         anchorX="center"
         anchorY="bottom"
@@ -342,7 +389,7 @@ function RoomFloor({ obj, originX, originY }: { obj: ParsedObject; originX: numb
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
       <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
-      <meshStandardMaterial color="#faf7f0" side={DoubleSide} />
+      <meshStandardMaterial color="#faf7f0" side={DoubleSide} roughness={0.85} metalness={0} />
     </mesh>
   );
 }
@@ -417,29 +464,49 @@ function FloorPlan3DScene({
 
   return (
     <>
+      {/* Environment map for realistic reflections */}
+      <Environment preset="apartment" background={false} />
+
+      {/* Fog for depth */}
+      <fog attach="fog" args={["#e7e5e4", maxDim * 1.5, maxDim * 4]} />
+
       {/* Scene lighting */}
-      <ambientLight intensity={lightingEnabled ? 0.15 : 0.5} />
+      <ambientLight intensity={lightingEnabled ? 0.15 : 0.4} />
       <directionalLight
         position={[10, 20, 10]}
-        intensity={lightingEnabled ? 0.3 : 1}
+        intensity={lightingEnabled ? 0.3 : 0.8}
         castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
         shadow-camera-left={-maxDim}
         shadow-camera-right={maxDim}
         shadow-camera-top={maxDim}
         shadow-camera-bottom={-maxDim}
+        shadow-bias={-0.0001}
       />
       {/* Fill light from opposite side */}
-      <directionalLight position={[-8, 12, -8]} intensity={0.2} />
+      <directionalLight position={[-8, 12, -8]} intensity={0.15} />
+      {/* Rim light for edge definition */}
+      <directionalLight position={[0, 8, -15]} intensity={0.1} />
 
       {/* Ground plane (fallback if no room) */}
       {rooms.length === 0 && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
           <planeGeometry args={[maxDim * 1.5, maxDim * 1.5]} />
-          <meshStandardMaterial color="#e7e5e4" />
+          <meshStandardMaterial color="#e7e5e4" roughness={0.9} metalness={0} />
         </mesh>
       )}
+
+      {/* Contact shadows for soft ground shadows */}
+      <ContactShadows
+        position={[0, -0.005, 0]}
+        opacity={0.35}
+        scale={maxDim * 1.5}
+        blur={2.5}
+        far={maxDim}
+        resolution={512}
+        color="#8a7a6a"
+      />
 
       {/* Room floor */}
       {rooms.map((room, i) => (
@@ -542,7 +609,7 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
         <Canvas
           shadows
           camera={camConfig}
-          dpr={[1, 1.5]}
+          dpr={[1, 2]}
           onCreated={handleCreated}
           gl={{ antialias: true, powerPreference: "default" }}
         >

@@ -80,10 +80,14 @@ export default function FloorPlanPage() {
 
   const handleSave = useCallback(
     (json: string) => {
-      if (!event || !resolvedPlanId) return;
+      if (!event || !resolvedPlanId) {
+        console.warn("[FloorPlan] handleSave skipped: event=", !!event, "resolvedPlanId=", resolvedPlanId);
+        return;
+      }
       const updated = validPlans.map((fp) =>
         fp.id === resolvedPlanId ? { ...fp, json } : fp
       );
+      console.log("[FloorPlan] handleSave: saving", updated.length, "plans, active=", resolvedPlanId, "json length=", json.length);
       updateEvent(eventId, { floorPlans: updated });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps

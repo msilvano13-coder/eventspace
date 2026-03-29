@@ -14,7 +14,7 @@ import {
   ActiveSelection,
   util,
 } from "fabric";
-import { GRID_SIZE, ROOM_PRESETS, FurnitureGroup } from "@/lib/constants";
+import { GRID_SIZE, ROOM_PRESETS, FURNITURE_GROUPS, FurnitureGroup } from "@/lib/constants";
 import {
   unwrapCanvasJSON,
   serializeFloorPlan,
@@ -29,9 +29,10 @@ FabricObject.prototype.toObject = function (propertiesToInclude?: string[]) {
 import { FurnitureItemDef, LightingZone, RoomPreset } from "@/lib/types";
 import { getFurnitureById } from "./furniture-items";
 import FurniturePalette from "./FurniturePalette";
-import Toolbar from "./Toolbar";
+import Toolbar, { RotationSnapValue, ROTATION_SNAP_OPTIONS } from "./Toolbar";
 import PropertiesPanel from "./PropertiesPanel";
 import { Plus, X } from "lucide-react";
+import { LAYOUT_TEMPLATES, LayoutTemplate } from "@/lib/layout-templates";
 
 interface Props {
   eventId: string;
@@ -182,13 +183,14 @@ export default function FloorPlanEditor({
   const containerRef = useRef<HTMLDivElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
   const [snapEnabled, setSnapEnabled] = useState(true);
-  const [rotationSnap, setRotationSnap] = useState(true);
+  const [rotationSnap, setRotationSnap] = useState<RotationSnapValue>(15);
   const [zoom, setZoom] = useState(1);
   const [selectedInfo, setSelectedInfo] = useState<SelectedInfo | null>(null);
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
   const [showMobilePalette, setShowMobilePalette] = useState(false);
   const [showRoomPicker, setShowRoomPicker] = useState(false);
+  const [showLayoutPicker, setShowLayoutPicker] = useState(false);
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLoadingRef = useRef(false);
@@ -198,6 +200,7 @@ export default function FloorPlanEditor({
   const clipboardRef = useRef<any[]>([]);
   const [canPaste, setCanPaste] = useState(false);
   const angleGuideRef = useRef<{ line: FabricObject; text: FabricText } | null>(null);
+  const isDraggingLightRef = useRef(false);
 
   // ── Refs for latest values (used in closures) ──
   const onSaveRef = useRef(onSave);
@@ -261,18 +264,47 @@ export default function FloorPlanEditor({
     }, 150);
   }, [getCanvasJSON]);
 
+  // ── Save status for manual save feedback ──
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const saveStatusTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** Core save logic — used by both auto-save and manual save */
+  const doSave = useCallback(() => {
+    const json = getCanvasJSON();
+    if (!json) {
+      console.warn("[FloorPlan] doSave: getCanvasJSON returned null");
+      return false;
+    }
+    const serialized = serializeFloorPlan(json as Record<string, unknown>);
+    if (!serialized) {
+      console.warn("[FloorPlan] doSave: serializeFloorPlan returned null (validation failed)");
+      return false;
+    }
+    onSaveRef.current(serialized);
+    return true;
+  }, [getCanvasJSON]);
+
   // ── Auto-save with schema versioning + validation ──
   const triggerAutoSave = useCallback(() => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     saveTimeoutRef.current = setTimeout(() => {
-      const json = getCanvasJSON();
-      if (!json) return;
-      const serialized = serializeFloorPlan(json as Record<string, unknown>);
-      if (serialized) {
-        onSaveRef.current(serialized);
-      }
+      doSave();
     }, 800);
-  }, [getCanvasJSON]);
+  }, [doSave]);
+
+  /** Manual save — immediate, with visual feedback */
+  const handleManualSave = useCallback(() => {
+    // Flush any pending auto-save
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    setSaveStatus("saving");
+    const ok = doSave();
+    setSaveStatus(ok ? "saved" : "error");
+    if (saveStatusTimeoutRef.current) clearTimeout(saveStatusTimeoutRef.current);
+    saveStatusTimeoutRef.current = setTimeout(() => setSaveStatus("idle"), 2500);
+  }, [doSave]);
 
   // ── Grid: create once, reposition on resize ──
   function createGrid(canvas: Canvas, w: number, h: number) {
@@ -320,6 +352,11 @@ export default function FloorPlanEditor({
   const syncLightingToCanvas = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
+
+    // Skip full recreate while user is actively dragging a light —
+    // the object:moving handler already updates the position in real-time.
+    // A full recreate would destroy the drag target mid-drag.
+    if (isDraggingLightRef.current) return;
 
     const w = canvas.getWidth();
     const h = canvas.getHeight();
@@ -396,6 +433,7 @@ export default function FloorPlanEditor({
 
       // Lighting zones: snap to furniture or convert pixel position to percentage
       if (obj.data?.isLighting) {
+        isDraggingLightRef.current = true;
         const cw = canvas.getWidth();
         const ch = canvas.getHeight();
         const zoneId = obj.data.zoneId;
@@ -449,23 +487,23 @@ export default function FloorPlanEditor({
       });
     });
 
-    // ── Rotation snapping (15° increments) + visual angle guide ──
-    const ROTATION_SNAP_ANGLE = 15;
+    // ── Rotation snapping (configurable angle) + visual angle guide ──
     const GUIDE_LINE_LEN = 60;
 
     canvas.on("object:rotating", (e) => {
       const obj = e.target;
       if (!obj || obj.data?.isLighting) return;
 
-      if (rotationSnapRef.current) {
+      const snapAngle = rotationSnapRef.current;
+      if (snapAngle) {
         const raw = obj.angle || 0;
-        const snapped = Math.round(raw / ROTATION_SNAP_ANGLE) * ROTATION_SNAP_ANGLE;
+        const snapped = Math.round(raw / snapAngle) * snapAngle;
         obj.rotate(snapped);
         // Also snap individual objects within ActiveSelection
         if (obj instanceof ActiveSelection) {
           obj.getObjects().forEach((child) => {
             const childRaw = child.angle || 0;
-            child.rotate(Math.round(childRaw / ROTATION_SNAP_ANGLE) * ROTATION_SNAP_ANGLE);
+            child.rotate(Math.round(childRaw / snapAngle) * snapAngle);
           });
         }
       }
@@ -525,7 +563,10 @@ export default function FloorPlanEditor({
       }
     };
     canvas.on("selection:cleared", clearAngleGuide);
-    canvas.on("mouse:up", clearAngleGuide);
+    canvas.on("mouse:up", () => {
+      clearAngleGuide();
+      isDraggingLightRef.current = false;
+    });
 
     const updateSelection = () => {
       const active = canvas.getActiveObject();
@@ -601,6 +642,7 @@ export default function FloorPlanEditor({
 
       // If lighting zone was moved, sync position
       if (obj?.data?.isLighting) {
+        isDraggingLightRef.current = false;
         const cw = canvas.getWidth();
         const ch = canvas.getHeight();
         const zoneId = obj.data.zoneId;
@@ -611,6 +653,8 @@ export default function FloorPlanEditor({
             lightingZonesRef.current.map((z) => (z.id === zoneId ? { ...z, x, y } : z))
           );
         }
+        // Now safe to do a full sync to update the visual appearance
+        syncLightingToCanvas();
         return; // Don't push undo or save for lighting changes
       }
 
@@ -676,6 +720,8 @@ export default function FloorPlanEditor({
           canvas.requestRenderAll();
           pushUndo();
           triggerAutoSave();
+        }).catch((err) => {
+          console.error("[FloorPlan] Paste failed:", err);
         });
       }
 
@@ -790,7 +836,7 @@ export default function FloorPlanEditor({
     syncLightingToCanvas();
   }, [lightingZones, lightingEnabled, selectedZoneId, syncLightingToCanvas]);
 
-  function applyRoomPreset(preset: RoomPreset) {
+  function applyRoomPreset(preset: RoomPreset, skipSave = false) {
     const canvas = fabricRef.current;
     if (!canvas) return;
 
@@ -817,10 +863,66 @@ export default function FloorPlanEditor({
     canvas.sendObjectToBack(polygon);
     gridObjectsRef.current.forEach((o) => canvas.sendObjectToBack(o));
 
+    if (!skipSave) {
+      canvas.requestRenderAll();
+      pushUndo();
+      triggerAutoSave();
+      setShowRoomPicker(false);
+    }
+  }
+
+  function applyLayoutTemplate(template: LayoutTemplate) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+
+    // 1. Clear existing furniture (keep grid, lighting, guides)
+    const toRemove = canvas.getObjects().filter((o: any) =>
+      o.data && !o.data.isGrid && !o.data.isLighting && !o.data.isLightingOverlay && !o.data.isGuide && !o.data.isRoom
+    );
+    toRemove.forEach((o: any) => canvas.remove(o));
+
+    // 2. Apply room preset (skipSave — we save once at the end)
+    const roomPreset = ROOM_PRESETS.find((p) => p.id === template.roomPreset);
+    if (roomPreset) {
+      applyRoomPreset(roomPreset, true);
+    }
+
+    // 3. Place all furniture items (skipSave — batch operation)
+    for (const placement of template.placements) {
+      if (placement.isGroup) {
+        const group = FURNITURE_GROUPS.find((g) => g.id === placement.itemId);
+        if (group) {
+          addFurnitureGroup(group, placement.x, placement.y, true);
+          // Apply rotation if specified
+          if (placement.angle) {
+            const objects = canvas.getObjects();
+            const lastObj = objects[objects.length - 1];
+            if (lastObj) {
+              lastObj.rotate(placement.angle);
+              lastObj.setCoords();
+            }
+          }
+        }
+      } else {
+        const item = getFurnitureById(placement.itemId);
+        if (item) {
+          addFurnitureToCanvas(item, placement.x, placement.y, true);
+          if (placement.angle) {
+            const objects = canvas.getObjects();
+            const lastObj = objects[objects.length - 1];
+            if (lastObj) {
+              lastObj.rotate(placement.angle);
+              lastObj.setCoords();
+            }
+          }
+        }
+      }
+    }
+
     canvas.requestRenderAll();
     pushUndo();
     triggerAutoSave();
-    setShowRoomPicker(false);
+    setShowLayoutPicker(false);
   }
 
   function clearRoomShape() {
@@ -856,7 +958,7 @@ export default function FloorPlanEditor({
     return { x: Math.round(x / GRID_SIZE) * GRID_SIZE, y: Math.round(y / GRID_SIZE) * GRID_SIZE };
   }
 
-  function addFurnitureToCanvas(item: FurnitureItemDef, x?: number, y?: number) {
+  function addFurnitureToCanvas(item: FurnitureItemDef, x?: number, y?: number, skipSave = false) {
     const canvas = fabricRef.current;
     if (!canvas) return;
     const defaultX = canvas.getWidth() / 2;
@@ -911,11 +1013,13 @@ export default function FloorPlanEditor({
     });
 
     canvas.add(group);
-    canvas.setActiveObject(group);
-    canvas.requestRenderAll();
-    pushUndo();
-    triggerAutoSave();
-    setShowMobilePalette(false);
+    if (!skipSave) {
+      canvas.setActiveObject(group);
+      canvas.requestRenderAll();
+      pushUndo();
+      triggerAutoSave();
+      setShowMobilePalette(false);
+    }
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -951,6 +1055,9 @@ export default function FloorPlanEditor({
       isLoadingRef.current = false;
       triggerAutoSave();
       syncLightingToCanvas();
+    }).catch((err) => {
+      console.error("[FloorPlan] Undo failed:", err);
+      isLoadingRef.current = false;
     });
   }
 
@@ -970,6 +1077,9 @@ export default function FloorPlanEditor({
       isLoadingRef.current = false;
       triggerAutoSave();
       syncLightingToCanvas();
+    }).catch((err) => {
+      console.error("[FloorPlan] Redo failed:", err);
+      isLoadingRef.current = false;
     });
   }
 
@@ -1056,7 +1166,7 @@ export default function FloorPlanEditor({
     const active = canvas.getActiveObject();
     if (!active || active.data?.isLighting) return;
 
-    const step = rotationSnap ? 15 : 45;
+    const step = rotationSnap ? rotationSnap : 45;
     if (active instanceof ActiveSelection) {
       active.getObjects().forEach((obj) => {
         obj.rotate((obj.angle || 0) + step);
@@ -1109,10 +1219,12 @@ export default function FloorPlanEditor({
       canvas.requestRenderAll();
       pushUndo();
       triggerAutoSave();
+    }).catch((err) => {
+      console.error("[FloorPlan] Paste failed:", err);
     });
   }
 
-  function addFurnitureGroup(group: FurnitureGroup, x?: number, y?: number) {
+  function addFurnitureGroup(group: FurnitureGroup, x?: number, y?: number, skipSave = false) {
     const canvas = fabricRef.current;
     if (!canvas) return;
     const defaultX = canvas.getWidth() / 2;
@@ -1209,11 +1321,13 @@ export default function FloorPlanEditor({
     });
 
     canvas.add(combinedGroup);
-    canvas.setActiveObject(combinedGroup);
-    canvas.requestRenderAll();
-    pushUndo();
-    triggerAutoSave();
-    setShowMobilePalette(false);
+    if (!skipSave) {
+      canvas.setActiveObject(combinedGroup);
+      canvas.requestRenderAll();
+      pushUndo();
+      triggerAutoSave();
+      setShowMobilePalette(false);
+    }
   }
 
   function handleUpdateLabel(label: string) {
@@ -1246,7 +1360,14 @@ export default function FloorPlanEditor({
         snapEnabled={snapEnabled}
         onToggleSnap={() => setSnapEnabled(!snapEnabled)}
         rotationSnap={rotationSnap}
-        onToggleRotationSnap={() => setRotationSnap(!rotationSnap)}
+        onCycleRotationSnap={() => {
+          setRotationSnap((prev) => {
+            const opts: (RotationSnapValue)[] = [...ROTATION_SNAP_OPTIONS, false];
+            const idx = opts.indexOf(prev);
+            return opts[(idx + 1) % opts.length];
+          });
+        }}
+        onLayoutTemplate={() => setShowLayoutPicker(true)}
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onUndo={handleUndo}
@@ -1262,6 +1383,8 @@ export default function FloorPlanEditor({
         onCopy={handleCopy}
         onPaste={handlePaste}
         canPaste={canPaste}
+        onManualSave={handleManualSave}
+        saveStatus={saveStatus}
       />
       <div className="flex flex-1 overflow-hidden relative">
         {/* Desktop side panels */}
@@ -1334,11 +1457,62 @@ export default function FloorPlanEditor({
               onUpdateLabel={handleUpdateLabel}
               onUpdateAngle={handleUpdateAngle}
               onDelete={handleDeleteSelected}
+              rotationSnap={rotationSnap}
               mobile
             />
           </div>
         )}
       </div>
+
+      {/* ─── Layout Template Picker Modal ─── */}
+      {showLayoutPicker && (
+        <>
+          <div
+            className="fixed inset-0 bg-stone-900/30 backdrop-blur-sm z-50"
+            onClick={() => setShowLayoutPicker(false)}
+          />
+          <div className="fixed inset-x-0 bottom-0 md:inset-0 md:flex md:items-center md:justify-center z-50 pointer-events-none">
+            <div className="pointer-events-auto w-full md:w-auto md:min-w-[560px] md:max-w-2xl bg-white rounded-t-2xl md:rounded-2xl shadow-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-stone-100">
+                <div className="w-10 h-1 bg-stone-300 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-2 md:hidden" />
+                <h2 className="font-heading text-base font-semibold text-stone-800 pt-1 md:pt-0">
+                  Layout Templates
+                </h2>
+                <button
+                  onClick={() => setShowLayoutPicker(false)}
+                  className="text-stone-400 hover:text-stone-600 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-5">
+                <p className="text-xs text-stone-400 mb-4">
+                  Choose a pre-built layout to quickly set up your floor plan. This will replace existing furniture.
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {LAYOUT_TEMPLATES.map((template) => (
+                    <button
+                      key={template.id}
+                      onClick={() => applyLayoutTemplate(template)}
+                      className="group flex flex-col gap-1.5 p-4 rounded-xl border border-stone-200 hover:border-violet-300 hover:bg-violet-50/40 transition-all active:scale-[0.98] text-left"
+                    >
+                      <span className="text-sm font-semibold text-stone-700 group-hover:text-violet-700 transition-colors">
+                        {template.name}
+                      </span>
+                      <span className="text-xs text-stone-400 group-hover:text-stone-500 leading-relaxed">
+                        {template.description}
+                      </span>
+                      <span className="text-[10px] text-stone-300 mt-1">
+                        {template.placements.length} items
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ─── Room Shape Picker Modal ─── */}
       {showRoomPicker && (
