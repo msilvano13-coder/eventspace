@@ -1,11 +1,11 @@
 # EventSpace Handoff — March 29, 2026
 
-## Current State: Phase 3 + Client Portal Fixes — Deployed
+## Current State: Phase 3 + Client Portal Fixes + 3D Placement Fix — Deployed
 All code committed, pushed, deployed to Vercel production.
-- **Latest commit:** `81fd13f` — Phase 3: rotation snapping, layout templates, 3D polish + client portal fixes
+- **Latest commit:** `df4a8f0` — Fix 3D view furniture placement: negate room floor Z to match furniture coordinates
 - **Branch:** `main`
 - **Build:** Clean
-- **Deploy:** `eventspace-k23dvxljn-msilvano13-coders-projects.vercel.app`
+- **Deploy:** `eventspace-19lw1wfrf-msilvano13-coders-projects.vercel.app`
 
 ---
 
@@ -39,6 +39,12 @@ All code committed, pushed, deployed to Vercel production.
 - Scene fog for depth
 - Shadow map resolution: 1024 → 2048, DPR: 1.5 → 2
 - Rim light added, rect label font size increased
+
+**Bug Fix: 3D furniture placement mirrored within room**
+- File: `FloorPlan3DView.tsx` — `RoomFloor` component
+- Root cause: The `RoomFloor` Shape (2D XY plane) is rotated `-π/2` around the X axis to lay flat, which maps Shape Y → World **-Z**. But furniture uses `posZ = +(canvasY - originY)`, mapping canvas Y → World **+Z**. This Z-axis flip caused furniture to appear at mirrored positions relative to the room floor.
+- Fix: Negate the Y component in room shape points: `-(y + obj.y - originY) * S`
+- Also removed temporary debug console.log statements
 
 #### Critical Bug Fixes
 
@@ -171,6 +177,10 @@ Page renders → useEvent(id)        → store.getById(id)
 
 | Commit | Description |
 |--------|-------------|
+| `df4a8f0` | Fix 3D view furniture placement: room floor Z-axis was flipped relative to furniture |
+| `89f0af8` | Fix layout templates overflow and improve 3D furniture rendering |
+| `37074ba` | Show loading spinner instead of 'Event not found' during hydration |
+| `2f4d937` | Update handoff doc with Phase 3 + client portal fixes |
 | `81fd13f` | Phase 3: rotation snapping, layout templates, 3D polish + client portal fixes |
 | `e122939` | Improve 3D view scale to match floor plan proportions |
 | `8d5ad4e` | Fix 5 floor plan UX/UI issues from QA audit |
