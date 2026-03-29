@@ -20,7 +20,7 @@ interface Props {
   relationships?: GuestRelationship[];
 }
 
-/** Parse floor plan JSON to extract table objects */
+/** Parse floor plan JSON to extract table objects with unique labels */
 function extractTables(json: string | null): TableInfo[] {
   if (!json) return [];
   try {
@@ -34,6 +34,19 @@ function extractTables(json: string | null): TableInfo[] {
       const catalogItem = FURNITURE_CATALOG.find((f) => f.id === data.furnitureId);
       if (catalogItem && catalogItem.category === "table") {
         tables.push({ label: data.label || catalogItem.name, furnitureId: data.furnitureId, maxSeats: catalogItem.maxSeats ?? 0 });
+      }
+    }
+    // Ensure unique labels — duplicate labels break the seating algorithm's Map
+    const labelCounts = new Map<string, number>();
+    for (const t of tables) {
+      labelCounts.set(t.label, (labelCounts.get(t.label) ?? 0) + 1);
+    }
+    const labelIdx = new Map<string, number>();
+    for (const t of tables) {
+      if ((labelCounts.get(t.label) ?? 0) > 1) {
+        const idx = (labelIdx.get(t.label) ?? 0) + 1;
+        labelIdx.set(t.label, idx);
+        t.label = `${t.label} #${idx}`;
       }
     }
     return tables;
@@ -79,15 +92,27 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
   function runAutoSeat() {
     const seatableTables: TableSlot[] = tables
       .filter((t) => t.maxSeats > 0)
-      .map((t) => ({ label: t.label, maxSeats: t.maxSeats }));
+      .map((t) => {
+        // Subtract already-occupied seats so algorithm knows remaining capacity
+        const occupied = headCount(t.label);
+        return { label: t.label, maxSeats: Math.max(0, t.maxSeats - occupied) };
+      })
+      .filter((t) => t.maxSeats > 0); // Only tables with remaining capacity
 
     if (seatableTables.length === 0) return;
 
     const relationships: GuestRelationship[] = relsProp ?? [];
 
-    const result = autoSeat(guests, seatableTables, relationships);
+    // Only pass unassigned guests to the algorithm
+    const unassignedGuests = guests.filter((g) => {
+      if (g.rsvp !== "accepted") return false;
+      return !g.tableAssignment || !tables.some((t) => t.label === g.tableAssignment);
+    });
 
-    // Apply assignments
+    // Build a fake guest list with only unassigned guests (all marked accepted)
+    const result = autoSeat(unassignedGuests, seatableTables, relationships);
+
+    // Apply assignments — only update guests who got new assignments
     const updated = guests.map((g) => {
       const table = result.assignments.get(g.id);
       return table ? { ...g, tableAssignment: table } : g;
@@ -129,7 +154,10 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
   }
 
   const totalCapacity = tables.reduce((sum, t) => sum + t.maxSeats, 0);
-  const totalSeated = acceptedGuests.reduce((sum, g) => sum + 1 + (g.plusOne ? 1 : 0), 0);
+  const assignedGuests = acceptedGuests.filter(
+    (g) => g.tableAssignment && tables.some((t) => t.label === g.tableAssignment)
+  );
+  const totalSeated = assignedGuests.reduce((sum, g) => sum + 1 + (g.plusOne ? 1 : 0), 0);
 
   return (
     <div className="w-72 h-full bg-white border-l border-stone-200 flex-shrink-0 overflow-y-auto">
