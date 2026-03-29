@@ -12,7 +12,6 @@ import {
   Clock,
   Users,
   Store,
-  Wallet,
   Palette,
   CheckSquare,
   Check,
@@ -20,12 +19,6 @@ import {
   Image,
   Eye,
 } from "lucide-react";
-import { VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
-
-function fmtCurrency(n: number) {
-  return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
-}
-
 function fmt12(time: string) {
   const [h, m] = time.split(":").map(Number);
   const period = h >= 12 ? "PM" : "AM";
@@ -55,7 +48,7 @@ export default function VendorPortalPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
   const loading = useEventsLoading();
-  useEventSubEntities(eventId, ["timeline", "schedule", "vendors", "guests", "budget", "files"]);
+  useEventSubEntities(eventId, ["timeline", "schedule", "vendors", "guests", "files"]);
   const profile = usePlannerProfile();
 
   if (loading) return <EventLoader />;
@@ -76,10 +69,6 @@ export default function VendorPortalPage() {
   const schedule = event.schedule ?? [];
   const todos = [...(event.timeline ?? [])].sort((a, b) => a.order - b.order);
   const completedCount = todos.filter((t) => t.completed).length;
-  const budgetItems = event.budget ?? [];
-  const totalAllocated = budgetItems.reduce((sum, b) => sum + b.allocated, 0);
-  const totalCommitted = vendors.reduce((s, v) => s + (v.contractTotal ?? 0), 0);
-  const totalPaid = vendors.reduce((s, v) => s + (v.payments ?? []).filter((p: any) => p.paid).reduce((ps: number, p: any) => ps + p.amount, 0), 0);
   const acceptedGuests = guests.filter((g) => g.rsvp === "accepted");
   const totalHeadCount = acceptedGuests.reduce((sum, g) => sum + 1 + (g.plusOne ? 1 : 0), 0);
 
@@ -230,12 +219,12 @@ export default function VendorPortalPage() {
           </div>
         </div>
 
-        {/* Vendors */}
+        {/* Vendor Team — names & contact only, no pricing */}
         {vendors.length > 0 && (
           <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
             <div className="flex items-center gap-2 px-5 pt-5 pb-4 border-b border-stone-100">
               <Store size={15} className="text-orange-400" />
-              <h2 className="font-heading font-semibold text-stone-800 text-sm">Vendors</h2>
+              <h2 className="font-heading font-semibold text-stone-800 text-sm">Vendor Team</h2>
               <span className="text-xs text-stone-400">({vendors.length})</span>
             </div>
             <div className="divide-y divide-stone-50">
@@ -252,56 +241,8 @@ export default function VendorPortalPage() {
                     {vendor.phone && <span>{vendor.phone}</span>}
                     {vendor.email && <span>{vendor.email}</span>}
                   </div>
-                  {vendor.notes && <p className="text-xs text-stone-400 italic mt-1">{vendor.notes}</p>}
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* Budget Overview */}
-        {budgetItems.length > 0 && (
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
-            <div className="flex items-center gap-2 px-5 pt-5 pb-4 border-b border-stone-100">
-              <Wallet size={15} className="text-emerald-500" />
-              <h2 className="font-heading font-semibold text-stone-800 text-sm">Budget</h2>
-            </div>
-            <div className="grid grid-cols-3 gap-3 px-5 py-4 border-b border-stone-100 bg-stone-50/50 text-center">
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium">Allocated</p>
-                <p className="text-sm font-heading font-bold text-stone-800 mt-0.5">{fmtCurrency(totalAllocated)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium">Committed</p>
-                <p className="text-sm font-heading font-bold text-stone-800 mt-0.5">{fmtCurrency(totalCommitted)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium">Paid</p>
-                <p className="text-sm font-heading font-bold text-emerald-600 mt-0.5">{fmtCurrency(totalPaid)}</p>
-              </div>
-            </div>
-            <div className="divide-y divide-stone-100">
-              {budgetItems.map((item) => {
-                const committed = vendors
-                  .filter((v) => VENDOR_TO_BUDGET_CATEGORY[v.category] === item.category)
-                  .reduce((sum, v) => sum + (v.contractTotal ?? 0), 0);
-                const pct = item.allocated > 0 ? Math.min((committed / item.allocated) * 100, 100) : 0;
-                const over = committed > item.allocated;
-                return (
-                  <div key={item.id} className="px-5 py-3">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-sm font-medium text-stone-700">{item.category}</span>
-                      <span className="text-xs text-stone-400">{fmtCurrency(committed)} / {fmtCurrency(item.allocated)}</span>
-                    </div>
-                    <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full transition-all ${over ? "bg-red-400" : pct > 80 ? "bg-amber-400" : "bg-emerald-400"}`}
-                        style={{ width: `${Math.min(pct, 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
             </div>
           </div>
         )}
