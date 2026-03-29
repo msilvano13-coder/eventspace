@@ -269,10 +269,10 @@ export default function FloorPlanEditor({
       if (!json) return;
       const serialized = serializeFloorPlan(json as Record<string, unknown>);
       if (serialized) {
-        onSave(serialized);
+        onSaveRef.current(serialized);
       }
     }, 800);
-  }, [onSave, getCanvasJSON]);
+  }, [getCanvasJSON]);
 
   // ── Grid: create once, reposition on resize ──
   function createGrid(canvas: Canvas, w: number, h: number) {

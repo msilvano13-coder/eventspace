@@ -60,23 +60,35 @@ export default function FloorPlanPage() {
     fetchGuestRelationships(eventId).then(setGuestRelationships).catch(() => {});
   }, [eventId]);
 
-  // Resolve the effective active plan ID (fallback to first plan)
-  const resolvedPlanId = activePlanId ?? event?.floorPlans?.[0]?.id ?? null;
+  // Filter out any floor plans with non-UUID IDs (legacy bug) and deduplicate by name
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const validPlans = (() => {
+    const uuidPlans = (event?.floorPlans || []).filter((fp) => UUID_RE.test(fp.id));
+    // Keep only the first plan per name (dedup legacy duplicates, prefer ones with saved JSON)
+    const seen = new Map<string, typeof uuidPlans[0]>();
+    for (const fp of uuidPlans) {
+      const existing = seen.get(fp.name);
+      if (!existing || (!existing.json && fp.json)) {
+        seen.set(fp.name, fp);
+      }
+    }
+    return Array.from(seen.values());
+  })();
+
+  // Resolve the effective active plan ID (fallback to first valid plan)
+  const resolvedPlanId = activePlanId ?? validPlans[0]?.id ?? null;
 
   const handleSave = useCallback(
     (json: string) => {
       if (!event || !resolvedPlanId) return;
-      const updated = event.floorPlans.map((fp) =>
+      const updated = validPlans.map((fp) =>
         fp.id === resolvedPlanId ? { ...fp, json } : fp
       );
       updateEvent(eventId, { floorPlans: updated });
     },
-    [eventId, resolvedPlanId, updateEvent, event]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [eventId, resolvedPlanId, updateEvent, validPlans]
   );
-
-  // Filter out any floor plans with non-UUID IDs (legacy bug)
-  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const validPlans = (event?.floorPlans || []).filter((fp) => UUID_RE.test(fp.id));
 
   // Auto-create default floor plans if none valid exist (wait for core data from DB)
   useEffect(() => {
