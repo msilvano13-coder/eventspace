@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useEvent, useEventSubEntities, useEventCoreLoaded, useStoreActions, useEventsLoading } from "@/hooks/useStore";
 import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
-import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown, FileDown, Box } from "lucide-react";
+import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown, FileDown, Box, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FloorPlan, Guest, GuestRelationship, LightingZone, createDefaultFloorPlans } from "@/lib/types";
 import { v4 as uuid } from "uuid";
@@ -171,6 +171,17 @@ export default function FloorPlanPage() {
     setShowAddTab(false);
   }
 
+  function deleteTab(planId: string) {
+    if (plans.length <= 1) return; // always keep at least one
+    if (!confirm("Delete this floor plan? This cannot be undone.")) return;
+    const remaining = plans.filter((p) => p.id !== planId);
+    updateEvent(eventId, { floorPlans: remaining });
+    // If we deleted the active plan, switch to the first remaining
+    if (resolvedPlanId === planId) {
+      setActivePlanId(remaining[0]?.id ?? null);
+    }
+  }
+
   return (
     <FloorPlanErrorBoundary>
     <div className="fixed inset-0 z-50 flex flex-col bg-stone-50">
@@ -244,22 +255,32 @@ export default function FloorPlanPage() {
       {/* Floor plan tabs */}
       <div className="bg-white border-b border-stone-200 flex items-center px-2 sm:px-4 overflow-x-auto flex-shrink-0">
         {plans.map((plan) => (
-          <button
-            key={plan.id}
-            onClick={() => { setActivePlanId(plan.id); setSelectedZoneId(null); }}
-            className={`px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
-              plan.id === activePlan?.id
-                ? "border-rose-400 text-rose-600"
-                : "border-transparent text-stone-400 hover:text-stone-600"
-            }`}
-          >
-            {plan.name}
-            {(plan.lightingZones ?? []).length > 0 && showLighting && (
-              <span className="ml-1.5 text-[9px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-semibold">
-                {(plan.lightingZones ?? []).length}
-              </span>
+          <div key={plan.id} className="relative group flex items-center">
+            <button
+              onClick={() => { setActivePlanId(plan.id); setSelectedZoneId(null); }}
+              className={`px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                plan.id === activePlan?.id
+                  ? "border-rose-400 text-rose-600"
+                  : "border-transparent text-stone-400 hover:text-stone-600"
+              }`}
+            >
+              {plan.name}
+              {(plan.lightingZones ?? []).length > 0 && showLighting && (
+                <span className="ml-1.5 text-[9px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full font-semibold">
+                  {(plan.lightingZones ?? []).length}
+                </span>
+              )}
+            </button>
+            {plans.length > 1 && (
+              <button
+                onClick={(e) => { e.stopPropagation(); deleteTab(plan.id); }}
+                className="opacity-0 group-hover:opacity-100 -ml-2 mr-1 p-0.5 rounded text-stone-300 hover:text-red-500 hover:bg-red-50 transition-all"
+                title="Delete floor plan"
+              >
+                <X size={12} />
+              </button>
             )}
-          </button>
+          </div>
         ))}
         {showAddTab ? (
           <div className="flex items-center gap-1 px-2">
