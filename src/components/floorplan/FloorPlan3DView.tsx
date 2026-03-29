@@ -94,10 +94,26 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
   const fabricObjects = (canvasJSON as any).objects || [];
   const parsed: ParsedObject[] = [];
 
-  for (const obj of fabricObjects) {
+  function processObject(obj: any) {
     const data = obj.data;
-    if (!data) continue;
-    if (data.isGrid || data.isLighting || data.isLightingOverlay || data.isGuide) continue;
+
+    // Recurse into Fabric.js groups to find nested furniture/rooms
+    if (obj.type === "group" && Array.isArray(obj.objects) && !data?.furnitureId && !data?.isRoom) {
+      for (const child of obj.objects) {
+        // Offset child positions by group position
+        const adjusted = {
+          ...child,
+          left: (obj.left || 0) + (child.left || 0),
+          top: (obj.top || 0) + (child.top || 0),
+          angle: (obj.angle || 0) + (child.angle || 0),
+        };
+        processObject(adjusted);
+      }
+      return;
+    }
+
+    if (!data) return;
+    if (data.isGrid || data.isLighting || data.isLightingOverlay || data.isGuide) return;
 
     if (data.isRoom) {
       const points = obj.points || [];
@@ -108,22 +124,24 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
         shape: "rect",
         x: obj.left || 0,
         y: obj.top || 0,
-        width: obj.width || 0,
-        height: obj.height || 0,
+        width: (obj.width || 0) * (obj.scaleX || 1),
+        height: (obj.height || 0) * (obj.scaleY || 1),
         angle: obj.angle || 0,
         fill: "#faf7f0",
         stroke: "#a89070",
         points: points.map((p: any) => [p.x, p.y]),
       });
-      continue;
+      return;
     }
 
     if (data.furnitureId) {
       const catalogItem = FURNITURE_CATALOG.find((f) => f.id === data.furnitureId);
       const shape = catalogItem?.shape || "rect";
-      const w = obj.width || catalogItem?.defaultWidth || 40;
-      const h = obj.height || catalogItem?.defaultHeight || 40;
-      const r = catalogItem?.defaultRadius;
+      const scaleX = obj.scaleX || 1;
+      const scaleY = obj.scaleY || 1;
+      const w = (obj.width || catalogItem?.defaultWidth || 40) * scaleX;
+      const h = (obj.height || catalogItem?.defaultHeight || 40) * scaleY;
+      const r = catalogItem?.defaultRadius ? catalogItem.defaultRadius * scaleX : undefined;
 
       parsed.push({
         type: "furniture",
@@ -140,6 +158,10 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
         stroke: catalogItem?.stroke || obj.stroke || "#c4b5a0",
       });
     }
+  }
+
+  for (const obj of fabricObjects) {
+    processObject(obj);
   }
 
   return {
