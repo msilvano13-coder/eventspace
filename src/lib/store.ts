@@ -129,7 +129,15 @@ class EventStore {
           if (full) {
             // Use current event state (not stale capture) to preserve any optimistic updates
             const current = this.events.get(id) || evt;
-            this.events.set(id, { ...current, ...full });
+            // Only merge core fields — skip sub-entity keys so we don't overwrite
+            // data that was loaded by ensureSubEntity with empty arrays from eventFromRow
+            const coreFields: Record<string, unknown> = {};
+            for (const [k, v] of Object.entries(full)) {
+              if (!SUB_ENTITY_KEYS.has(k)) {
+                coreFields[k] = v;
+              }
+            }
+            this.events.set(id, { ...current, ...coreFields } as Event);
             this.rebuildCache();
             this.coreLoaded.add(id);
             this.emit();
@@ -168,7 +176,7 @@ class EventStore {
         const apply = () => {
           const evt = this.events.get(eventId);
           if (evt) {
-            this.events.set(eventId, { ...evt, [key]: data });
+            this.events.set(eventId, { ...evt, [key]: data, updatedAt: new Date().toISOString() });
             this.rebuildCache();
 
             let loadedSet = this.loadedEntities.get(eventId);
