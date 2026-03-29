@@ -58,7 +58,7 @@ const FURNITURE_HEIGHTS: Record<string, number> = {
 };
 
 function getHeight(furnitureId: string): number {
-  return FURNITURE_HEIGHTS[furnitureId] ?? 30;
+  return (FURNITURE_HEIGHTS[furnitureId] ?? 30) * H_MULT;
 }
 
 /** PBR material properties per furniture category */
@@ -284,6 +284,12 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
 /** Scale factor: convert canvas px (inches) to 3D world units */
 const SCALE = 1 / 12; // 1 inch = 1/12 world unit (1 foot = 1 unit; a 60" table = 5 units)
 const S = SCALE; // alias for compact geometry args
+
+/** Visual height multiplier — exaggerate furniture height so it reads at overview scale */
+const H_MULT = 1.8;
+
+/** Room wall height in world units */
+const WALL_HEIGHT = 8 * S * 12; // 8 feet
 
 /** Classify a furnitureId into a rendering category */
 type FurnitureCategory =
@@ -743,13 +749,63 @@ function RoomFloor({ obj, originX, originY }: { obj: ParsedObject; originX: numb
     return new Shape(shapePoints);
   }, [obj.points, obj.x, obj.y, originX, originY]);
 
+  // Compute wall segments from polygon edges
+  const wallSegments = useMemo(() => {
+    if (!obj.points || obj.points.length < 3) return [];
+    const segments: { x1: number; z1: number; x2: number; z2: number; length: number; angle: number; cx: number; cz: number }[] = [];
+    const pts = obj.points.map(([x, y]) => ({
+      x: (x + obj.x - originX) * S,
+      z: (y + obj.y - originY) * S,
+    }));
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i];
+      const b = pts[(i + 1) % pts.length];
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const length = Math.sqrt(dx * dx + dz * dz);
+      const angle = Math.atan2(dz, dx);
+      segments.push({
+        x1: a.x, z1: a.z, x2: b.x, z2: b.z,
+        length,
+        angle,
+        cx: (a.x + b.x) / 2,
+        cz: (a.z + b.z) / 2,
+      });
+    }
+    return segments;
+  }, [obj.points, obj.x, obj.y, originX, originY]);
+
   if (!floorShape) return null;
 
+  const wallThickness = 0.15;
+
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-      <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
-      <meshStandardMaterial color="#faf7f0" side={DoubleSide} roughness={0.85} metalness={0} />
-    </mesh>
+    <group>
+      {/* Floor */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+        <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
+        <meshStandardMaterial color="#faf7f0" side={DoubleSide} roughness={0.85} metalness={0} />
+      </mesh>
+      {/* Walls */}
+      {wallSegments.map((seg, i) => (
+        <mesh
+          key={`wall-${i}`}
+          position={[seg.cx, WALL_HEIGHT / 2, seg.cz]}
+          rotation={[0, -seg.angle, 0]}
+          castShadow
+          receiveShadow
+        >
+          <boxGeometry args={[seg.length, WALL_HEIGHT, wallThickness]} />
+          <meshStandardMaterial
+            color="#f0ece4"
+            roughness={0.9}
+            metalness={0}
+            transparent
+            opacity={0.35}
+          />
+        </mesh>
+      ))}
+    </group>
   );
 }
 
@@ -933,11 +989,11 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
     } else {
       span = Math.max(parsed.canvasWidth, parsed.canvasHeight) * S;
     }
-    // Camera distance: far enough to see all furniture with some padding
-    const dist = Math.max(span * 0.9, 8);
+    // Camera distance: close enough to see furniture detail with room context
+    const dist = Math.max(span * 0.75, 8);
     return {
-      position: [dist * 0.6, dist * 0.7, dist * 0.6] as [number, number, number],
-      fov: 50,
+      position: [dist * 0.5, dist * 0.45, dist * 0.7] as [number, number, number],
+      fov: 45,
       near: 0.1,
       far: 1000,
     };
