@@ -454,6 +454,7 @@ function getFurnitureCategory(furnitureId: string): FurnitureCategory {
 /** Label that floats above every furniture piece */
 // Text component from drei fetches a font from CDN which is blocked by CSP,
 // causing Suspense to hang indefinitely. Labels disabled until a local font is bundled.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function FurnitureLabel(_props: { label: string; y: number }) {
   return null;
 }
