@@ -797,7 +797,6 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
   // ── DJ Booth — angled console with equipment shelf ──
   if (category === "dj-booth") {
     const consoleH = h3d;
-    const shelfY = consoleH * 0.6;
     return (
       <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
         {/* Main console body */}
