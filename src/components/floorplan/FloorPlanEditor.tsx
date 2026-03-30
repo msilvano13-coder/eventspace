@@ -758,6 +758,10 @@ export default function FloorPlanEditor({
 
       // ── Delete / Backspace ──
       if (e.key === "Delete" || e.key === "Backspace") {
+        // Don't intercept when typing in an input field
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
+
         const active = canvas.getActiveObject();
         if (!active) return;
 
