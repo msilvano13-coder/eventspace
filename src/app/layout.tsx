@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Playfair_Display, Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/react";
+import PostHogProvider from "@/components/providers/PostHogProvider";
 import "./globals.css";
 
 const playfair = Playfair_Display({
@@ -116,7 +118,8 @@ export default function RootLayout({
       <body
         className={`${playfair.variable} ${inter.variable} font-body antialiased bg-stone-50`}
       >
-        {children}
+        <PostHogProvider>{children}</PostHogProvider>
+        <Analytics />
       </body>
     </html>
   );

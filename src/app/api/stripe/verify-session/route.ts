@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
+import { validateOrigin } from "@/lib/api-security";
 
 const supabaseAdmin = createAdminClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,6 +16,9 @@ const supabaseAdmin = createAdminClient(
  */
 export async function POST(request: Request) {
   try {
+    const csrfError = validateOrigin(request);
+    if (csrfError) return csrfError;
+
     const supabase = createClient();
     const {
       data: { user },

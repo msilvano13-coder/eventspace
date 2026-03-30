@@ -28,25 +28,15 @@ export async function POST(request: Request) {
     );
   }
 
-  // Idempotency: skip duplicate webhook deliveries
-  const { data: existing } = await supabaseAdmin
-    .from("stripe_webhook_events")
-    .select("id")
-    .eq("stripe_event_id", event.id)
-    .maybeSingle();
-
-  if (existing) {
-    return NextResponse.json({ received: true, deduplicated: true });
-  }
-
-  // Claim this event ID before processing
+  // Idempotency: atomic claim via INSERT (unique constraint on stripe_event_id)
+  // If another instance already claimed this event, the INSERT fails and we skip.
   const { error: claimError } = await supabaseAdmin
     .from("stripe_webhook_events")
     .insert({ stripe_event_id: event.id, event_type: event.type });
 
   if (claimError) {
-    // Another instance claimed it — skip
-    console.log(`Webhook event ${event.id} already being processed`);
+    // Unique constraint violation = duplicate delivery — skip
+    console.log(`Webhook event ${event.id} already processed (deduplicated)`);
     return NextResponse.json({ received: true, deduplicated: true });
   }
 
@@ -115,6 +105,8 @@ export async function POST(request: Request) {
         };
         if (asyncPlan === "diy") {
           asyncUpdateData.stripe_payment_id = asyncSession.payment_intent as string;
+        } else {
+          asyncUpdateData.stripe_subscription_id = asyncSession.subscription as string;
         }
 
         if (asyncUserId) {

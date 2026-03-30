@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
+import { validateOrigin } from "@/lib/api-security";
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const csrfError = validateOrigin(request);
+    if (csrfError) return csrfError;
+
     const supabase = createClient();
     const {
       data: { user },

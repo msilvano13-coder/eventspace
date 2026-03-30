@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { validateOrigin, isRateLimited, getClientIp } from "@/lib/api-security";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +14,16 @@ const supabaseAdmin = createClient(
  */
 export async function POST(request: Request) {
   try {
+    // CSRF protection
+    const csrfError = validateOrigin(request);
+    if (csrfError) return csrfError;
+
+    // Rate limiting
+    const clientIp = getClientIp(request);
+    if (isRateLimited(clientIp, { name: "audit", max: 30, windowMs: 60_000 })) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const body = await request.json();
     const { shareToken, eventId, contractId, action, metadata } = body;
 
@@ -44,10 +55,22 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid share token" }, { status: 401 });
     }
 
-    // Extract IP and user agent from request headers
-    const forwarded = request.headers.get("x-forwarded-for");
-    const ipAddress = forwarded ? forwarded.split(",")[0].trim() : null;
-    const userAgent = request.headers.get("user-agent") ?? null;
+    // Extract IP (prefer Vercel header) and user agent
+    const ipAddress = clientIp !== "unknown" ? clientIp : null;
+    const userAgent = request.headers.get("user-agent")?.slice(0, 512) ?? null;
+
+    // Sanitize metadata: only allow string values, cap keys and size
+    const MAX_META_KEYS = 10;
+    const MAX_META_VALUE_LEN = 500;
+    const safeMeta: Record<string, string> = {};
+    if (metadata && typeof metadata === "object" && !Array.isArray(metadata)) {
+      const entries = Object.entries(metadata).slice(0, MAX_META_KEYS);
+      for (const [k, v] of entries) {
+        if (typeof v === "string") {
+          safeMeta[k] = v.slice(0, MAX_META_VALUE_LEN);
+        }
+      }
+    }
 
     const { error: insertError } = await supabaseAdmin
       .from("contract_audit_log")
@@ -59,7 +82,7 @@ export async function POST(request: Request) {
         action,
         ip_address: ipAddress,
         user_agent: userAgent,
-        metadata: metadata ?? {},
+        metadata: safeMeta,
       });
 
     if (insertError) {

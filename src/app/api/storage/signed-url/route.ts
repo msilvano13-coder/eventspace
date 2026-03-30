@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { validateOrigin, isRateLimited, getClientIp } from "@/lib/api-security";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,6 +9,16 @@ const supabaseAdmin = createClient(
 
 export async function POST(request: Request) {
   try {
+    // CSRF protection
+    const csrfError = validateOrigin(request);
+    if (csrfError) return csrfError;
+
+    // Rate limiting
+    const clientIp = getClientIp(request);
+    if (isRateLimited(clientIp, { name: "signed-url", max: 30, windowMs: 60_000 })) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const body = await request.json();
     const { shareToken, bucket, path } = body;
 
@@ -27,12 +38,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Normalize URL-encoded variants before traversal check
+    const decodedPath = decodeURIComponent(path);
+
     // Validate path against traversal attacks
     if (
-      path.includes("..") ||
-      path.includes("\\") ||
-      path.includes("\0") ||
-      path.startsWith("/")
+      decodedPath.includes("..") ||
+      decodedPath.includes("\\") ||
+      decodedPath.includes("\0") ||
+      decodedPath.startsWith("/")
     ) {
       return NextResponse.json(
         { error: "Invalid path" },

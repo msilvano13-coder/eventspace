@@ -11,6 +11,50 @@ interface CachedProfile {
   ts: number;
 }
 
+// ── HMAC cookie signing (Edge-compatible via Web Crypto API) ──
+const COOKIE_SECRET = process.env.COOKIE_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+
+async function getHmacKey(): Promise<CryptoKey> {
+  const enc = new TextEncoder();
+  return crypto.subtle.importKey(
+    "raw",
+    enc.encode(COOKIE_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"]
+  );
+}
+
+function bufToHex(buf: ArrayBuffer): string {
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
+async function signCookie(payload: string): Promise<string> {
+  const key = await getHmacKey();
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  return `${payload}.${bufToHex(sig)}`;
+}
+
+async function verifyCookie(signed: string): Promise<string | null> {
+  const lastDot = signed.lastIndexOf(".");
+  if (lastDot === -1) return null;
+  const payload = signed.slice(0, lastDot);
+  const sig = signed.slice(lastDot + 1);
+  const key = await getHmacKey();
+  const expected = bufToHex(
+    await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload))
+  );
+  // Constant-time comparison
+  if (sig.length !== expected.length) return null;
+  let mismatch = 0;
+  for (let i = 0; i < sig.length; i++) {
+    mismatch |= sig.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return mismatch === 0 ? payload : null;
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
 
@@ -70,12 +114,15 @@ export async function updateSession(request: NextRequest) {
     const cachedRaw = request.cookies.get(PROFILE_CACHE_COOKIE)?.value;
     if (cachedRaw) {
       try {
-        const cached: CachedProfile = JSON.parse(cachedRaw);
-        const age = (Date.now() - cached.ts) / 1000;
-        if (age < PROFILE_CACHE_MAX_AGE) {
-          plan = cached.plan;
-          trialEndsAt = cached.trialEndsAt;
-          needsFetch = false;
+        const verified = await verifyCookie(cachedRaw);
+        if (verified) {
+          const cached: CachedProfile = JSON.parse(verified);
+          const age = (Date.now() - cached.ts) / 1000;
+          if (age < PROFILE_CACHE_MAX_AGE) {
+            plan = cached.plan;
+            trialEndsAt = cached.trialEndsAt;
+            needsFetch = false;
+          }
         }
       } catch (e) {
         console.warn("[middleware] Invalid profile cache cookie, will re-fetch:", e);
@@ -98,16 +145,17 @@ export async function updateSession(request: NextRequest) {
       plan = profile.plan;
       trialEndsAt = profile.trial_ends_at;
 
-      // Cache profile in a short-lived cookie
+      // Cache profile in a short-lived HMAC-signed cookie
       const cacheValue: CachedProfile = {
         plan: profile.plan,
         trialEndsAt: profile.trial_ends_at,
         ts: Date.now(),
       };
-      supabaseResponse.cookies.set(PROFILE_CACHE_COOKIE, JSON.stringify(cacheValue), {
+      const signedValue = await signCookie(JSON.stringify(cacheValue));
+      supabaseResponse.cookies.set(PROFILE_CACHE_COOKIE, signedValue, {
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
+        sameSite: "strict",
         maxAge: PROFILE_CACHE_MAX_AGE,
         path: "/",
       });

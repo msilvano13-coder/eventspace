@@ -2,14 +2,19 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { stripe } from "@/lib/stripe";
+import { validateOrigin } from "@/lib/api-security";
 
 const supabaseAdmin = createAdminClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    // CSRF protection
+    const csrfError = validateOrigin(request);
+    if (csrfError) return csrfError;
+
     const supabase = createClient();
     const {
       data: { user },
@@ -129,7 +134,10 @@ export async function POST() {
     // 5. Delete the profile
     await supabaseAdmin.from("profiles").delete().eq("id", user.id);
 
-    // 6. Delete the auth user (requires admin client)
+    // 6. Sign out all sessions before deleting the auth user
+    await supabase.auth.signOut({ scope: "global" });
+
+    // 7. Delete the auth user (requires admin client)
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
     if (deleteError) {
       console.error("Failed to delete auth user:", deleteError);

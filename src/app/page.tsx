@@ -578,6 +578,7 @@ export default function HomePage() {
                 <li><Link href="/sign-in" className="hover:text-white transition-colors">Sign In</Link></li>
                 <li><Link href="/sign-up" className="hover:text-white transition-colors">Get Started</Link></li>
                 <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
+                <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>
               </ul>
             </div>
           </div>
@@ -587,6 +588,7 @@ export default function HomePage() {
             <div className="flex gap-6">
               <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
               <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
+              <Link href="/blog" className="hover:text-white transition-colors">Blog</Link>
             </div>
           </div>
         </div>
