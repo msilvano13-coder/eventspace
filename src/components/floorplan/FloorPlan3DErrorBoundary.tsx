@@ -19,6 +19,7 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   static getDerivedStateFromError(error: Error): State {
+    console.error("[3D ErrorBoundary]", error.message, error.stack);
     return {
       hasError: true,
       error: error.message || "3D rendering failed",
@@ -36,6 +37,11 @@ export class ErrorBoundary extends Component<Props, State> {
           <p className="text-xs text-stone-500 text-center max-w-xs">
             Your browser couldn&apos;t render the 3D view. This can happen on older devices or when GPU resources are limited.
           </p>
+          {this.state.error && (
+            <pre className="text-[10px] text-stone-400 bg-stone-200 rounded px-3 py-2 max-w-sm overflow-auto max-h-24 whitespace-pre-wrap">
+              {this.state.error}
+            </pre>
+          )}
           <button
             onClick={() => this.setState({ hasError: false, error: null })}
             className="text-xs font-medium text-rose-500 hover:text-rose-600 border border-rose-200 px-4 py-2 rounded-lg hover:bg-rose-50 transition-colors"
