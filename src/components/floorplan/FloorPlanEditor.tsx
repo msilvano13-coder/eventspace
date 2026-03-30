@@ -242,6 +242,10 @@ export default function FloorPlanEditor({
     if (overlayObj) canvas.remove(overlayObj);
 
     const rawJSON = canvas.toJSON();
+    // Fabric.js v6 toJSON() does not serialize canvas dimensions —
+    // inject them so the 3D view can convert lighting zone percentages correctly
+    (rawJSON as any).width = canvas.getWidth();
+    (rawJSON as any).height = canvas.getHeight();
 
     // Re-add non-content objects
     gridObjs.forEach((o) => { canvas.add(o); canvas.sendObjectToBack(o); });
@@ -836,6 +840,8 @@ export default function FloorPlanEditor({
         gridObjs.forEach((o) => canvas.remove(o));
         if (overlayObj) canvas.remove(overlayObj);
         const rawJSON = canvas.toJSON();
+        (rawJSON as any).width = canvas.getWidth();
+        (rawJSON as any).height = canvas.getHeight();
         const serialized = serializeFloorPlan(rawJSON as Record<string, unknown>);
         if (serialized) {
           onSaveRef.current(serialized);

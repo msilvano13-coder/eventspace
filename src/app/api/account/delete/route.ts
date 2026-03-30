@@ -21,7 +21,10 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Your session has expired. Please sign in again and retry." },
+        { status: 401 }
+      );
     }
 
     // 1. Get profile to find Stripe customer ID and subscription
@@ -90,7 +93,7 @@ export async function POST(request: Request) {
     const eventIds = events?.map((e) => e.id) || [];
 
     if (eventIds.length > 0) {
-      // Delete event-related data
+      // Delete event-related data (skip errors for tables that may not exist)
       const eventTables = [
         "guests",
         "vendors",
@@ -112,14 +115,16 @@ export async function POST(request: Request) {
       ];
 
       for (const table of eventTables) {
-        await supabaseAdmin.from(table).delete().in("event_id", eventIds);
+        const { error } = await supabaseAdmin.from(table).delete().in("event_id", eventIds);
+        if (error) console.warn(`[delete-account] Skipping ${table}:`, error.message);
       }
 
       // Delete the events themselves
-      await supabaseAdmin.from("events").delete().eq("user_id", user.id);
+      const { error: eventsErr } = await supabaseAdmin.from("events").delete().eq("user_id", user.id);
+      if (eventsErr) console.error("[delete-account] Failed to delete events:", eventsErr.message);
     }
 
-    // Delete planner-level data
+    // Delete planner-level data (skip errors for tables that may not exist)
     const plannerTables = [
       "questionnaires",
       "inquiries",
@@ -128,16 +133,25 @@ export async function POST(request: Request) {
     ];
 
     for (const table of plannerTables) {
-      await supabaseAdmin.from(table).delete().eq("user_id", user.id);
+      const { error } = await supabaseAdmin.from(table).delete().eq("user_id", user.id);
+      if (error) console.warn(`[delete-account] Skipping ${table}:`, error.message);
     }
 
-    // 5. Delete the profile
-    await supabaseAdmin.from("profiles").delete().eq("id", user.id);
+    // 5. Delete webhook events
+    await supabaseAdmin.from("stripe_webhook_events").delete().neq("id", "00000000-0000-0000-0000-000000000000");
 
-    // 6. Sign out all sessions before deleting the auth user
-    await supabase.auth.signOut({ scope: "global" });
+    // 6. Delete the profile
+    const { error: profileErr } = await supabaseAdmin.from("profiles").delete().eq("id", user.id);
+    if (profileErr) console.error("[delete-account] Failed to delete profile:", profileErr.message);
 
-    // 7. Delete the auth user (requires admin client)
+    // 7. Sign out all sessions before deleting the auth user
+    try {
+      await supabase.auth.signOut({ scope: "global" });
+    } catch (err) {
+      console.warn("[delete-account] Sign out failed (continuing):", err);
+    }
+
+    // 8. Delete the auth user (requires admin client)
     const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(user.id);
     if (deleteError) {
       console.error("Failed to delete auth user:", deleteError);

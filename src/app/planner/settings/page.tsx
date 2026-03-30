@@ -174,7 +174,10 @@ function SettingsContent() {
     if (deleteConfirmText !== "DELETE") return;
     setDeleteLoading(true);
     try {
-      const res = await fetch("/api/account/delete", { method: "POST" });
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
       const data = await res.json();
       if (data.success) {
         // Sign out and redirect to home

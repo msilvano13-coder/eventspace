@@ -66,6 +66,9 @@ export default function ClientPortalPage() {
   const allQuestionnaires = useQuestionnaires();
   const profile = usePlannerProfile();
   const [openQId, setOpenQId] = useState<string | null>(null);
+  const [newTodoTitle, setNewTodoTitle] = useState("");
+  const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
+  const [editingTodoTitle, setEditingTodoTitle] = useState("");
 
   if (loading) return <EventLoader />;
 
@@ -165,61 +168,149 @@ export default function ClientPortalPage() {
             <h3 className="font-heading font-semibold text-stone-800 group-hover:text-blue-500 text-sm">Files</h3>
             <p className="text-xs text-stone-400 mt-1">{(event.files ?? []).length} shared files</p>
           </Link>
+          {(event.invoices ?? []).filter((inv) => inv.status !== "draft").length > 0 && (
+            <a
+              href="#invoices"
+              className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
+            >
+              <Receipt size={22} className="text-emerald-400 mb-2" />
+              <h3 className="font-heading font-semibold text-stone-800 group-hover:text-emerald-500 text-sm">Invoices</h3>
+              <p className="text-xs text-stone-400 mt-1">
+                {(event.invoices ?? []).filter((inv) => inv.status !== "draft").length} invoice{(event.invoices ?? []).filter((inv) => inv.status !== "draft").length !== 1 ? "s" : ""}
+              </p>
+            </a>
+          )}
         </div>
 
-        {/* To Do List — client can toggle completion */}
-        {todos.length > 0 && (
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
-            <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-stone-100">
-              <div className="flex items-center gap-2">
-                <CheckSquare size={15} className="text-emerald-400" />
-                <h2 className="font-heading font-semibold text-stone-800">Planning Progress</h2>
-              </div>
+        {/* To Do List — client can toggle, add, edit, delete */}
+        <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
+          <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-stone-100">
+            <div className="flex items-center gap-2">
+              <CheckSquare size={15} className="text-emerald-400" />
+              <h2 className="font-heading font-semibold text-stone-800">Planning Progress</h2>
+            </div>
+            {todos.length > 0 && (
               <span className="text-xs text-stone-400 font-medium">
                 {completedCount}/{todos.length} complete
               </span>
-            </div>
+            )}
+          </div>
 
-            {/* Progress bar */}
+          {/* Progress bar */}
+          {todos.length > 0 && (
             <div className="px-5 pt-3 pb-1">
               <div className="h-1.5 bg-stone-100 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-emerald-400 rounded-full transition-all"
-                  style={{ width: `${todos.length ? (completedCount / todos.length) * 100 : 0}%` }}
+                  style={{ width: `${(completedCount / todos.length) * 100}%` }}
                 />
               </div>
             </div>
+          )}
 
-            <div className="px-5 py-3 space-y-0.5">
-              {todos.map((item) => (
+          <div className="px-5 py-3 space-y-0.5">
+            {todos.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 py-2 w-full hover:bg-stone-50 rounded-lg px-1 -mx-1 transition-colors group"
+              >
                 <button
-                  key={item.id}
-                  className="flex items-center gap-3 py-2 w-full text-left hover:bg-stone-50 rounded-lg px-1 -mx-1 transition-colors"
                   onClick={() => {
                     const updated = (event.timeline ?? []).map((t) =>
                       t.id === item.id ? { ...t, completed: !t.completed } : t
                     );
                     updateEvent(eventId, { timeline: updated });
                   }}
+                  className="shrink-0"
                 >
                   {item.completed ? (
-                    <Check size={14} className="text-emerald-500 shrink-0" />
+                    <Check size={14} className="text-emerald-500" />
                   ) : (
-                    <Circle size={14} className="text-stone-300 shrink-0" />
-                  )}
-                  <span className={`text-sm flex-1 ${item.completed ? "line-through text-stone-400" : "text-stone-700"}`}>
-                    {item.title}
-                  </span>
-                  {item.dueDate && (
-                    <span className="text-xs text-stone-400 shrink-0">
-                      {new Date(item.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                    </span>
+                    <Circle size={14} className="text-stone-300" />
                   )}
                 </button>
-              ))}
-            </div>
+
+                {editingTodoId === item.id ? (
+                  <form
+                    className="flex-1 flex items-center gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (!editingTodoTitle.trim()) return;
+                      const updated = (event.timeline ?? []).map((t) =>
+                        t.id === item.id ? { ...t, title: editingTodoTitle.trim() } : t
+                      );
+                      updateEvent(eventId, { timeline: updated });
+                      setEditingTodoId(null);
+                    }}
+                  >
+                    <input
+                      autoFocus
+                      className="flex-1 text-sm border border-stone-200 rounded-lg px-2 py-1 focus:outline-none focus:ring-1 focus:ring-rose-300"
+                      value={editingTodoTitle}
+                      onChange={(e) => setEditingTodoTitle(e.target.value)}
+                      onBlur={() => setEditingTodoId(null)}
+                      onKeyDown={(e) => { if (e.key === "Escape") setEditingTodoId(null); }}
+                    />
+                  </form>
+                ) : (
+                  <>
+                    <span className={`text-sm flex-1 ${item.completed ? "line-through text-stone-400" : "text-stone-700"}`}>
+                      {item.title}
+                    </span>
+                    {item.dueDate && (
+                      <span className="text-xs text-stone-400 shrink-0">
+                        {new Date(item.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => { setEditingTodoId(item.id); setEditingTodoTitle(item.title); }}
+                      className="opacity-0 group-hover:opacity-100 text-stone-300 hover:text-stone-500 transition-all shrink-0"
+                      title="Edit"
+                    >
+                      <Pencil size={12} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const updated = (event.timeline ?? []).filter((t) => t.id !== item.id);
+                        updateEvent(eventId, { timeline: updated });
+                      }}
+                      className="opacity-0 group-hover:opacity-100 text-stone-300 hover:text-red-500 transition-all shrink-0"
+                      title="Delete"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </>
+                )}
+              </div>
+            ))}
+
+            {/* Add new to-do */}
+            <form
+              className="flex items-center gap-3 py-2 px-1 -mx-1"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!newTodoTitle.trim()) return;
+                const newItem = {
+                  id: crypto.randomUUID(),
+                  title: newTodoTitle.trim(),
+                  dueDate: null,
+                  completed: false,
+                  order: todos.length,
+                };
+                updateEvent(eventId, { timeline: [...(event.timeline ?? []), newItem] });
+                setNewTodoTitle("");
+              }}
+            >
+              <Plus size={14} className="text-stone-300 shrink-0" />
+              <input
+                className="flex-1 text-sm placeholder:text-stone-300 bg-transparent focus:outline-none"
+                placeholder="Add a to-do..."
+                value={newTodoTitle}
+                onChange={(e) => setNewTodoTitle(e.target.value)}
+              />
+            </form>
           </div>
-        )}
+        </div>
 
         {/* Questionnaires */}
         {(event.questionnaires ?? []).length > 0 && (
@@ -344,6 +435,18 @@ export default function ClientPortalPage() {
                         <p className="text-xs text-stone-500">Contact: {vendor.contact}</p>
                       )}
                     </div>
+                    <button
+                      onClick={() => {
+                        if (!confirm(`Remove ${vendor.name} from your vendors?`)) return;
+                        updateEvent(event.id, {
+                          vendors: (event.vendors ?? []).filter((v) => v.id !== vendor.id),
+                        });
+                      }}
+                      className="text-stone-300 hover:text-red-500 transition-colors p-1 -mr-1 shrink-0"
+                      title="Remove vendor"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
                     {vendor.phone && (
@@ -481,7 +584,7 @@ export default function ClientPortalPage() {
 
         {/* Invoices */}
         {(event.invoices ?? []).filter((inv) => inv.status !== "draft").length > 0 && (
-          <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
+          <div id="invoices" className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden scroll-mt-4">
             <div className="flex items-center gap-2 px-5 pt-5 pb-4 border-b border-stone-100">
               <Receipt size={15} className="text-emerald-400" />
               <h2 className="font-heading font-semibold text-stone-800">Invoices</h2>
