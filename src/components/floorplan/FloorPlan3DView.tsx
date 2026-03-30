@@ -75,6 +75,7 @@ interface ParsedObject {
   fill: string;
   stroke: string;
   points?: number[][];
+  inTableSet?: boolean;
 }
 
 /** Heights in 3D (in inches, matching the 1px = 1 inch scale) */
@@ -205,6 +206,7 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
     parentAngle = 0,
     parentScaleX = 1,
     parentScaleY = 1,
+    inTableSet = false,
   ) {
     const data = obj.data;
     // Apply parent scale to child positions within groups
@@ -222,7 +224,7 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
       // If this is a table set, recurse into sub-objects to render each piece
       if (data?.isTableSet) {
         for (const child of obj.objects) {
-          processObject(child, absX, absY, absAngle, ownScaleX, ownScaleY);
+          processObject(child, absX, absY, absAngle, ownScaleX, ownScaleY, true);
         }
         return;
       }
@@ -249,6 +251,7 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
           angle: absAngle,
           fill: catalogItem?.fill || obj.fill || "#f5f0e8",
           stroke: catalogItem?.stroke || obj.stroke || "#c4b5a0",
+          inTableSet,
         });
         return;
       }
@@ -283,6 +286,7 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
           angle: absAngle,
           fill: obj.fill || "#f5f0e8",
           stroke: obj.stroke || "#c4b5a0",
+          inTableSet,
         });
       }
       return;
@@ -467,7 +471,11 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
   // Convert 2D canvas position to 3D world position
   const posX = (obj.x - originX) * S;
   const posZ = (obj.y - originY) * S;
-  const rotY = -(obj.angle * Math.PI) / 180;
+  // Table-set chairs have pre-set angles facing the table center — compensate
+  // for the flipped back panel by adding π so they face inward again
+  const category = getFurnitureCategory(obj.furnitureId);
+  const chairTableSetOffset = (category === "chair" && obj.inTableSet) ? Math.PI : 0;
+  const rotY = -(obj.angle * Math.PI) / 180 + chairTableSetOffset;
 
   const fillColor = getCachedColor(obj.fill);
   const strokeColor = getCachedColor(obj.stroke);
@@ -478,7 +486,6 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
   const chairLeg = getCachedColor("#9a8050");        // chair leg tone
   const darkColor = getCachedColor("#3a3530");
 
-  const category = getFurnitureCategory(obj.furnitureId);
   const w = obj.width * S;
   const d = obj.height * S;
 
