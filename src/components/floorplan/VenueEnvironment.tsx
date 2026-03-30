@@ -94,7 +94,7 @@ const TENT_EDGE = 8; // edge height
 const POLE_RADIUS = 0.08;
 
 function TentStructure({ cx, cz, span }: { cx: number; cz: number; span: number }) {
-  const half = span * 0.55;
+  const half = span * 0.5;
   const poleColor = new Color("#8a7a6a");
   const canopyColor = new Color("#f5f0e6");
 
@@ -283,7 +283,7 @@ function ExposedBeams({ cx, cz, span }: { cx: number; cz: number; span: number }
 }
 
 function LowRailing({ cx, cz, span }: { cx: number; cz: number; span: number }) {
-  const half = span * 0.55;
+  const half = span * 0.5;
   const railHeight = 1.1; // ~3.5 feet
   const postSpacing = 1.5;
   const postRadius = 0.04;

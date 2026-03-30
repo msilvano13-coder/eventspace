@@ -175,6 +175,7 @@ function getCachedColor(hex: string): Color {
     try {
       c = new Color(hex);
     } catch {
+      console.warn(`[3D] Invalid color "${hex}", using fallback grey`);
       c = new Color("#cccccc");
     }
     colorCache.set(hex, c);
@@ -1250,7 +1251,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
 
   // ── Draping — tall fabric panels with swag effect + gather rings ──
   if (category === "draping") {
-    const panelCount = Math.max(2, Math.floor(w / (10 * S)));
+    const panelCount = Math.min(10, Math.max(2, Math.floor(w / (10 * S))));
     const panelW = w / panelCount;
     return (
       <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
@@ -1540,6 +1541,29 @@ function FloorPlan3DScene({
   const rooms = useMemo(() => objects.filter((o) => o.type === "room"), [objects]);
   const furniture = useMemo(() => objects.filter((o) => o.type === "furniture"), [objects]);
 
+  // Compute actual room bounding box so venue elements fit the room, not the canvas
+  const roomBounds = useMemo(() => {
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    let hasRoom = false;
+    for (const room of rooms) {
+      if (!room.points || room.points.length < 3) continue;
+      hasRoom = true;
+      for (const [px, py] of room.points) {
+        const wx = (px - originX) * S;
+        const wz = (py - originY) * S;
+        minX = Math.min(minX, wx);
+        maxX = Math.max(maxX, wx);
+        minZ = Math.min(minZ, wz);
+        maxZ = Math.max(maxZ, wz);
+      }
+    }
+    if (!hasRoom) return { cx, cz, span: maxDim };
+    const roomCx = (minX + maxX) / 2;
+    const roomCz = (minZ + maxZ) / 2;
+    const roomSpan = Math.max(maxX - minX, maxZ - minZ);
+    return { cx: roomCx, cz: roomCz, span: roomSpan };
+  }, [rooms, originX, originY, cx, cz, maxDim]);
+
   // Resolve venue preset
   const activePreset: VenuePresetDef | null = settings.venuePreset !== "none"
     ? VENUE_PRESETS[settings.venuePreset]
@@ -1594,27 +1618,27 @@ function FloorPlan3DScene({
 
       {/* Ground plane (fallback if no room) — uses venue floor override when active */}
       {rooms.length === 0 && (
-        <mesh key={`ground-${effectiveFloor.color}`} rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.01, cz]} receiveShadow>
-          <planeGeometry args={[maxDim * 1.5, maxDim * 1.5]} />
+        <mesh key={`ground-${effectiveFloor.color}`} rotation={[-Math.PI / 2, 0, 0]} position={[roomBounds.cx, -0.01, roomBounds.cz]} receiveShadow>
+          <planeGeometry args={[roomBounds.span * 1.5, roomBounds.span * 1.5]} />
           <meshStandardMaterial color={effectiveFloor.color} roughness={effectiveFloor.roughness} metalness={effectiveFloor.metalness} />
         </mesh>
       )}
 
-      {/* Contact shadows — softer and more spread out */}
+      {/* Contact shadows — sized to room */}
       {settings.showShadows && (
         <ContactShadows
-          position={[cx, -0.005, cz]}
+          position={[roomBounds.cx, -0.005, roomBounds.cz]}
           opacity={0.3}
-          scale={maxDim * 1.5}
+          scale={roomBounds.span * 1.5}
           blur={3}
-          far={maxDim}
+          far={roomBounds.span}
           resolution={512}
           color="#7a6e60"
         />
       )}
 
-      {/* Venue environment elements (tent, grass, string lights, beams, etc.) */}
-      <VenueEnvironment preset={activePreset} cx={cx} cz={cz} maxDim={maxDim} />
+      {/* Venue environment elements (tent, grass, string lights, beams, etc.) — sized to room */}
+      <VenueEnvironment preset={activePreset} cx={roomBounds.cx} cz={roomBounds.cz} maxDim={roomBounds.span} />
 
       {/* Room floor */}
       {rooms.map((room, i) => (
@@ -1640,10 +1664,10 @@ function FloorPlan3DScene({
           />
         ))}
 
-      {/* Subtle ground grid — lighter, only visible up close */}
+      {/* Subtle ground grid — sized to room bounds */}
       <gridHelper
-        args={[maxDim * 1.5, Math.ceil(maxDim * 1.5 / (20 * S)), "#ddd8d0", "#ebe6de"]}
-        position={[cx, -0.004, cz]}
+        args={[roomBounds.span * 1.5, Math.ceil(roomBounds.span * 1.5 / (20 * S)), "#ddd8d0", "#ebe6de"]}
+        position={[roomBounds.cx, -0.004, roomBounds.cz]}
       />
 
       <OrbitControls
