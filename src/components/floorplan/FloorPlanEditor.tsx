@@ -351,6 +351,8 @@ export default function FloorPlanEditor({
   }
 
   // ── Lighting: sync Fabric objects from zone state ──
+  const isSyncingLightingRef = useRef(false);
+
   const syncLightingToCanvas = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas) return;
@@ -359,6 +361,11 @@ export default function FloorPlanEditor({
     // the object:moving handler already updates the position in real-time.
     // A full recreate would destroy the drag target mid-drag.
     if (isDraggingLightRef.current) return;
+
+    // Re-entrancy guard: setActiveObject below can fire Fabric selection
+    // events synchronously, which could re-trigger this function.
+    if (isSyncingLightingRef.current) return;
+    isSyncingLightingRef.current = true;
 
     const w = canvas.getWidth();
     const h = canvas.getHeight();
@@ -397,6 +404,7 @@ export default function FloorPlanEditor({
 
     if (!enabled) {
       canvas.requestRenderAll();
+      isSyncingLightingRef.current = false;
       return;
     }
 
@@ -418,6 +426,7 @@ export default function FloorPlanEditor({
     }
 
     canvas.requestRenderAll();
+    isSyncingLightingRef.current = false;
   }, []);
 
   // ── Canvas initialization ──
@@ -448,9 +457,6 @@ export default function FloorPlanEditor({
       // Lighting zones: snap to furniture or convert pixel position to percentage
       if (obj.data?.isLighting) {
         isDraggingLightRef.current = true;
-        const cw = canvas.getWidth();
-        const ch = canvas.getHeight();
-        const zoneId = obj.data.zoneId;
         const objLeft = obj.left || 0;
         const objTop = obj.top || 0;
 
@@ -482,15 +488,10 @@ export default function FloorPlanEditor({
           obj.setCoords();
         }
 
-        const x = Math.max(0, Math.min(100, (snapX / cw) * 100));
-        const y = Math.max(0, Math.min(100, (snapY / ch) * 100));
-        if (onUpdateZonesRef.current && lightingZonesRef.current) {
-          onUpdateZonesRef.current(
-            lightingZonesRef.current.map((z) =>
-              z.id === zoneId ? { ...z, x, y, snappedToFurnitureId: snappedLabel } : z
-            )
-          );
-        }
+        // Store snap info on the object for object:modified to read.
+        // Don't update React state here — firing on every drag frame
+        // causes a state→effect→sync loop that overflows the stack.
+        obj.data = { ...obj.data, _snappedLabel: snappedLabel };
         return;
       }
 
@@ -654,7 +655,9 @@ export default function FloorPlanEditor({
 
       const obj = e.target;
 
-      // If lighting zone was moved, sync position
+      // If lighting zone was moved, persist final position.
+      // Do NOT call syncLightingToCanvas() here — the useEffect watching
+      // lightingZones will pick up the state change and sync safely.
       if (obj?.data?.isLighting) {
         isDraggingLightRef.current = false;
         const cw = canvas.getWidth();
@@ -662,13 +665,14 @@ export default function FloorPlanEditor({
         const zoneId = obj.data.zoneId;
         const x = Math.max(0, Math.min(100, ((obj.left || 0) / cw) * 100));
         const y = Math.max(0, Math.min(100, ((obj.top || 0) / ch) * 100));
+        const snappedLabel = obj.data._snappedLabel as string | undefined;
         if (onUpdateZonesRef.current && lightingZonesRef.current) {
           onUpdateZonesRef.current(
-            lightingZonesRef.current.map((z) => (z.id === zoneId ? { ...z, x, y } : z))
+            lightingZonesRef.current.map((z) =>
+              z.id === zoneId ? { ...z, x, y, snappedToFurnitureId: snappedLabel } : z
+            )
           );
         }
-        // Now safe to do a full sync to update the visual appearance
-        syncLightingToCanvas();
         return; // Don't push undo or save for lighting changes
       }
 
