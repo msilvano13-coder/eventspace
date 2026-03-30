@@ -60,17 +60,59 @@ export default function UpgradePage() {
     profile.plan === "expired" ||
     (profile.plan === "trial" && trialDaysLeft <= 0);
 
-  async function handleSelectPlan(plan: "diy" | "professional") {
-    setLoadingPlan(plan);
+  async function handleSelectDiy() {
+    setLoadingPlan("diy");
     try {
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({ plan: "diy" }),
       });
       const data = await res.json();
       if (data.url) {
-        trackPlanPurchased(plan, plan === "diy" ? 99 : 20);
+        trackPlanPurchased("diy", 99);
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Something went wrong");
+        setLoadingPlan(null);
+      }
+    } catch {
+      alert("Something went wrong. Please try again.");
+      setLoadingPlan(null);
+    }
+  }
+
+  async function handleStartTrial() {
+    setLoadingPlan("professional");
+    try {
+      const res = await fetch("/api/start-trial", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (data.success) {
+        router.push("/planner");
+      } else {
+        alert(data.error || "Something went wrong");
+        setLoadingPlan(null);
+      }
+    } catch {
+      alert("Something went wrong. Please try again.");
+      setLoadingPlan(null);
+    }
+  }
+
+  async function handleSubscribePro() {
+    setLoadingPlan("professional");
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: "professional" }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        trackPlanPurchased("professional", 20);
         window.location.href = data.url;
       } else {
         alert(data.error || "Something went wrong");
@@ -126,7 +168,7 @@ export default function UpgradePage() {
             <span className="text-stone-400 text-sm"> one-time</span>
           </p>
           <button
-            onClick={() => handleSelectPlan("diy")}
+            onClick={handleSelectDiy}
             disabled={loadingPlan !== null}
             className="mt-6 flex items-center justify-center gap-2 font-medium text-stone-700 bg-white hover:bg-stone-100 border border-stone-200 px-6 py-2.5 rounded-xl transition-colors text-sm disabled:opacity-50"
           >
@@ -136,7 +178,7 @@ export default function UpgradePage() {
                 Redirecting...
               </>
             ) : (
-              "Select Plan"
+              "Buy Now"
             )}
           </button>
           <p className="mt-5 mb-4 text-xs text-stone-400 font-medium uppercase tracking-wider">
@@ -173,17 +215,19 @@ export default function UpgradePage() {
             <span className="text-stone-400 text-sm"> / month</span>
           </p>
           <button
-            onClick={() => handleSelectPlan("professional")}
+            onClick={isExpired ? handleSubscribePro : handleStartTrial}
             disabled={loadingPlan !== null}
             className="mt-6 flex items-center justify-center gap-2 font-medium text-white bg-rose-500 hover:bg-rose-600 px-6 py-2.5 rounded-xl transition-colors text-sm shadow-sm disabled:opacity-50"
           >
             {loadingPlan === "professional" ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
-                Redirecting...
+                {isExpired ? "Redirecting..." : "Starting trial..."}
               </>
+            ) : isExpired ? (
+              "Subscribe — $20/mo"
             ) : (
-              "Select Plan"
+              "Start 30-Day Free Trial"
             )}
           </button>
           <p className="mt-5 mb-4 text-xs text-stone-400 font-medium uppercase tracking-wider">
