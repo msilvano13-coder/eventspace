@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { PRO_ONLY_ROUTES } from "@/lib/plan-features";
 
 const PROFILE_CACHE_COOKIE = "es_profile_cache";
-const PROFILE_CACHE_MAX_AGE = 5 * 60; // 5 minutes in seconds
+const PROFILE_CACHE_MAX_AGE = 15 * 60; // 15 minutes in seconds
 
 interface CachedProfile {
   plan: string;
@@ -77,8 +77,8 @@ export async function updateSession(request: NextRequest) {
           trialEndsAt = cached.trialEndsAt;
           needsFetch = false;
         }
-      } catch {
-        // Invalid cookie — will re-fetch
+      } catch (e) {
+        console.warn("[middleware] Invalid profile cache cookie, will re-fetch:", e);
       }
     }
 

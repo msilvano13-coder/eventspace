@@ -2,7 +2,8 @@
 
 import { Event } from "./types";
 import {
-  getUserId, fetchEvents, fetchEventCore, createEvent as dbCreateEvent,
+  getUserId, fetchEvents, fetchEventCore,
+  createEvent as dbCreateEvent,
   updateEventFields, deleteEvent as dbDeleteEvent,
   replaceTimeline, replaceSchedule, replaceFloorPlans, replaceVendors,
   replaceGuests, replaceQuestionnaireAssignments, replaceInvoices,
@@ -59,12 +60,16 @@ const SUB_ENTITY_FETCHERS: Record<string, (eventId: string) => Promise<any>> = {
   discoveredVendors: fetchEventDiscoveredVendors,
 };
 
+const MAX_CACHED_EVENTS = 100;
+
 class EventStore {
   private events: Map<string, Event> = new Map();
+  private accessOrder: string[] = []; // LRU tracking: most recently accessed at end
   private listeners: Set<Listener> = new Set();
   private hydrated = false;
   private hydrating = false;
   private _loading = true;
+  private _hasMore = false;
   private cachedAll: Event[] = EMPTY;
   private cacheDirty = true;
   private coreLoaded: Set<string> = new Set();
@@ -77,6 +82,28 @@ class EventStore {
     return this._loading;
   }
 
+  get hasMoreEvents(): boolean {
+    return this._hasMore;
+  }
+
+  /** Move id to end of access order (most recent) */
+  private touchLRU(id: string): void {
+    const idx = this.accessOrder.indexOf(id);
+    if (idx !== -1) this.accessOrder.splice(idx, 1);
+    this.accessOrder.push(id);
+  }
+
+  /** Evict least recently used events if over max */
+  private evictLRU(): void {
+    while (this.events.size > MAX_CACHED_EVENTS && this.accessOrder.length > 0) {
+      const evictId = this.accessOrder.shift()!;
+      this.events.delete(evictId);
+      this.loadedEntities.delete(evictId);
+      this.loadingEntities.delete(evictId);
+      this.coreLoaded.delete(evictId);
+    }
+  }
+
   async hydrate(): Promise<void> {
     if (this.hydrated || this.hydrating) return;
     this.hydrating = true;
@@ -85,17 +112,38 @@ class EventStore {
       return;
     }
     try {
-      const rows = await fetchEvents();
+      const { data: rows, hasMore } = await fetchEvents();
       this.events = new Map(rows.map((e: Event) => [e.id, e]));
+      this.accessOrder = rows.map((e: Event) => e.id);
+      this._hasMore = hasMore;
     } catch (err) {
       console.error("[EventStore] hydrate failed:", err);
       this.events = new Map();
+      this.accessOrder = [];
     }
     this.hydrated = true;
     this.hydrating = false;
     this._loading = false;
     this.rebuildCache();
     this.emit();
+  }
+
+  /** Load more events (pagination) */
+  async loadMore(): Promise<void> {
+    if (!this._hasMore) return;
+    try {
+      const { data: rows, hasMore } = await fetchEvents(this.events.size);
+      for (const e of rows) {
+        this.events.set(e.id, e);
+        this.touchLRU(e.id);
+      }
+      this._hasMore = hasMore;
+      this.evictLRU();
+      this.rebuildCache();
+      this.emit();
+    } catch (err) {
+      console.error("[EventStore] loadMore failed:", err);
+    }
   }
 
   private rebuildCache() {
@@ -122,6 +170,7 @@ class EventStore {
   /** Load event core data (event fields + floor plans). Replaces the old 14-way fetchEventFull. */
   getById(id: string): Event | undefined {
     const evt = this.events.get(id);
+    if (evt) this.touchLRU(id);
     if (evt && !this.coreLoaded.has(id) && !this.loadingCore.has(id)) {
       this.loadingCore.add(id);
       fetchEventCore(id)
@@ -194,14 +243,15 @@ class EventStore {
         };
 
         if (!apply()) {
-          // Event not ready — poll briefly for hydration to finish
-          let attempts = 0;
-          const interval = setInterval(() => {
-            attempts++;
-            if (apply() || attempts >= 10) {
-              clearInterval(interval);
-            }
-          }, 500);
+          // Event not ready — retry with exponential backoff (max 3 retries)
+          const retry = (attempt: number) => {
+            if (attempt >= 3) return; // give up after 3 retries
+            const delay = 500 * Math.pow(2, attempt); // 500ms, 1000ms, 2000ms
+            setTimeout(() => {
+              if (!apply()) retry(attempt + 1);
+            }, delay);
+          };
+          retry(0);
         }
       })
       .catch((err) => console.error(`[EventStore] load ${key} failed:`, err))
@@ -221,6 +271,8 @@ class EventStore {
     const userId = await getUserId();
     const event = await dbCreateEvent(data, userId);
     this.events.set(event.id, event);
+    this.touchLRU(event.id);
+    this.evictLRU();
     this.rebuildCache();
     this.emit();
     return event;
@@ -272,6 +324,8 @@ class EventStore {
     this.loadedEntities.delete(id);
     this.loadingEntities.delete(id);
     this.coreLoaded.delete(id);
+    const idx = this.accessOrder.indexOf(id);
+    if (idx !== -1) this.accessOrder.splice(idx, 1);
     this.rebuildCache();
     this.emit();
     try {

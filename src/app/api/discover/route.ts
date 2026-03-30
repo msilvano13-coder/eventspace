@@ -4,11 +4,18 @@ import { NextRequest, NextResponse } from "next/server";
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX = 20; // 20 requests per minute per IP
+const MAX_RATE_LIMIT_ENTRIES = 10_000;
 
 function isRateLimited(ip: string): boolean {
   const now = Date.now();
   const entry = rateLimitMap.get(ip);
   if (!entry || now > entry.resetAt) {
+    // If map is at capacity, flush expired entries first
+    if (rateLimitMap.size >= MAX_RATE_LIMIT_ENTRIES) {
+      rateLimitMap.forEach((e, k) => { if (now > e.resetAt) rateLimitMap.delete(k); });
+      // If still over cap after flush, reject to prevent memory exhaustion
+      if (rateLimitMap.size >= MAX_RATE_LIMIT_ENTRIES) return true;
+    }
     rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
     return false;
   }
@@ -28,7 +35,7 @@ if (typeof globalThis !== "undefined") {
       if (now - entry.ts > SEVEN_DAYS) cache.delete(key);
     });
   };
-  setInterval(cleanup, 60 * 1000).unref?.();
+  setInterval(cleanup, 30 * 1000).unref?.();
 }
 
 // ── In-memory cache with 7-day TTL and LRU eviction (max 500 entries) ──

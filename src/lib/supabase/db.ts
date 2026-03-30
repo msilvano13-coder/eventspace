@@ -32,14 +32,29 @@ import type { PlanType } from "@/lib/types";
 // Helper: get current authenticated user id
 // ────────────────────────────────────────────────────────────────────────────
 
+let _cachedUserId: string | null = null;
+let _cachedUserAt = 0;
+const USER_ID_TTL = 30_000; // 30 seconds
+
 export async function getUserId(): Promise<string> {
+  if (_cachedUserId && Date.now() - _cachedUserAt < USER_ID_TTL) {
+    return _cachedUserId;
+  }
   const supabase = createClient();
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
   if (error || !user) throw new Error("Not authenticated");
+  _cachedUserId = user.id;
+  _cachedUserAt = Date.now();
   return user.id;
+}
+
+/** Clear the cached user ID (call on logout) */
+export function clearUserIdCache(): void {
+  _cachedUserId = null;
+  _cachedUserAt = 0;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -185,6 +200,7 @@ function eventFromRow(r: any): Event {
 
 // ── FloorPlan ──
 
+// After running scalability-migration.sql, add userId param and user_id field
 function floorPlanToRow(fp: FloorPlan, eventId: string, index: number) {
   return {
     id: fp.id,
@@ -267,6 +283,7 @@ function timelineItemFromRow(r: any): TimelineItem {
 
 // ── ScheduleItem ──
 
+// After running scalability-migration.sql, add userId param and user_id field
 function scheduleItemToRow(s: ScheduleItem, eventId: string) {
   return {
     id: s.id,
@@ -289,6 +306,7 @@ function scheduleItemFromRow(r: any): ScheduleItem {
 
 // ── Vendor ──
 
+// After running scalability-migration.sql, add userId param and user_id field
 function vendorToRow(v: Vendor, eventId: string) {
   return {
     id: v.id,
@@ -354,6 +372,8 @@ function guestToRow(g: Guest, eventId: string) {
   return {
     id: g.id,
     event_id: eventId,
+    // TODO: uncomment after scalability-migration.sql is applied
+    // ...(userId ? { user_id: userId } : {}),
     name: g.name,
     email: g.email,
     rsvp: g.rsvp,
@@ -415,6 +435,8 @@ function invoiceToRow(inv: Invoice, eventId: string) {
   return {
     id: inv.id,
     event_id: eventId,
+    // TODO: uncomment after scalability-migration.sql is applied
+    // ...(userId ? { user_id: userId } : {}),
     number: inv.number,
     status: inv.status,
     notes: inv.notes,
@@ -929,56 +951,27 @@ function contractTemplateFromRow(r: any): ContractTemplate {
 // Events
 // ────────────────────────────────────────────────────────────────────────────
 
-export async function fetchEvents(): Promise<Event[]> {
+export async function fetchEvents(
+  offset = 0,
+  limit = 50
+): Promise<{ data: Event[]; hasMore: boolean }> {
   const supabase = createClient();
   const userId = await getUserId();
 
+  // Fetch one extra row to detect if more exist
   const { data, error } = await supabase
     .from("events")
     .select("*")
     .eq("user_id", userId)
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(offset, offset + limit);
 
   if (error) throw new Error(`fetchEvents: ${error.message}`);
 
-  return (data ?? []).map((r) => eventFromRow(r));
-}
-
-export async function fetchEventFull(
-  eventId: string
-): Promise<Event | null> {
-  const supabase = createClient();
-
-  const { data, error } = await supabase
-    .from("events")
-    .select(
-      `
-      *,
-      floor_plans (*, lighting_zones (*)),
-      timeline_items (*),
-      schedule_items (*),
-      vendors (*, vendor_payments (*)),
-      guests (*),
-      questionnaire_assignments (*),
-      invoices (*, invoice_line_items (*)),
-      expenses (*),
-      budget_items (*),
-      event_contracts (*),
-      shared_files (*),
-      mood_board_images (*),
-      messages (*),
-      discovered_vendors (*)
-    `
-    )
-    .eq("id", eventId)
-    .single();
-
-  if (error) {
-    if (error.code === "PGRST116") return null; // not found
-    throw new Error(`fetchEventFull: ${error.message}`);
-  }
-
-  return eventFromRow(data);
+  const rows = data ?? [];
+  const hasMore = rows.length > limit;
+  const trimmed = hasMore ? rows.slice(0, limit) : rows;
+  return { data: trimmed.map((r) => eventFromRow(r)), hasMore };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -1004,9 +997,31 @@ export async function fetchEventGuests(eventId: string): Promise<Guest[]> {
   const { data, error } = await supabase
     .from("guests")
     .select("*")
-    .eq("event_id", eventId);
+    .eq("event_id", eventId)
+    .order("name", { ascending: true })
+    .limit(500);
   if (error) throw new Error(`fetchEventGuests: ${error.message}`);
   return (data ?? []).map(guestFromRow);
+}
+
+/** Paginated guest fetch for UI "Load more" pattern */
+export async function fetchEventGuestsPage(
+  eventId: string,
+  offset = 0,
+  limit = 100
+): Promise<{ data: Guest[]; hasMore: boolean }> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("guests")
+    .select("*")
+    .eq("event_id", eventId)
+    .order("name", { ascending: true })
+    .range(offset, offset + limit);
+  if (error) throw new Error(`fetchEventGuestsPage: ${error.message}`);
+  const rows = data ?? [];
+  const hasMore = rows.length > limit;
+  const trimmed = hasMore ? rows.slice(0, limit) : rows;
+  return { data: trimmed.map(guestFromRow), hasMore };
 }
 
 export async function fetchEventTimeline(eventId: string): Promise<TimelineItem[]> {
@@ -1015,7 +1030,8 @@ export async function fetchEventTimeline(eventId: string): Promise<TimelineItem[
     .from("timeline_items")
     .select("*")
     .eq("event_id", eventId)
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .limit(500);
   if (error) throw new Error(`fetchEventTimeline: ${error.message}`);
   return (data ?? []).map(timelineItemFromRow);
 }
@@ -1026,7 +1042,8 @@ export async function fetchEventSchedule(eventId: string): Promise<ScheduleItem[
     .from("schedule_items")
     .select("*")
     .eq("event_id", eventId)
-    .order("time", { ascending: true });
+    .order("time", { ascending: true })
+    .limit(500);
   if (error) throw new Error(`fetchEventSchedule: ${error.message}`);
   return (data ?? []).map(scheduleItemFromRow);
 }
@@ -1036,7 +1053,8 @@ export async function fetchEventVendors(eventId: string): Promise<Vendor[]> {
   const { data, error } = await supabase
     .from("vendors")
     .select("*, vendor_payments (*)")
-    .eq("event_id", eventId);
+    .eq("event_id", eventId)
+    .limit(500);
   if (error) throw new Error(`fetchEventVendors: ${error.message}`);
   return (data ?? []).map(vendorFromRow);
 }
@@ -1046,7 +1064,8 @@ export async function fetchEventInvoices(eventId: string): Promise<Invoice[]> {
   const { data, error } = await supabase
     .from("invoices")
     .select("*, invoice_line_items (*)")
-    .eq("event_id", eventId);
+    .eq("event_id", eventId)
+    .limit(500);
   if (error) throw new Error(`fetchEventInvoices: ${error.message}`);
   return (data ?? []).map(invoiceFromRow);
 }
@@ -1056,7 +1075,8 @@ export async function fetchEventExpenses(eventId: string): Promise<Expense[]> {
   const { data, error } = await supabase
     .from("expenses")
     .select("*")
-    .eq("event_id", eventId);
+    .eq("event_id", eventId)
+    .limit(500);
   if (error) throw new Error(`fetchEventExpenses: ${error.message}`);
   return (data ?? []).map(expenseFromRow);
 }
@@ -1066,7 +1086,8 @@ export async function fetchEventBudget(eventId: string): Promise<BudgetItem[]> {
   const { data, error } = await supabase
     .from("budget_items")
     .select("*")
-    .eq("event_id", eventId);
+    .eq("event_id", eventId)
+    .limit(500);
   if (error) throw new Error(`fetchEventBudget: ${error.message}`);
   return (data ?? []).map(budgetItemFromRow);
 }
@@ -1076,7 +1097,8 @@ export async function fetchEventContracts(eventId: string): Promise<EventContrac
   const { data, error } = await supabase
     .from("event_contracts")
     .select("*")
-    .eq("event_id", eventId);
+    .eq("event_id", eventId)
+    .limit(500);
   if (error) throw new Error(`fetchEventContracts: ${error.message}`);
   return (data ?? []).map(eventContractFromRow);
 }
@@ -1086,7 +1108,8 @@ export async function fetchEventFiles(eventId: string): Promise<SharedFile[]> {
   const { data, error } = await supabase
     .from("shared_files")
     .select("*")
-    .eq("event_id", eventId);
+    .eq("event_id", eventId)
+    .limit(500);
   if (error) throw new Error(`fetchEventFiles: ${error.message}`);
   return (data ?? []).map(sharedFileFromRow);
 }
@@ -1096,7 +1119,8 @@ export async function fetchEventMoodBoard(eventId: string): Promise<MoodBoardIma
   const { data, error } = await supabase
     .from("mood_board_images")
     .select("*")
-    .eq("event_id", eventId);
+    .eq("event_id", eventId)
+    .limit(500);
   if (error) throw new Error(`fetchEventMoodBoard: ${error.message}`);
   return (data ?? []).map(moodBoardImageFromRow);
 }
@@ -1107,7 +1131,8 @@ export async function fetchEventMessages(eventId: string): Promise<Message[]> {
     .from("messages")
     .select("*")
     .eq("event_id", eventId)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: true })
+    .limit(500);
   if (error) throw new Error(`fetchEventMessages: ${error.message}`);
   return (data ?? []).map(messageFromRow);
 }
@@ -1117,7 +1142,8 @@ export async function fetchEventQuestionnaireAssignments(eventId: string): Promi
   const { data, error } = await supabase
     .from("questionnaire_assignments")
     .select("*")
-    .eq("event_id", eventId);
+    .eq("event_id", eventId)
+    .limit(500);
   if (error) throw new Error(`fetchEventQuestionnaireAssignments: ${error.message}`);
   return (data ?? []).map(questionnaireAssignmentFromRow);
 }
@@ -1127,7 +1153,8 @@ export async function fetchEventDiscoveredVendors(eventId: string): Promise<Disc
   const { data, error } = await supabase
     .from("discovered_vendors")
     .select("*")
-    .eq("event_id", eventId);
+    .eq("event_id", eventId)
+    .limit(500);
   if (error) throw new Error(`fetchEventDiscoveredVendors: ${error.message}`);
   return (data ?? []).map(discoveredVendorFromRow);
 }
@@ -1231,6 +1258,7 @@ export async function replaceGuests(
   guests: Guest[]
 ): Promise<void> {
   const supabase = createClient();
+  // TODO: after scalability-migration.sql, re-add: const userId = await getUserId();
 
   if (guests.length > 0) {
     const { error: upsertError } = await supabase
@@ -1350,6 +1378,7 @@ export async function replaceVendors(
   vendors: Vendor[]
 ): Promise<void> {
   const supabase = createClient();
+  // TODO: after scalability-migration.sql, re-add: const userId = await getUserId();
 
   if (vendors.length > 0) {
     // 1. Upsert vendor rows
@@ -1369,15 +1398,13 @@ export async function replaceVendors(
     if (delError)
       throw new Error(`replaceVendors (delete removed): ${delError.message}`);
 
-    // 3. Delete all payments for current vendors, then re-insert
-    for (const v of vendors) {
-      const { error: delPayError } = await supabase
-        .from("vendor_payments")
-        .delete()
-        .eq("vendor_id", v.id);
-      if (delPayError)
-        throw new Error(`replaceVendors (delete payments): ${delPayError.message}`);
-    }
+    // 3. Batch delete all payments for current vendors, then re-insert
+    const { error: delPayError } = await supabase
+      .from("vendor_payments")
+      .delete()
+      .in("vendor_id", vendorIds);
+    if (delPayError)
+      throw new Error(`replaceVendors (delete payments): ${delPayError.message}`);
 
     // 4. Re-insert all payments
     const allPayments = vendors.flatMap((v) =>
@@ -1437,6 +1464,7 @@ export async function replaceSchedule(
   items: ScheduleItem[]
 ): Promise<void> {
   const supabase = createClient();
+  // TODO: after scalability-migration.sql, re-add: const userId = await getUserId();
 
   if (items.length > 0) {
     const { error: upsertError } = await supabase
@@ -1468,6 +1496,7 @@ export async function replaceFloorPlans(
   plans: FloorPlan[]
 ): Promise<void> {
   const supabase = createClient();
+  // TODO: after scalability-migration.sql, re-add: const userId = await getUserId();
 
   const planIds = plans.map((fp) => fp.id);
 
@@ -1503,12 +1532,12 @@ export async function replaceFloorPlans(
       throw new Error(`replaceFloorPlans (delete all): ${delError.message}`);
   }
 
-  // Replace lighting zones: delete all for these plans, then re-insert
-  for (const fp of plans) {
+  // Batch delete lighting zones for all plans, then re-insert
+  if (planIds.length > 0) {
     const { error: delZoneError } = await supabase
       .from("lighting_zones")
       .delete()
-      .eq("floor_plan_id", fp.id);
+      .in("floor_plan_id", planIds);
     if (delZoneError)
       throw new Error(
         `replaceFloorPlans (delete zones): ${delZoneError.message}`
@@ -1596,6 +1625,7 @@ export async function replaceInvoices(
   invoices: Invoice[]
 ): Promise<void> {
   const supabase = createClient();
+  // TODO: after scalability-migration.sql, re-add: const userId = await getUserId();
 
   if (invoices.length > 0) {
     // 1. Upsert invoice rows
@@ -1615,15 +1645,13 @@ export async function replaceInvoices(
     if (delError)
       throw new Error(`replaceInvoices (delete removed): ${delError.message}`);
 
-    // 3. Delete all line items for current invoices, then re-insert
-    for (const inv of invoices) {
-      const { error: delLiError } = await supabase
-        .from("invoice_line_items")
-        .delete()
-        .eq("invoice_id", inv.id);
-      if (delLiError)
-        throw new Error(`replaceInvoices (delete line items): ${delLiError.message}`);
-    }
+    // 3. Batch delete all line items for current invoices, then re-insert
+    const { error: delLiError } = await supabase
+      .from("invoice_line_items")
+      .delete()
+      .in("invoice_id", invoiceIds);
+    if (delLiError)
+      throw new Error(`replaceInvoices (delete line items): ${delLiError.message}`);
 
     // 4. Re-insert all line items
     const allLineItems = invoices.flatMap((inv) =>
