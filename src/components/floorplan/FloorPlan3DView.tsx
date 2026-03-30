@@ -8,10 +8,12 @@ import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 import { LightingZone } from "@/lib/types";
 import { FURNITURE_CATALOG } from "@/lib/constants";
 import { ErrorBoundary } from "./FloorPlan3DErrorBoundary";
+import VenueEnvironment, { VenuePreset, VenuePresetDef, VENUE_PRESETS } from "./VenueEnvironment";
 
 // ── 3D Settings ──
 
 interface View3DSettings {
+  venuePreset: VenuePreset;
   chairStyle: "solid-back" | "chiavari" | "folding" | "ghost";
   linenColor: "ivory" | "white" | "blush" | "navy" | "sage" | "gold";
   floorMaterial: "hardwood" | "marble" | "carpet" | "concrete";
@@ -21,6 +23,7 @@ interface View3DSettings {
 }
 
 const DEFAULT_SETTINGS: View3DSettings = {
+  venuePreset: "none",
   chairStyle: "solid-back",
   linenColor: "ivory",
   floorMaterial: "hardwood",
@@ -1124,7 +1127,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
   );
 }
 
-function RoomFloor({ obj, originX, originY, settings }: { obj: ParsedObject; originX: number; originY: number; settings: View3DSettings }) {
+function RoomFloor({ obj, originX, originY, settings, showWalls = true, floorOverride }: { obj: ParsedObject; originX: number; originY: number; settings: View3DSettings; showWalls?: boolean; floorOverride?: { color: string; roughness: number; metalness: number } }) {
   // Memoize shape to avoid re-creating on every render
   const floorShape = useMemo(() => {
     if (!obj.points || obj.points.length < 3) return null;
@@ -1169,56 +1172,62 @@ function RoomFloor({ obj, originX, originY, settings }: { obj: ParsedObject; ori
   if (!floorShape) return null;
 
   const wallThickness = 0.15;
+  const floorMat = floorOverride ?? FLOOR_MATERIALS[settings.floorMaterial];
 
   return (
     <group>
-      {/* Floor — warm wood-tone, slightly darker so furniture pops */}
+      {/* Floor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
-        <meshStandardMaterial color={FLOOR_MATERIALS[settings.floorMaterial].color} side={DoubleSide} roughness={FLOOR_MATERIALS[settings.floorMaterial].roughness} metalness={FLOOR_MATERIALS[settings.floorMaterial].metalness} />
+        <meshStandardMaterial color={floorMat.color} side={DoubleSide} roughness={floorMat.roughness} metalness={floorMat.metalness} />
       </mesh>
-      {/* Baseboard trim along walls */}
-      {wallSegments.map((seg, i) => (
-        <mesh
-          key={`base-${i}`}
-          position={[seg.cx, 0.15, seg.cz]}
-          rotation={[0, -seg.angle, 0]}
-        >
-          <boxGeometry args={[seg.length, 0.3, wallThickness + 0.06]} />
-          <meshStandardMaterial color="#d5cdc2" roughness={0.6} metalness={0.05} />
-        </mesh>
-      ))}
-      {/* Walls — subtle translucent with slight warmth */}
-      {wallSegments.map((seg, i) => (
-        <mesh
-          key={`wall-${i}`}
-          position={[seg.cx, WALL_HEIGHT / 2, seg.cz]}
-          rotation={[0, -seg.angle, 0]}
-          receiveShadow
-          renderOrder={1}
-        >
-          <boxGeometry args={[seg.length, WALL_HEIGHT, wallThickness]} />
-          <meshStandardMaterial
-            color="#f0ebe4"
-            roughness={0.92}
-            metalness={0}
-            transparent
-            opacity={0.2}
-            depthWrite={false}
-          />
-        </mesh>
-      ))}
-      {/* Crown molding at wall top */}
-      {wallSegments.map((seg, i) => (
-        <mesh
-          key={`crown-${i}`}
-          position={[seg.cx, WALL_HEIGHT - 0.08, seg.cz]}
-          rotation={[0, -seg.angle, 0]}
-        >
-          <boxGeometry args={[seg.length, 0.16, wallThickness + 0.04]} />
-          <meshStandardMaterial color="#e0d8ce" roughness={0.5} metalness={0.06} />
-        </mesh>
-      ))}
+      {/* Walls, baseboard, crown — only when venue has walls */}
+      {showWalls && (
+        <>
+          {/* Baseboard trim along walls */}
+          {wallSegments.map((seg, i) => (
+            <mesh
+              key={`base-${i}`}
+              position={[seg.cx, 0.15, seg.cz]}
+              rotation={[0, -seg.angle, 0]}
+            >
+              <boxGeometry args={[seg.length, 0.3, wallThickness + 0.06]} />
+              <meshStandardMaterial color="#d5cdc2" roughness={0.6} metalness={0.05} />
+            </mesh>
+          ))}
+          {/* Walls — subtle translucent with slight warmth */}
+          {wallSegments.map((seg, i) => (
+            <mesh
+              key={`wall-${i}`}
+              position={[seg.cx, WALL_HEIGHT / 2, seg.cz]}
+              rotation={[0, -seg.angle, 0]}
+              receiveShadow
+              renderOrder={1}
+            >
+              <boxGeometry args={[seg.length, WALL_HEIGHT, wallThickness]} />
+              <meshStandardMaterial
+                color="#f0ebe4"
+                roughness={0.92}
+                metalness={0}
+                transparent
+                opacity={0.2}
+                depthWrite={false}
+              />
+            </mesh>
+          ))}
+          {/* Crown molding at wall top */}
+          {wallSegments.map((seg, i) => (
+            <mesh
+              key={`crown-${i}`}
+              position={[seg.cx, WALL_HEIGHT - 0.08, seg.cz]}
+              rotation={[0, -seg.angle, 0]}
+            >
+              <boxGeometry args={[seg.length, 0.16, wallThickness + 0.04]} />
+              <meshStandardMaterial color="#e0d8ce" roughness={0.5} metalness={0.06} />
+            </mesh>
+          ))}
+        </>
+      )}
     </group>
   );
 }
@@ -1294,13 +1303,23 @@ function FloorPlan3DScene({
   const rooms = useMemo(() => objects.filter((o) => o.type === "room"), [objects]);
   const furniture = useMemo(() => objects.filter((o) => o.type === "furniture"), [objects]);
 
+  // Resolve venue preset
+  const activePreset: VenuePresetDef | null = settings.venuePreset !== "none"
+    ? VENUE_PRESETS[settings.venuePreset]
+    : null;
+  const effectiveFloor = activePreset?.floorOverride ?? FLOOR_MATERIALS[settings.floorMaterial];
+  const envPreset = activePreset?.environmentPreset ?? "studio";
+  const showBackground = activePreset ? !activePreset.showWalls : false;
+  const fogColor = activePreset?.fogColor ?? "#f0ece6";
+  const showWalls = activePreset?.showWalls ?? true;
+
   return (
     <>
-      {/* Neutral studio HDRI for clean reflections */}
-      <Environment preset="studio" background={false} />
+      {/* HDRI environment — outdoor presets show background sky */}
+      <Environment preset={envPreset as any} background={showBackground} />
 
-      {/* Fog for depth — warm tone */}
-      <fog attach="fog" args={["#f0ece6", maxDim * 2, maxDim * 5]} />
+      {/* Fog for depth */}
+      <fog attach="fog" args={[fogColor, maxDim * 2, maxDim * 5]} />
 
       {/* Scene lighting — mood-driven key + fill for dimension */}
       <ambientLight intensity={lightingEnabled ? LIGHTING_MOODS[settings.lightingMood].ambientIntensity * 0.4 : LIGHTING_MOODS[settings.lightingMood].ambientIntensity} color={LIGHTING_MOODS[settings.lightingMood].ambientColor} />
@@ -1336,11 +1355,11 @@ function FloorPlan3DScene({
         args={["#faf7f0", "#d4c8b8", 0.15]}
       />
 
-      {/* Ground plane (fallback if no room) */}
+      {/* Ground plane (fallback if no room) — uses venue floor override when active */}
       {rooms.length === 0 && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.01, cz]} receiveShadow>
           <planeGeometry args={[maxDim * 1.5, maxDim * 1.5]} />
-          <meshStandardMaterial color={FLOOR_MATERIALS[settings.floorMaterial].color} roughness={FLOOR_MATERIALS[settings.floorMaterial].roughness} metalness={FLOOR_MATERIALS[settings.floorMaterial].metalness} />
+          <meshStandardMaterial color={effectiveFloor.color} roughness={effectiveFloor.roughness} metalness={effectiveFloor.metalness} />
         </mesh>
       )}
 
@@ -1357,9 +1376,12 @@ function FloorPlan3DScene({
         />
       )}
 
+      {/* Venue environment elements (tent, grass, string lights, beams, etc.) */}
+      <VenueEnvironment preset={activePreset} cx={cx} cz={cz} maxDim={maxDim} />
+
       {/* Room floor */}
       {rooms.map((room, i) => (
-        <RoomFloor key={`room-${i}`} obj={room} originX={originX} originY={originY} settings={settings} />
+        <RoomFloor key={`room-${i}`} obj={room} originX={originX} originY={originY} settings={settings} showWalls={showWalls} floorOverride={activePreset?.floorOverride} />
       ))}
 
       {/* Furniture */}
@@ -1418,6 +1440,20 @@ function Settings3DPanel({
     onChange({ ...settings, [key]: value });
   };
 
+  const selectPreset = (preset: VenuePreset) => {
+    const def = VENUE_PRESETS[preset];
+    if (def) {
+      onChange({
+        ...settings,
+        venuePreset: preset,
+        floorMaterial: def.floorMaterial,
+        lightingMood: def.lightingMood,
+      });
+    } else {
+      onChange({ ...settings, venuePreset: preset });
+    }
+  };
+
   return (
     <div className="absolute top-3 right-3 z-10">
       {/* Gear toggle button */}
@@ -1438,8 +1474,28 @@ function Settings3DPanel({
 
       {/* Settings panel */}
       {open && (
-        <div className="absolute top-11 right-0 w-64 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-stone-200 p-4 space-y-4">
+        <div className="absolute top-11 right-0 w-64 max-h-[80vh] overflow-y-auto bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-stone-200 p-4 space-y-4">
           <h3 className="text-xs font-semibold text-stone-700 uppercase tracking-wider">3D Settings</h3>
+
+          {/* Venue Preset */}
+          <div>
+            <label className="text-xs font-medium text-stone-500 mb-1.5 block">Venue</label>
+            <div className="flex flex-wrap gap-1.5">
+              {(["none", "indoor-ballroom", "tent", "outdoor-garden", "rooftop", "barn", "beach"] as const).map((preset) => (
+                <button
+                  key={preset}
+                  onClick={() => selectPreset(preset)}
+                  className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+                    settings.venuePreset === preset
+                      ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
+                      : "bg-stone-50 text-stone-500 border border-stone-200 hover:bg-stone-100"
+                  }`}
+                >
+                  {preset === "none" ? "Default" : (VENUE_PRESETS[preset]?.label ?? preset)}
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* Chair Style */}
           <div>
