@@ -1726,8 +1726,6 @@ function FloorPlan3DScene({
     ? VENUE_PRESETS[settings.venuePreset]
     : null;
   const effectiveFloor = activePreset?.floorOverride ?? FLOOR_MATERIALS[settings.floorMaterial];
-  const envPreset = activePreset?.environmentPreset ?? "studio";
-  const showBackground = activePreset ? !activePreset.showWalls : false;
   const fogColor = activePreset?.fogColor ?? "#f0ece6";
   const showWalls = activePreset?.showWalls ?? true;
 
