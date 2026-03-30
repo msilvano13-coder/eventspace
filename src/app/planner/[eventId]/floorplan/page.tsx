@@ -57,6 +57,9 @@ export default function FloorPlanPage() {
   const [guestRelationships, setGuestRelationships] = useState<GuestRelationship[]>([]);
   const getCanvasDataURLRef = useRef<(() => string | null) | null>(null);
   const autoCreatedRef = useRef(false);
+  // Refs for latest values — prevents stale closure in flush-save on editor unmount
+  const validPlansRef = useRef<FloorPlan[]>([]);
+  const resolvedPlanIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     fetchGuestRelationships(eventId).then(setGuestRelationships).catch(() => {});
@@ -80,20 +83,26 @@ export default function FloorPlanPage() {
   // Resolve the effective active plan ID (fallback to first valid plan)
   const resolvedPlanId = activePlanId ?? validPlans[0]?.id ?? null;
 
+  // Keep refs in sync so flush-save on editor unmount always reads latest values
+  validPlansRef.current = validPlans;
+  resolvedPlanIdRef.current = resolvedPlanId;
+
   const handleSave = useCallback(
     (json: string) => {
-      if (!event || !resolvedPlanId) {
-        console.warn("[FloorPlan] handleSave skipped: event=", !!event, "resolvedPlanId=", resolvedPlanId);
+      // Read from refs to avoid stale closure — critical for editor unmount flush-save
+      const currentPlans = validPlansRef.current;
+      const currentPlanId = resolvedPlanIdRef.current;
+      if (!currentPlanId || currentPlans.length === 0) {
+        console.warn("[FloorPlan] handleSave skipped: currentPlanId=", currentPlanId, "plans=", currentPlans.length);
         return;
       }
-      const updated = validPlans.map((fp) =>
-        fp.id === resolvedPlanId ? { ...fp, json } : fp
+      const updated = currentPlans.map((fp) =>
+        fp.id === currentPlanId ? { ...fp, json } : fp
       );
-      console.log("[FloorPlan] handleSave: saving", updated.length, "plans, active=", resolvedPlanId, "json length=", json.length);
+      console.log("[FloorPlan] handleSave: saving", updated.length, "plans, active=", currentPlanId, "json length=", json.length);
       updateEvent(eventId, { floorPlans: updated });
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [eventId, resolvedPlanId, updateEvent, validPlans]
+    [eventId, updateEvent]
   );
 
   // Auto-create default floor plans if none valid exist (wait for core data from DB)
