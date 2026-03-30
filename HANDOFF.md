@@ -1,14 +1,64 @@
 # EventSpace Handoff — March 30, 2026
 
-## Current State: Session 6 Complete — Deployed
+## Current State: Session 7 Complete — Deployed
 - **Branch:** `main`
 - **Build:** Clean
-- **Latest commit:** `6913ccb` — Add lighting rotation + move edit panel to top for better UX
+- **Latest commit:** `26f9c0c` — Scale EventSpace for 1,000-5,000 users
 - **Deploy:** `eventspace-nine.vercel.app`
 
 ---
 
 ## What Was Done Today (March 30)
+
+### Session 7: Scalability — Scale to 1,000-5,000 Users
+
+Full scalability overhaul across database, query layer, client store, API, and bundle optimization. **No UX changes** at current data volumes — pagination only visible at 50+ events or 100+ guests.
+
+**Database & RLS Optimization** (`supabase/scalability-migration.sql`)
+- Denormalized `user_id` onto 5 high-traffic child tables: `guests`, `vendors`, `floor_plans`, `invoices`, `schedule_items`
+- Backfill from parent `events` table + orphan row cleanup before NOT NULL constraint
+- Composite indexes `(user_id, event_id)` on all 5 tables
+- Replaced 20 EXISTS-subquery RLS policies with direct `auth.uid() = user_id` (O(1) vs O(n))
+- Simplified 2-hop RLS on `vendor_payments`, `invoice_line_items`, `lighting_zones` to 1-hop via parent's new `user_id`
+- Updated client portal RPCs (`client_update_guests`, `client_update_schedule`) to include `user_id` + missing `guest_group`/`vip` columns
+
+**Query Layer** (`src/lib/supabase/db.ts`)
+- `fetchEvents()` now paginated (50/page) returning `{ data: Event[], hasMore: boolean }`
+- All 13 sub-entity fetchers capped with `.limit(500)` safety limit
+- N+1 deletion loops fixed with batch `.in()` operations:
+  - `replaceVendors`: vendor_payments batch delete
+  - `replaceInvoices`: invoice_line_items batch delete
+  - `replaceFloorPlans`: lighting_zones batch delete
+- `getUserId()` cached with 30s TTL + `clearUserIdCache()` for logout
+- Removed dead `fetchEventFull()` (monolithic 14-way join replaced by lazy loading in Session 2)
+
+**Client Store** (`src/lib/store.ts`)
+- LRU eviction: max 100 cached events, least-recently-accessed evicted on overflow
+- `loadMore()` method for event list pagination
+- `hasMoreEvents` getter for UI "Load more" button
+- Fixed `delete()` not removing from LRU access order
+- Replaced `setInterval` polling (10 retries × 500ms) with exponential backoff (3 retries: 500ms, 1s, 2s)
+
+**API & Infrastructure**
+- Rate limiter memory cap (`src/app/api/discover/route.ts`): 10K entry max, flush expired on overflow, 429 if still over
+- Middleware profile cache (`src/lib/supabase/middleware.ts`): extended from 5min to 15min, added `console.warn` on bad cookie parse
+- Bundle optimization (`next.config.mjs`): `optimizePackageImports` for `three`, `@react-three/fiber`, `@react-three/drei`, `fabric`
+
+**Deployment Sequencing**
+Code is deployed and backward-compatible. Migration has NOT been applied yet:
+1. Code is live (current state) — works without migration
+2. Apply `supabase/scalability-migration.sql` to add `user_id` columns
+3. Uncomment `user_id` in toRow functions (marked with `// TODO: uncomment after scalability-migration.sql`)
+4. Push toRow update
+
+**All Session 7 Commits:**
+| Commit | Description |
+|--------|-------------|
+| `26f9c0c` | Scale EventSpace for 1,000-5,000 users: RLS, pagination, LRU, bundle optimization |
+| `db91dbf` | Fix venue elements alignment: size to room polygon, not canvas |
+| `76f1a2d` | Enhance 3D procedural furniture geometry for all 10 categories |
+
+---
 
 ### Session 6: Chair Rotation, 3D Settings, Venue Presets, Lighting UX
 
@@ -288,7 +338,13 @@ Page renders → useEvent(id)        → store.getById(id)
 
 ### Should Address Soon
 
-1. **Missing DB columns for storage features** — Several tables reference `storage_path` columns in `db.ts` that may not exist in production:
+1. **Scalability migration not yet applied** — `supabase/scalability-migration.sql` adds `user_id` to 5 child tables. Code is backward-compatible without it, but RLS optimization won't take effect until migration runs. After applying:
+   - Search `db.ts` for `// TODO: uncomment after scalability-migration.sql`
+   - Uncomment `user_id` in `guestToRow`, `vendorToRow`, `floorPlanToRow`, `invoiceToRow`, `scheduleItemToRow`
+   - Re-add `const userId = await getUserId()` in the 5 replace functions
+   - Push the update
+
+2. **Missing DB columns for storage features** — Several tables reference `storage_path` columns in `db.ts` that may not exist in production:
    - `event_contracts`: `storage_path`, `storage_signed_path`, `storage_planner_sig`, `storage_client_sig`
    - `mood_board_images`: `storage_path`, `storage_thumb`
    - `shared_files`: `storage_path`
@@ -508,6 +564,7 @@ flower-arrangement, draping, uplighting
 | **Store React hooks** | `src/hooks/useStore.ts` |
 | **Database layer** | `src/lib/supabase/db.ts` |
 | **DB migration/schema** | `supabase/migration.sql` |
+| **Scalability migration** | `supabase/scalability-migration.sql` |
 | Floor plan editor | `src/components/floorplan/FloorPlanEditor.tsx` |
 | Floor plan 3D view | `src/components/floorplan/FloorPlan3DView.tsx` |
 | Lighting panel | `src/components/floorplan/LightingPanel.tsx` |
