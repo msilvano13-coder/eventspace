@@ -2032,6 +2032,12 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
   const [settings, setSettings] = useState<View3DSettings>(DEFAULT_SETTINGS);
   const [showSettings, setShowSettings] = useState(false);
 
+  // Debug: object count for diagnostics
+  const debugInfo = useMemo(() => {
+    const parsed = parseCanvasJSON(floorPlanJSON);
+    return { jsonLen: floorPlanJSON?.length ?? 0, objCount: parsed.objects.length, furniture: parsed.objects.filter(o => o.type === "furniture").length, rooms: parsed.objects.filter(o => o.type === "room").length };
+  }, [floorPlanJSON]);
+
   // Compute camera position + centroid to frame the actual furniture
   const { camConfig, centerX, centerZ } = useMemo(() => {
     const parsed = parseCanvasJSON(floorPlanJSON);
@@ -2121,6 +2127,10 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
           open={showSettings}
           onToggle={() => setShowSettings(!showSettings)}
         />
+        {/* Temporary debug overlay — remove after confirming 3D works on production */}
+        <div className="absolute bottom-2 left-2 text-[10px] text-stone-400 bg-white/80 px-2 py-1 rounded font-mono">
+          JSON:{debugInfo.jsonLen} | Obj:{debugInfo.objCount} | Furniture:{debugInfo.furniture} | Rooms:{debugInfo.rooms}
+        </div>
       </div>
     </ErrorBoundary>
   );
