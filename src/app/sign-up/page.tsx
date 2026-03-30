@@ -2,13 +2,24 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
 import { trackSignupCompleted } from "@/lib/analytics";
+import { Suspense } from "react";
 
 export default function SignUpPage() {
+  return (
+    <Suspense>
+      <SignUpContent />
+    </Suspense>
+  );
+}
+
+function SignUpContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const planParam = searchParams.get("plan");
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -47,8 +58,10 @@ export default function SignUpPage() {
 
     trackSignupCompleted();
 
-    // Redirect to sign-in with success message
-    router.push("/sign-in?registered=true");
+    // Preserve plan param so post-login redirect lands on the right upgrade card
+    const params = new URLSearchParams({ registered: "true" });
+    if (planParam) params.set("plan", planParam);
+    router.push(`/sign-in?${params.toString()}`);
   }
 
   return (
@@ -69,7 +82,9 @@ export default function SignUpPage() {
             Create your account
           </h1>
           <p className="text-sm text-stone-500 text-center mb-6">
-            Start your 30-day free trial of Professional
+            {planParam === "diy"
+              ? "Create your account to get started with DIY"
+              : "Get started — choose your plan after sign-up"}
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-4">

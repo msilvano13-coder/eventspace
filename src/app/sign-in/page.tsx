@@ -18,7 +18,9 @@ export default function SignInPage() {
 function SignInForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const rawRedirect = searchParams.get("redirect") || "/planner";
+  const planParam = searchParams.get("plan");
+  const defaultRedirect = planParam ? `/planner/upgrade?plan=${planParam}` : "/planner";
+  const rawRedirect = searchParams.get("redirect") || defaultRedirect;
   const redirect = rawRedirect && rawRedirect.startsWith("/") && !rawRedirect.startsWith("//") ? rawRedirect : "/planner";
 
   const [email, setEmail] = useState("");

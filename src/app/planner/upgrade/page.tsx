@@ -1,8 +1,8 @@
 "use client";
 
 import { usePlannerProfile } from "@/hooks/useStore";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Check, Sparkles, Loader2 } from "lucide-react";
 import { trackPlanPurchased } from "@/lib/analytics";
 
@@ -33,8 +33,18 @@ const PRO_FEATURES = [
 ];
 
 export default function UpgradePage() {
+  return (
+    <Suspense>
+      <UpgradeContent />
+    </Suspense>
+  );
+}
+
+function UpgradeContent() {
   const profile = usePlannerProfile();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const highlightDiy = searchParams.get("plan") === "diy";
   const [loadingPlan, setLoadingPlan] = useState<"diy" | "professional" | null>(
     null
   );
@@ -157,7 +167,7 @@ export default function UpgradePage() {
 
       <div className="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
         {/* DIY */}
-        <div className="bg-stone-50 rounded-2xl p-8 border border-stone-200 shadow-soft flex flex-col">
+        <div className={`rounded-2xl p-8 flex flex-col ${highlightDiy ? "bg-white border-2 border-rose-500 shadow-lg relative" : "bg-stone-50 border border-stone-200 shadow-soft"}`}>
           <h3 className="font-heading text-xl font-semibold text-stone-900">
             DIY
           </h3>
@@ -173,13 +183,15 @@ export default function UpgradePage() {
           <button
             onClick={handleSelectDiy}
             disabled={loadingPlan !== null}
-            className="mt-6 flex items-center justify-center gap-2 font-medium text-stone-700 bg-white hover:bg-stone-100 border border-stone-200 px-6 py-2.5 rounded-xl transition-colors text-sm disabled:opacity-50"
+            className={`mt-6 flex items-center justify-center gap-2 font-medium px-6 py-2.5 rounded-xl transition-colors text-sm disabled:opacity-50 ${highlightDiy ? "text-white bg-rose-500 hover:bg-rose-600 shadow-sm" : "text-stone-700 bg-white hover:bg-stone-100 border border-stone-200"}`}
           >
             {loadingPlan === "diy" ? (
               <>
                 <Loader2 size={14} className="animate-spin" />
                 Redirecting...
               </>
+            ) : highlightDiy ? (
+              "Get Started — $99"
             ) : (
               "Buy Now"
             )}
@@ -201,10 +213,12 @@ export default function UpgradePage() {
         </div>
 
         {/* Professional */}
-        <div className="bg-white rounded-2xl p-8 border-2 border-rose-500 shadow-lg relative flex flex-col">
-          <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-rose-500 text-white text-xs font-medium px-3 py-1 rounded-full">
-            For Professionals
-          </span>
+        <div className={`rounded-2xl p-8 relative flex flex-col ${highlightDiy ? "bg-stone-50 border border-stone-200 shadow-soft" : "bg-white border-2 border-rose-500 shadow-lg"}`}>
+          {!highlightDiy && (
+            <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-rose-500 text-white text-xs font-medium px-3 py-1 rounded-full">
+              For Professionals
+            </span>
+          )}
           <h3 className="font-heading text-xl font-semibold text-stone-900">
             Professional
           </h3>
@@ -220,7 +234,7 @@ export default function UpgradePage() {
           <button
             onClick={isExpired ? handleSubscribePro : handleStartTrial}
             disabled={loadingPlan !== null}
-            className="mt-6 flex items-center justify-center gap-2 font-medium text-white bg-rose-500 hover:bg-rose-600 px-6 py-2.5 rounded-xl transition-colors text-sm shadow-sm disabled:opacity-50"
+            className={`mt-6 flex items-center justify-center gap-2 font-medium px-6 py-2.5 rounded-xl transition-colors text-sm disabled:opacity-50 ${highlightDiy ? "text-stone-700 bg-white hover:bg-stone-100 border border-stone-200" : "text-white bg-rose-500 hover:bg-rose-600 shadow-sm"}`}
           >
             {loadingPlan === "professional" ? (
               <>
