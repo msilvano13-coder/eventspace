@@ -1,15 +1,33 @@
 # EventSpace Handoff — March 29, 2026
 
-## Current State: Phase 3 + Client Portal Fixes + 3D Placement Fix — Deployed
-All code committed, pushed, deployed to Vercel production.
-- **Latest commit:** `df4a8f0` — Fix 3D view furniture placement: negate room floor Z to match furniture coordinates
+## Current State: Tech Debt Cleanup + 3D Room Fix — In Progress
 - **Branch:** `main`
-- **Build:** Clean
+- **Build:** Clean (TypeScript passes)
 - **Deploy:** `eventspace-19lw1wfrf-msilvano13-coders-projects.vercel.app`
 
 ---
 
 ## What Was Done Today (March 29)
+
+### Session 4: Tech Debt Cleanup + 3D Room Floor Fix
+
+**5 Tech Debt Items Resolved:**
+
+| # | Issue | Fix | Files |
+|---|-------|-----|-------|
+| 1 | `replace*()` delete-then-insert loses data on failure | Converted 11 functions to upsert pattern (`onConflict: "id"` + delete removed) | `db.ts` |
+| 2 | Webhook idempotency | `stripe_webhook_events` table + claim-before-process dedup | `webhook/route.ts`, `webhook-idempotency-migration.sql` |
+| 3 | `eventFromRow` ambiguity | Split into `eventCoreFields` (shared), `eventCoreFromRow` (core + floorPlans), `eventFromRow` (full) | `db.ts` |
+| 4 | Event creation spinner stuck | Added `try/finally` with `setCreating(false)` | `planner/page.tsx` |
+| 5 | Storage migration needed | Consolidated migration with storage columns, buckets, RLS policies | `migration.sql` |
+
+**3D Room Floor Positioning Fix:**
+- **Problem:** Room floor polygon appeared offset from furniture in 3D view
+- **Root cause:** Fabric.js Polygon uses `originX: "left"` (left edge) while Groups use `originX: "center"`. The `parseCanvasJSON` stored `obj.x = polygon.left` (left edge), but the centroid/camera calculation treated it as center — shifting camera, grid, contact shadows, and lights away from the actual room position.
+- **Fix:** Pre-compute absolute canvas coordinates for room polygon points in `parseCanvasJSON` using Fabric.js pathOffset formula: `centerX + (point.x - pathOffsetX) * scaleX`. Store true center in `obj.x/y` so centroid calculation works correctly. Simplified `RoomFloor` to use absolute coords directly.
+- **File:** `FloorPlan3DView.tsx`
+
+---
 
 ### Session 3: Floor Plan Phase 3 + Client Portal Bugs
 
@@ -164,12 +182,11 @@ Page renders → useEvent(id)        → store.getById(id)
 
    **Fix:** Run ALTER TABLE statements from migration.sql + `NOTIFY pgrst, 'reload schema'`
 
-2. **`replaceGuests` delete-then-insert is dangerous** — All `replace*()` functions do DELETE ALL then INSERT. If INSERT fails, all data is permanently lost. Consider transactions or upsert.
-
-3. **`eventFromRow` initializes empty sub-entity arrays** — Used for both full-event loads and core-only loads. Consider splitting into `eventCoreFromRow()` and `eventFullFromRow()`.
-
-4. **Event creation spinning** — User previously reported pinwheel. Not fully debugged.
-5. **Webhook idempotency** — No deduplication by Stripe event ID.
+### Resolved (Session 4)
+- ~~`replaceGuests` delete-then-insert~~ → Converted to upsert pattern
+- ~~`eventFromRow` ambiguity~~ → Split into `eventCoreFromRow` / `eventFromRow`
+- ~~Event creation spinner~~ → try/finally with `setCreating(false)`
+- ~~Webhook idempotency~~ → `stripe_webhook_events` dedup table
 
 ---
 
@@ -198,8 +215,173 @@ Page renders → useEvent(id)        → store.getById(id)
 ✅ Phase 1b: UX features (capacity, dimensions, multi-select, furniture groups)
 ✅ Phase 2:  Smart seating algorithm, lighting-furniture snap, PDF export
 ✅ Phase 3:  3D polish, layout templates, rotation snapping
-⬜ Phase 4:  Venue library, mobile editor, real-time collaboration
+✅ Tech debt: Upsert pattern, webhook idempotency, eventFromRow split, spinner fix
 ```
+
+---
+
+## 3D Upgrade Roadmap — "Polished Architectural Viz"
+
+Goal: Professional, clean 3D rendering planners can screenshot for proposals. Stylized (not photorealistic) — think architectural diagram, not a photo.
+
+### Step 1: GLTF Furniture Models (Biggest Visual Impact)
+Replace colored boxes/cylinders with real 3D models (tables with tablecloths, chairs with legs, stages with risers).
+
+**Architecture:**
+- Add `public/models/` directory with `.glb` files (one per furniture type)
+- Use `useGLTF` from `@react-three/drei` for loading + caching
+- Map `furnitureId` → model path in a `FURNITURE_MODELS` record
+- Fallback to current geometric shapes if model not loaded
+- LOD (Level of Detail) for scenes with 200+ items
+
+**Models Needed (priority order):**
+| Model | Used For | Style |
+|-------|----------|-------|
+| Round table + tablecloth | `round-table-60`, `round-table-72` | White cloth drape, center visible |
+| Rectangular table + cloth | `rect-table-6`, `rect-table-8` | Banquet linen |
+| Chiavari chair | `chair` | Gold/clear, most common event chair |
+| Cocktail table | `cocktail-table`, `high-top` | Tall pedestal, small top |
+| Stage/riser | `stage` | Black platform, 12" height |
+| Bar counter | `bar` | Front panel, counter surface |
+| Lounge sofa | `lounge-sofa` | Tufted, low profile |
+| Dance floor | `dance-floor` | Parquet tiles, reflective |
+| DJ booth | `dj-booth` | Console with facade |
+| Buffet station | `buffet-station` | Chafing dish row |
+
+**Source options:**
+- Free: Sketchfab CC0, Kenney.nl, Google Poly archive
+- Paid ($5-15/model): CGTrader, TurboSquid "low-poly event" packs
+- Custom: Blender → glTF export (most control over style consistency)
+
+**Files to modify:**
+- `FloorPlan3DView.tsx` — Add `GLTFFurniture` component, modify `FurnitureMesh` to try GLTF first
+- New: `src/lib/furniture-models.ts` — Model path registry + preloader
+
+**Estimated effort:** 1-2 sessions (loader infra + first 3-4 models)
+
+---
+
+### Step 2: Material & Lighting Upgrade
+Improve floor, walls, and scene atmosphere without changing geometry.
+
+**Changes:**
+- **Floor texture:** Subtle wood grain or carpet pattern (use `useTexture` with a tileable image)
+- **Wall material:** Drywall bump map, soft off-white, slight glossiness
+- **Ambient occlusion:** `<EffectComposer>` + `<SSAO>` from `@react-three/postprocessing`
+- **Tone mapping:** ACES filmic tone mapping for cinematic look
+- **Better shadows:** PCF soft shadows, shadow bias tuning
+- **Sky/Environment:** Neutral studio HDRI (not "apartment" — too residential)
+
+**New dependency:** `@react-three/postprocessing`
+
+**Files to modify:**
+- `FloorPlan3DView.tsx` — Scene setup, materials, post-processing
+- New: `public/textures/` — Floor wood, wall bump, tablecloth normal maps
+
+**Estimated effort:** 1 session
+
+---
+
+### Step 3: Camera Presets & View Modes
+One-click views that make the 3D useful for client presentations.
+
+**Views:**
+| Preset | Camera | Use Case |
+|--------|--------|----------|
+| Bird's Eye | Directly above, slight angle | Overview layout check |
+| Guest POV | Eye level (5ft) from entrance | "What guests see walking in" |
+| Stage View | From stage looking at audience | Speaker/performer perspective |
+| Sweetheart View | From head table looking out | Couple's perspective |
+| Walkthrough | Animated orbit path | Auto-play showcase |
+
+**Implementation:**
+- Preset buttons in 3D view toolbar
+- Smooth camera transition via `gsap` or `@react-three/drei` `CameraShake`/lerp
+- Walkthrough: keyframe array → `useFrame` interpolation
+
+**Files to modify:**
+- `FloorPlan3DView.tsx` — Camera preset logic
+- `Toolbar.tsx` or new `View3DToolbar.tsx` — Preset buttons
+- New dependency: `gsap` (optional, for smooth transitions)
+
+**Estimated effort:** 1 session
+
+---
+
+### Step 4: Export & Share
+Get the 3D view into planner proposals.
+
+**Features:**
+- **Screenshot export:** `canvas.toDataURL()` via R3F's `gl` context → PNG download
+- **PDF integration:** Add 3D screenshot as page 1 of existing PDF export
+- **Share link:** Read-only 3D view at `/client/[eventId]/floorplan` (already exists, just needs polish)
+- **Embed snippet:** `<iframe>` code for venue websites
+- **Layout comparison:** Side-by-side or toggle between floor plan variants in 3D
+
+**Files to modify:**
+- `FloorPlan3DView.tsx` — Screenshot capture function
+- `floorplan-export-pdf.ts` — Add 3D render page
+- `FloorPlanPage` — Export button wiring
+- Client portal — Polish the existing 3D view
+
+**Estimated effort:** 1 session
+
+---
+
+### Execution Order & Dependencies
+
+```
+Step 1 (GLTF Models) ← START HERE, biggest visual impact
+    ↓
+Step 2 (Materials)   ← builds on Step 1's models with better textures
+    ↓
+Step 3 (Camera)      ← independent, but better with good models
+    ↓
+Step 4 (Export)      ← captures everything above
+```
+
+### What We're NOT Doing (and why)
+- **360° venue photos** — Doesn't scale (can't photograph every venue)
+- **Photorealistic rendering** — Diminishing returns, long load times
+- **WebXR/VR** — Tiny audience, big effort
+- **Real-time collaboration** — Different initiative, not 3D-specific
+
+---
+
+## Current 3D Architecture (for reference)
+
+### Coordinate System
+- **Canvas (2D):** 1px = 1 inch. Fabric.js with Groups (`originX: "center"`) and Polygons (`originX: "left"`)
+- **3D World:** `SCALE = 1/12` (12 inches = 1 world unit = 1 foot). `H_MULT = 1.8` for height exaggeration.
+- **Conversion:** `worldX = (canvasX - canvasWidth/2) * SCALE`, `worldZ = (canvasY - canvasHeight/2) * SCALE`
+
+### parseCanvasJSON Pipeline
+```
+Fabric.js JSON → unwrapCanvasJSON()
+    ↓
+processObject() recursion (handles Groups, Polygons, nested objects)
+    ↓
+ParsedObject[] — normalized items with absolute canvas coords
+    ↓
+Split into: rooms[] | furniture[] | lighting[]
+    ↓
+Each rendered by: RoomFloor | FurnitureMesh | LightingZone3D
+```
+
+### Furniture Rendering Categories (14)
+Each `furnitureId` maps to a category with specialized Three.js geometry:
+round-table, cocktail-table, rect-table, chair, sofa, service (bar/buffet),
+flat-surface (dance floor), stage, dj-booth, photo-booth, arch,
+flower-arrangement, draping, uplighting
+
+### Key Constants
+| Constant | Value | Purpose |
+|----------|-------|---------|
+| `S` (SCALE) | `1/12` | Inches to feet |
+| `H_MULT` | `1.8` | Height exaggeration |
+| `WALL_HEIGHT` | `96 * S = 8ft` | Room wall height |
+| `MAX_SHADOW_LIGHTS` | `4` | GPU shadow budget |
+| Color cache | LRU, max 200 | Prevent THREE.Color churn |
 
 ---
 

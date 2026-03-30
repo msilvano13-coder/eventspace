@@ -241,19 +241,43 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
 
     if (data.isRoom) {
       const points = obj.points || [];
+      if (points.length < 3) return;
+
+      // Fabric.js Polygon (originX:"left") stores left/top as the bounding-box edge.
+      // pathOffset = center of the points bounding box (not serialized, recomputed here).
+      const pxs = points.map((p: any) => p.x as number);
+      const pys = points.map((p: any) => p.y as number);
+      const pathOffsetX = (Math.min(...pxs) + Math.max(...pxs)) / 2;
+      const pathOffsetY = (Math.min(...pys) + Math.max(...pys)) / 2;
+
+      const objWidth = obj.width || 0;
+      const objHeight = obj.height || 0;
+
+      // Center of the polygon on canvas:
+      //   centerX = left + (width * scaleX) / 2   (for originX:"left")
+      const centerX = absX + (objWidth * ownScaleX) / 2;
+      const centerY = absY + (objHeight * ownScaleY) / 2;
+
+      // Convert every point to absolute canvas coordinates
+      const absPoints = points.map((p: any) => [
+        centerX + (p.x - pathOffsetX) * ownScaleX,
+        centerY + (p.y - pathOffsetY) * ownScaleY,
+      ]);
+
       parsed.push({
         type: "room",
         furnitureId: "",
         label: "Room",
         shape: "rect",
-        x: absX,
-        y: absY,
-        width: (obj.width || 0) * ownScaleX,
-        height: (obj.height || 0) * ownScaleY,
+        // Store the TRUE center so centroid / camera calculations are correct
+        x: centerX,
+        y: centerY,
+        width: objWidth * ownScaleX,
+        height: objHeight * ownScaleY,
         angle: absAngle,
         fill: "#faf7f0",
         stroke: "#a89070",
-        points: points.map((p: any) => [p.x, p.y]),
+        points: absPoints,
       });
       return;
     }
@@ -397,182 +421,417 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
 
   const fillColor = getCachedColor(obj.fill);
   const strokeColor = getCachedColor(obj.stroke);
+  const whiteColor = getCachedColor("#ffffff");
+  const darkColor = getCachedColor("#3a3530");
 
   const category = getFurnitureCategory(obj.furnitureId);
   const w = obj.width * S;
   const d = obj.height * S;
 
-  // ── Round tables ──
+  // ── Round tables — with tablecloth drape ──
   if (category === "round-table") {
     const radius = (obj.radius || obj.width / 2) * S;
-    const halfH = h3d / 2;
+    const tableTopY = h3d;
+    const topThick = 1.2 * S;
+    const clothDrop = 12 * S; // tablecloth hangs 12 inches
+    const clothRadius = radius + 1.5 * S; // cloth extends past table edge
     return (
-      <group position={[posX, halfH, posZ]} rotation={[0, rotY, 0]}>
-        {/* Tabletop */}
-        <mesh position={[0, halfH - 1 * S, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[radius, radius, 2 * S, 32]} />
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        {/* Pedestal base disc */}
+        <mesh position={[0, 1 * S, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[3 * S, 3.5 * S, 2 * S, 16]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.4} metalness={0.15} />
+        </mesh>
+        {/* Pedestal column */}
+        <mesh position={[0, tableTopY / 2, 0]} castShadow>
+          <cylinderGeometry args={[1.2 * S, 1.5 * S, tableTopY - 2 * S, 8]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.4} metalness={0.15} />
+        </mesh>
+        {/* Table surface */}
+        <mesh position={[0, tableTopY, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[radius, radius, topThick, 32]} />
           <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
-        {/* Pedestal leg */}
-        <mesh position={[0, -halfH / 2, 0]} castShadow>
-          <cylinderGeometry args={[1.5 * S, 2 * S, h3d - 2 * S, 8]} />
-          <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.1} />
+        {/* Tablecloth — slightly wider cylinder draped from top */}
+        <mesh position={[0, tableTopY - clothDrop / 2, 0]} receiveShadow>
+          <cylinderGeometry args={[clothRadius, clothRadius * 1.08, clothDrop, 32]} />
+          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={h3d + 2 * S} />
+        {/* Tablecloth top disc */}
+        <mesh position={[0, tableTopY + topThick / 2 + 0.01, 0]} receiveShadow>
+          <cylinderGeometry args={[clothRadius, clothRadius, 0.05, 32]} />
+          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
+        </mesh>
+        <FurnitureLabel label={obj.label} y={tableTopY + topThick + 2 * S} />
       </group>
     );
   }
 
-  // ── Cocktail / high-top tables ──
+  // ── Cocktail / high-top tables — tall stem, small top ──
   if (category === "cocktail-table") {
     const radius = (obj.radius || obj.width / 2) * S;
-    const halfH = h3d / 2;
+    const tableTopY = h3d;
     return (
-      <group position={[posX, halfH, posZ]} rotation={[0, rotY, 0]}>
-        {/* Thin tabletop */}
-        <mesh position={[0, halfH - 0.75 * S, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[radius, radius, 1.5 * S, 32]} />
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        {/* Base disc — heavy foot */}
+        <mesh position={[0, 0.8 * S, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[3 * S, 3.5 * S, 1.6 * S, 16]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.35} metalness={0.2} />
+        </mesh>
+        {/* Thin chrome pole */}
+        <mesh position={[0, tableTopY / 2, 0]} castShadow>
+          <cylinderGeometry args={[0.6 * S, 0.6 * S, tableTopY - 2 * S, 8]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.2} metalness={0.4} />
+        </mesh>
+        {/* Table top — thin */}
+        <mesh position={[0, tableTopY, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[radius, radius, 1 * S, 32]} />
           <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
-        {/* Single center leg */}
-        <mesh position={[0, -halfH / 2, 0]} castShadow>
-          <cylinderGeometry args={[1 * S, 1.5 * S, h3d - 1.5 * S, 8]} />
-          <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.1} />
+        {/* Optional small cloth/topper */}
+        <mesh position={[0, tableTopY + 0.55 * S, 0]} receiveShadow>
+          <cylinderGeometry args={[radius * 0.85, radius * 0.85, 0.1, 32]} />
+          <meshStandardMaterial color={whiteColor} roughness={0.9} metalness={0} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={h3d + 2 * S} />
+        <FurnitureLabel label={obj.label} y={tableTopY + 2 * S} />
       </group>
     );
   }
 
-  // ── Rectangular tables ──
+  // ── Rectangular tables — with linen overhang ──
   if (category === "rect-table") {
-    const halfH = h3d / 2;
+    const tableTopY = h3d;
+    const topThick = 1.5 * S;
+    const clothDrop = 10 * S;
+    const clothOverhang = 2 * S;
+    const legW = 1.2 * S;
+    const legInset = 2.5 * S;
     const legPositions: [number, number, number][] = [
-      [-w / 2 + 2 * S, 0, -d / 2 + 2 * S],
-      [w / 2 - 2 * S, 0, -d / 2 + 2 * S],
-      [-w / 2 + 2 * S, 0, d / 2 - 2 * S],
-      [w / 2 - 2 * S, 0, d / 2 - 2 * S],
+      [-w / 2 + legInset, (tableTopY - topThick) / 2, -d / 2 + legInset],
+      [w / 2 - legInset, (tableTopY - topThick) / 2, -d / 2 + legInset],
+      [-w / 2 + legInset, (tableTopY - topThick) / 2, d / 2 - legInset],
+      [w / 2 - legInset, (tableTopY - topThick) / 2, d / 2 - legInset],
     ];
     return (
-      <group position={[posX, halfH, posZ]} rotation={[0, rotY, 0]}>
-        {/* Tabletop */}
-        <mesh position={[0, halfH - 1 * S, 0]} castShadow receiveShadow>
-          <boxGeometry args={[w, 2 * S, d]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
-        </mesh>
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
         {/* 4 legs */}
         {legPositions.map((pos, i) => (
           <mesh key={i} position={pos} castShadow>
-            <boxGeometry args={[1.5 * S, h3d - 2 * S, 1.5 * S]} />
-            <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.1} />
+            <boxGeometry args={[legW, tableTopY - topThick, legW]} />
+            <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.08} />
           </mesh>
         ))}
+        {/* Table surface */}
+        <mesh position={[0, tableTopY - topThick / 2, 0]} castShadow receiveShadow>
+          <boxGeometry args={[w, topThick, d]} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+        </mesh>
+        {/* Linen top */}
+        <mesh position={[0, tableTopY + 0.05, 0]} receiveShadow>
+          <boxGeometry args={[w + clothOverhang * 2, 0.08, d + clothOverhang * 2]} />
+          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
+        </mesh>
+        {/* Linen drape — front */}
+        <mesh position={[0, tableTopY - clothDrop / 2, d / 2 + clothOverhang]} receiveShadow>
+          <boxGeometry args={[w + clothOverhang * 2, clothDrop, 0.08]} />
+          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
+        </mesh>
+        {/* Linen drape — back */}
+        <mesh position={[0, tableTopY - clothDrop / 2, -d / 2 - clothOverhang]} receiveShadow>
+          <boxGeometry args={[w + clothOverhang * 2, clothDrop, 0.08]} />
+          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
+        </mesh>
+        {/* Linen drape — left */}
+        <mesh position={[-w / 2 - clothOverhang, tableTopY - clothDrop / 2, 0]} receiveShadow>
+          <boxGeometry args={[0.08, clothDrop, d + clothOverhang * 2]} />
+          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
+        </mesh>
+        {/* Linen drape — right */}
+        <mesh position={[w / 2 + clothOverhang, tableTopY - clothDrop / 2, 0]} receiveShadow>
+          <boxGeometry args={[0.08, clothDrop, d + clothOverhang * 2]} />
+          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
+        </mesh>
+        <FurnitureLabel label={obj.label} y={tableTopY + 2 * S} />
+      </group>
+    );
+  }
+
+  // ── Chairs — Chiavari style: 4 tapered legs, thin seat, elegant back with slats ──
+  if (category === "chair") {
+    const seatY = 18 * S * H_MULT; // seat at 18 inches
+    const seatThick = 1 * S;
+    const backTopY = h3d;
+    const backH = backTopY - seatY;
+    const legR = 0.5 * S;
+    const legInset = 1.5 * S;
+    const slatCount = 3;
+    const slatW = w / (slatCount * 2 + 1);
+    return (
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        {/* 4 tapered legs */}
+        {([
+          [-w / 2 + legInset, -d / 2 + legInset],
+          [w / 2 - legInset, -d / 2 + legInset],
+          [-w / 2 + legInset, d / 2 - legInset],
+          [w / 2 - legInset, d / 2 - legInset],
+        ] as [number, number][]).map(([lx, lz], i) => (
+          <mesh key={`leg-${i}`} position={[lx, seatY / 2, lz]} castShadow>
+            <cylinderGeometry args={[legR * 0.7, legR, seatY, 6]} />
+            <meshStandardMaterial color={strokeColor} roughness={0.45} metalness={0.1} />
+          </mesh>
+        ))}
+        {/* Front crossbar */}
+        <mesh position={[0, seatY * 0.35, d / 2 - legInset]} castShadow>
+          <boxGeometry args={[w - legInset * 2, 0.6 * S, 0.6 * S]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.45} metalness={0.1} />
+        </mesh>
+        {/* Side crossbars */}
+        {[-1, 1].map((side) => (
+          <mesh key={`xbar-${side}`} position={[side * (w / 2 - legInset), seatY * 0.35, 0]} castShadow>
+            <boxGeometry args={[0.6 * S, 0.6 * S, d - legInset * 2]} />
+            <meshStandardMaterial color={strokeColor} roughness={0.45} metalness={0.1} />
+          </mesh>
+        ))}
+        {/* Seat — thin cushion */}
+        <mesh position={[0, seatY, 0]} castShadow receiveShadow>
+          <boxGeometry args={[w, seatThick, d]} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+        </mesh>
+        {/* Back frame — top rail */}
+        <mesh position={[0, backTopY, -d / 2 + 0.4 * S]} castShadow receiveShadow>
+          <boxGeometry args={[w, 1 * S, 0.8 * S]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.45} metalness={0.1} />
+        </mesh>
+        {/* Back vertical slats */}
+        {Array.from({ length: slatCount }).map((_, i) => {
+          const slatX = -w / 2 + slatW + i * (w / (slatCount + 1)) + slatW / 2;
+          return (
+            <mesh key={`slat-${i}`} position={[slatX, seatY + backH / 2, -d / 2 + 0.4 * S]} castShadow>
+              <boxGeometry args={[slatW, backH - 1 * S, 0.6 * S]} />
+              <meshStandardMaterial color={strokeColor} roughness={0.45} metalness={0.1} />
+            </mesh>
+          );
+        })}
+        {/* Back legs (extensions from rear legs) */}
+        {[-1, 1].map((side) => (
+          <mesh key={`bleg-${side}`} position={[side * (w / 2 - legInset), seatY + backH / 2, -d / 2 + legInset]} castShadow>
+            <cylinderGeometry args={[legR * 0.6, legR * 0.7, backH, 6]} />
+            <meshStandardMaterial color={strokeColor} roughness={0.45} metalness={0.1} />
+          </mesh>
+        ))}
+        <FurnitureLabel label={obj.label} y={backTopY + 2 * S} />
+      </group>
+    );
+  }
+
+  // ── Sofas — cushions, armrests, visible feet ──
+  if (category === "sofa") {
+    const footH = 3 * S;
+    const seatTopY = 18 * S * H_MULT;
+    const cushionH = seatTopY - footH;
+    const cushionD = d * 0.65;
+    const backH = 14 * S;
+    const backThick = 3 * S;
+    const armW = 3 * S;
+    const armH = 10 * S;
+    return (
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        {/* 4 small feet */}
+        {([[-1,-1],[-1,1],[1,-1],[1,1]] as [number,number][]).map(([sx, sz], i) => (
+          <mesh key={`foot-${i}`} position={[sx * (w / 2 - 2 * S), footH / 2, sz * (cushionD / 2 - 1 * S)]} castShadow>
+            <cylinderGeometry args={[0.8 * S, 1 * S, footH, 6]} />
+            <meshStandardMaterial color={darkColor} roughness={0.5} metalness={0.1} />
+          </mesh>
+        ))}
+        {/* Seat base */}
+        <mesh position={[0, footH + cushionH / 2, 0]} castShadow receiveShadow>
+          <boxGeometry args={[w - armW * 2, cushionH, cushionD]} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+        </mesh>
+        {/* Seat cushion divider line */}
+        <mesh position={[0, seatTopY + 0.02, 0]}>
+          <boxGeometry args={[0.1 * S, 0.04, cushionD * 0.9]} />
+          <meshStandardMaterial color={strokeColor} roughness={1} metalness={0} />
+        </mesh>
+        {/* Back rest */}
+        <mesh position={[0, seatTopY + backH / 2, -cushionD / 2 - backThick / 2 + 1 * S]} castShadow receiveShadow>
+          <boxGeometry args={[w - armW * 2, backH, backThick]} />
+          <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+        </mesh>
+        {/* Armrests */}
+        {[-1, 1].map((side) => (
+          <mesh key={`arm-${side}`} position={[side * (w / 2 - armW / 2), seatTopY + armH / 2, -backThick / 2]} castShadow receiveShadow>
+            <boxGeometry args={[armW, armH, cushionD + backThick - 1 * S]} />
+            <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          </mesh>
+        ))}
+        <FurnitureLabel label={obj.label} y={seatTopY + backH + 2 * S} />
+      </group>
+    );
+  }
+
+  // ── Service counters — counter with overhang, front panel, back shelf ──
+  if (category === "service-counter") {
+    const counterH = h3d;
+    const topThick = 1.5 * S;
+    const overhang = 2 * S;
+    const panelInset = 1 * S;
+    const isBar = obj.furnitureId === "bar";
+    return (
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        {/* Main body */}
+        <mesh position={[0, (counterH - topThick) / 2, 0]} castShadow receiveShadow>
+          <boxGeometry args={[w, counterH - topThick, d]} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+        </mesh>
+        {/* Countertop with overhang */}
+        <mesh position={[0, counterH - topThick / 2, overhang / 2]} castShadow receiveShadow>
+          <boxGeometry args={[w + overhang, topThick, d + overhang]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.4} metalness={0.12} />
+        </mesh>
+        {/* Front decorative panel inset */}
+        <mesh position={[0, (counterH - topThick) / 2, d / 2 + 0.05]}>
+          <boxGeometry args={[w - panelInset * 2, counterH - topThick - panelInset * 2, 0.1]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.7} metalness={0.05} />
+        </mesh>
+        {/* Bar foot rail */}
+        {isBar && (
+          <mesh position={[0, 6 * S, d / 2 + 1.5 * S]} rotation={[0, 0, Math.PI / 2]} castShadow>
+            <cylinderGeometry args={[0.5 * S, 0.5 * S, w - 4 * S, 8]} />
+            <meshStandardMaterial color={getCachedColor("#b8a080")} roughness={0.25} metalness={0.35} />
+          </mesh>
+        )}
+        <FurnitureLabel label={obj.label} y={counterH + 2 * S} />
+      </group>
+    );
+  }
+
+  // ── Flat surfaces — dance floor with subtle tile pattern, aisle runner ──
+  if (category === "flat-surface") {
+    const isDanceFloor = obj.furnitureId === "dance-floor";
+    const floorH = 1.5 * S;
+    return (
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        {/* Main surface */}
+        <mesh position={[0, floorH / 2, 0]} receiveShadow castShadow>
+          <boxGeometry args={[w, floorH, d]} />
+          <meshStandardMaterial
+            color={fillColor}
+            roughness={isDanceFloor ? 0.15 : pbr.roughness}
+            metalness={isDanceFloor ? 0.08 : pbr.metalness}
+          />
+        </mesh>
+        {/* Edge trim */}
+        <mesh position={[0, floorH + 0.05, 0]}>
+          <boxGeometry args={[w + 0.3 * S, 0.1, d + 0.3 * S]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.1} />
+        </mesh>
+        {/* Dance floor tile lines */}
+        {isDanceFloor && (() => {
+          const tileSize = 2; // 2 foot tiles
+          const lines: JSX.Element[] = [];
+          const halfW = w / 2;
+          const halfD = d / 2;
+          // Horizontal lines
+          for (let z = -halfD + tileSize; z < halfD; z += tileSize) {
+            lines.push(
+              <mesh key={`hl-${z}`} position={[0, floorH + 0.06, z]}>
+                <boxGeometry args={[w - 0.2, 0.02, 0.02]} />
+                <meshStandardMaterial color={strokeColor} roughness={0.3} metalness={0.05} />
+              </mesh>
+            );
+          }
+          // Vertical lines
+          for (let x = -halfW + tileSize; x < halfW; x += tileSize) {
+            lines.push(
+              <mesh key={`vl-${x}`} position={[x, floorH + 0.06, 0]}>
+                <boxGeometry args={[0.02, 0.02, d - 0.2]} />
+                <meshStandardMaterial color={strokeColor} roughness={0.3} metalness={0.05} />
+              </mesh>
+            );
+          }
+          return lines;
+        })()}
+        <FurnitureLabel label={obj.label} y={floorH + 2 * S} />
+      </group>
+    );
+  }
+
+  // ── Stage — platform with edge trim and skirt ──
+  if (category === "stage") {
+    const trimH = 1.5 * S;
+    return (
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        {/* Main platform */}
+        <mesh position={[0, h3d / 2, 0]} castShadow receiveShadow>
+          <boxGeometry args={[w, h3d, d]} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+        </mesh>
+        {/* Top surface — slightly different shade */}
+        <mesh position={[0, h3d + 0.05, 0]} receiveShadow>
+          <boxGeometry args={[w, 0.1, d]} />
+          <meshStandardMaterial color={darkColor} roughness={0.3} metalness={0.05} />
+        </mesh>
+        {/* Front edge trim */}
+        <mesh position={[0, h3d - trimH / 2, d / 2 + 0.1]}>
+          <boxGeometry args={[w + 0.2, trimH, 0.2]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.6} metalness={0.05} />
+        </mesh>
+        {/* Side edge trims */}
+        {[-1, 1].map((side) => (
+          <mesh key={`strim-${side}`} position={[side * (w / 2 + 0.1), h3d - trimH / 2, 0]}>
+            <boxGeometry args={[0.2, trimH, d + 0.2]} />
+            <meshStandardMaterial color={strokeColor} roughness={0.6} metalness={0.05} />
+          </mesh>
+        ))}
+        {/* Stage skirt — front */}
+        <mesh position={[0, h3d / 2, d / 2 + 0.3]}>
+          <boxGeometry args={[w + 0.4, h3d, 0.1]} />
+          <meshStandardMaterial color={darkColor} roughness={0.9} metalness={0} />
+        </mesh>
         <FurnitureLabel label={obj.label} y={h3d + 2 * S} />
       </group>
     );
   }
 
-  // ── Chairs ──
-  if (category === "chair") {
-    const seatH = 1.5 * S;
-    const seatY = h3d * 0.5; // seat at roughly half total height
-    const backH = 12 * S;
-    const backThick = 1.5 * S;
-    return (
-      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
-        {/* Seat — solid cube */}
-        <mesh position={[0, seatY, 0]} castShadow receiveShadow>
-          <boxGeometry args={[w, seatH, d]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
-        </mesh>
-        {/* Back panel — taller thin box behind the seat */}
-        <mesh position={[0, seatY + backH / 2, -d / 2 + backThick / 2]} castShadow receiveShadow>
-          <boxGeometry args={[w, backH, backThick]} />
-          <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
-        </mesh>
-        <FurnitureLabel label={obj.label} y={seatY + backH + 2 * S} />
-      </group>
-    );
-  }
-
-  // ── Sofas ──
-  if (category === "sofa") {
-    const cushionH = 14 * S;
-    const cushionD = d * 0.7;
-    const backH = 20 * S;
-    const backThick = 4 * S;
-    return (
-      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
-        {/* Cushion — low wide solid box */}
-        <mesh position={[0, cushionH / 2, 0]} castShadow receiveShadow>
-          <boxGeometry args={[w, cushionH, cushionD]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
-        </mesh>
-        {/* Back — taller thinner box at rear */}
-        <mesh position={[0, backH / 2, -cushionD / 2 + backThick / 2 - 1 * S]} castShadow receiveShadow>
-          <boxGeometry args={[w, backH, backThick]} />
-          <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
-        </mesh>
-        <FurnitureLabel label={obj.label} y={backH + 2 * S} />
-      </group>
-    );
-  }
-
-  // ── Service counters (bar, buffet, dessert station, coffee station) ──
-  if (category === "service-counter") {
-    return (
-      <group position={[posX, h3d / 2, posZ]} rotation={[0, rotY, 0]}>
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[w, h3d, d]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
-        </mesh>
-        <FurnitureLabel label={obj.label} y={h3d / 2 + 2 * S} />
-      </group>
-    );
-  }
-
-  // ── Flat surfaces (dance floor, aisle runner) ──
-  if (category === "flat-surface") {
-    return (
-      <group position={[posX, 0.5 * S, posZ]} rotation={[0, rotY, 0]}>
-        <mesh receiveShadow>
-          <boxGeometry args={[w, 1 * S, d]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
-        </mesh>
-        <FurnitureLabel label={obj.label} y={1 * S + 2 * S} />
-      </group>
-    );
-  }
-
-  // ── Stage — solid platform block ──
-  if (category === "stage") {
-    return (
-      <group position={[posX, h3d / 2, posZ]} rotation={[0, rotY, 0]}>
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[w, h3d, d]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
-        </mesh>
-        <FurnitureLabel label={obj.label} y={h3d / 2 + 2 * S} />
-      </group>
-    );
-  }
-
-  // ── DJ Booth — solid console box ──
+  // ── DJ Booth — angled console with equipment shelf ──
   if (category === "dj-booth") {
+    const consoleH = h3d;
+    const shelfY = consoleH * 0.6;
     return (
-      <group position={[posX, h3d / 2, posZ]} rotation={[0, rotY, 0]}>
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[w, h3d, d]} />
-          <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        {/* Main console body */}
+        <mesh position={[0, consoleH / 2, 0]} castShadow receiveShadow>
+          <boxGeometry args={[w, consoleH, d]} />
+          <meshStandardMaterial color={darkColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={h3d / 2 + 2 * S} />
+        {/* Front facade — angled panel */}
+        <mesh position={[0, consoleH / 2, d / 2 + 0.15]} castShadow>
+          <boxGeometry args={[w + 0.5 * S, consoleH - 2 * S, 0.3]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.7} metalness={0.05} />
+        </mesh>
+        {/* Countertop */}
+        <mesh position={[0, consoleH, 0]} castShadow receiveShadow>
+          <boxGeometry args={[w + 1 * S, 1 * S, d + 2 * S]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.4} metalness={0.1} />
+        </mesh>
+        {/* Equipment boxes on top */}
+        <mesh position={[-w * 0.25, consoleH + 1.5 * S, 0]} castShadow>
+          <boxGeometry args={[w * 0.35, 2 * S, d * 0.7]} />
+          <meshStandardMaterial color={darkColor} roughness={0.3} metalness={0.15} />
+        </mesh>
+        <mesh position={[w * 0.2, consoleH + 1 * S, 0]} castShadow>
+          <boxGeometry args={[w * 0.3, 1 * S, d * 0.5]} />
+          <meshStandardMaterial color={darkColor} roughness={0.3} metalness={0.15} />
+        </mesh>
+        <FurnitureLabel label={obj.label} y={consoleH + 4 * S} />
       </group>
     );
   }
 
-  // ── Photo Booth — frame structure: 4 tall corner posts + top frame ──
+  // ── Photo Booth — frame structure: 4 tall corner posts + top frame + backdrop ──
   if (category === "photo-booth") {
-    const postRadius = 1.5 * S;
+    const postRadius = 1.2 * S;
     const postH = h3d;
     const topThick = 2 * S;
     const cornerOffsets: [number, number][] = [
@@ -595,26 +854,31 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
           <boxGeometry args={[w, topThick, d]} />
           <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
+        {/* Backdrop curtain */}
+        <mesh position={[0, postH / 2, -d / 2 + 0.5 * S]}>
+          <boxGeometry args={[w - 2 * S, postH - 4 * S, 0.3 * S]} />
+          <meshStandardMaterial color={whiteColor} roughness={0.95} metalness={0} transparent opacity={0.9} />
+        </mesh>
         <FurnitureLabel label={obj.label} y={postH + 2 * S} />
       </group>
     );
   }
 
-  // ── Arch — two tall posts + crossbar at top ──
+  // ── Arch — elegant: two tapered columns + curved crossbar ──
   if (category === "arch") {
-    const postRadius = 2 * S;
+    const postRadius = 1.8 * S;
     const postH = h3d;
-    const crossH = 3 * S;
+    const crossH = 4 * S;
     return (
       <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
-        {/* Left post */}
+        {/* Left column — tapered */}
         <mesh position={[-w / 2 + postRadius, postH / 2, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[postRadius, postRadius, postH, 8]} />
+          <cylinderGeometry args={[postRadius * 0.75, postRadius, postH, 12]} />
           <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
-        {/* Right post */}
+        {/* Right column — tapered */}
         <mesh position={[w / 2 - postRadius, postH / 2, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[postRadius, postRadius, postH, 8]} />
+          <cylinderGeometry args={[postRadius * 0.75, postRadius, postH, 12]} />
           <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
         {/* Top crossbar */}
@@ -622,86 +886,125 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
           <boxGeometry args={[w, crossH, 3 * S]} />
           <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={postH + 2 * S} />
-      </group>
-    );
-  }
-
-  // ── Flower Arrangement — sphere on a short cylinder base ──
-  if (category === "flower-arrangement") {
-    const baseR = Math.min(w, d) / 2;
-    const baseH = h3d * 0.4;
-    const sphereR = baseR * 0.8;
-    return (
-      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
-        {/* Vase / base */}
-        <mesh position={[0, baseH / 2, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[baseR * 0.5, baseR * 0.7, baseH, 12]} />
-          <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
-        </mesh>
-        {/* Flower sphere */}
-        <mesh position={[0, baseH + sphereR, 0]} castShadow receiveShadow>
-          <sphereGeometry args={[sphereR, 16, 16]} />
+        {/* Decorative keystone */}
+        <mesh position={[0, postH, 0]} castShadow>
+          <sphereGeometry args={[2 * S, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
           <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={baseH + sphereR * 2 + 2 * S} />
+        <FurnitureLabel label={obj.label} y={postH + 3 * S} />
       </group>
     );
   }
 
-  // ── Draping — tall thin vertical panels ──
-  if (category === "draping") {
+  // ── Flower Arrangement — vase with tapered body + flower sphere ──
+  if (category === "flower-arrangement") {
+    const baseR = Math.min(w, d) / 2;
+    const vaseH = h3d * 0.5;
+    const neckR = baseR * 0.35;
+    const sphereR = baseR * 0.9;
     return (
-      <group position={[posX, h3d / 2, posZ]} rotation={[0, rotY, 0]}>
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[w, h3d, 2 * S]} />
-          <meshStandardMaterial
-            color={fillColor}
-            roughness={pbr.roughness}
-            metalness={pbr.metalness}
-            transparent
-            opacity={0.85}
-          />
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        {/* Vase base — tapered cylinder */}
+        <mesh position={[0, vaseH / 2, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[neckR, baseR * 0.55, vaseH, 12]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.3} metalness={0.15} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={h3d / 2 + 2 * S} />
+        {/* Vase rim */}
+        <mesh position={[0, vaseH, 0]} castShadow>
+          <cylinderGeometry args={[neckR * 1.3, neckR, 1 * S, 12]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.3} metalness={0.15} />
+        </mesh>
+        {/* Flower dome */}
+        <mesh position={[0, vaseH + sphereR * 0.7, 0]} castShadow receiveShadow>
+          <sphereGeometry args={[sphereR, 16, 12]} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+        </mesh>
+        {/* A few leaf accents */}
+        {[0, 1.2, 2.4, 3.6, 4.8].map((angle) => (
+          <mesh key={`leaf-${angle}`} position={[
+            Math.cos(angle) * sphereR * 0.6,
+            vaseH + sphereR * 0.3,
+            Math.sin(angle) * sphereR * 0.6,
+          ]}>
+            <sphereGeometry args={[sphereR * 0.25, 6, 6]} />
+            <meshStandardMaterial color={getCachedColor("#5a7a50")} roughness={0.8} metalness={0} />
+          </mesh>
+        ))}
+        <FurnitureLabel label={obj.label} y={vaseH + sphereR * 2 + 2 * S} />
       </group>
     );
   }
 
-  // ── Uplighting — small cylinder on the ground ──
+  // ── Draping — tall fabric panels with subtle curve ──
+  if (category === "draping") {
+    const panelCount = Math.max(2, Math.floor(w / (10 * S)));
+    const panelW = w / panelCount;
+    return (
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        {/* Top rod */}
+        <mesh position={[0, h3d, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
+          <cylinderGeometry args={[0.3 * S, 0.3 * S, w + 2 * S, 8]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.3} metalness={0.2} />
+        </mesh>
+        {/* Fabric panels */}
+        {Array.from({ length: panelCount }).map((_, i) => (
+          <mesh key={`panel-${i}`} position={[-w / 2 + panelW / 2 + i * panelW, h3d / 2, 0]} castShadow receiveShadow>
+            <boxGeometry args={[panelW - 0.2 * S, h3d, 1.5 * S]} />
+            <meshStandardMaterial
+              color={fillColor}
+              roughness={0.95}
+              metalness={0}
+              transparent
+              opacity={0.8}
+              side={DoubleSide}
+            />
+          </mesh>
+        ))}
+        <FurnitureLabel label={obj.label} y={h3d + 2 * S} />
+      </group>
+    );
+  }
+
+  // ── Uplighting — fixture with glow cone ──
   if (category === "uplighting") {
     const lightR = Math.min(w, d) / 2;
     return (
       <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        {/* Fixture body */}
         <mesh position={[0, h3d / 2, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[lightR, lightR * 1.1, h3d, 12]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <cylinderGeometry args={[lightR * 0.8, lightR, h3d, 12]} />
+          <meshStandardMaterial color={darkColor} roughness={0.5} metalness={0.15} />
+        </mesh>
+        {/* Lens cap */}
+        <mesh position={[0, h3d + 0.1, 0]}>
+          <cylinderGeometry args={[lightR * 0.6, lightR * 0.8, 0.3 * S, 12]} />
+          <meshStandardMaterial color={fillColor} roughness={0.2} metalness={0.1} emissive={fillColor} emissiveIntensity={0.3} />
+        </mesh>
+        {/* Light glow cone (transparent) */}
+        <mesh position={[0, h3d + 8 * S, 0]}>
+          <coneGeometry args={[4 * S, 16 * S, 16, 1, true]} />
+          <meshStandardMaterial color={fillColor} transparent opacity={0.06} side={DoubleSide} depthWrite={false} />
         </mesh>
         <FurnitureLabel label={obj.label} y={h3d + 2 * S} />
       </group>
     );
   }
 
-  // ── Default fallback: original rect/circle rendering ──
+  // ── Default fallback: circle or rect ──
   if (obj.shape === "circle") {
     const radius = (obj.radius || obj.width / 2) * S;
-    const halfH = h3d / 2;
     return (
-      <group position={[posX, halfH, posZ]} rotation={[0, rotY, 0]}>
-        <mesh position={[0, halfH - 1 * S, 0]} castShadow receiveShadow>
-          <cylinderGeometry args={[radius, radius, 2 * S, 32]} />
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        <mesh position={[0, h3d / 2, 0]} castShadow receiveShadow>
+          <cylinderGeometry args={[radius, radius, h3d, 32]} />
           <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
-        </mesh>
-        <mesh position={[0, -halfH / 2, 0]} castShadow>
-          <cylinderGeometry args={[1.5 * S, 2 * S, h3d - 2 * S, 8]} />
-          <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.1} />
         </mesh>
         <FurnitureLabel label={obj.label} y={h3d + 2 * S} />
       </group>
     );
   }
 
-  // Default rectangular fallback
+  // Default rectangular fallback with legs
   const halfH = h3d / 2;
   if (h3d < 2 * S) {
     return (
@@ -714,11 +1017,12 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
     );
   }
 
+  const legInset = 2 * S;
   const legPositions: [number, number, number][] = [
-    [-w / 2 + 2 * S, 0, -d / 2 + 2 * S],
-    [w / 2 - 2 * S, 0, -d / 2 + 2 * S],
-    [-w / 2 + 2 * S, 0, d / 2 - 2 * S],
-    [w / 2 - 2 * S, 0, d / 2 - 2 * S],
+    [-w / 2 + legInset, 0, -d / 2 + legInset],
+    [w / 2 - legInset, 0, -d / 2 + legInset],
+    [-w / 2 + legInset, 0, d / 2 - legInset],
+    [w / 2 - legInset, 0, d / 2 - legInset],
   ];
 
   return (
@@ -729,7 +1033,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
       </mesh>
       {legPositions.map((pos, i) => (
         <mesh key={i} position={pos} castShadow>
-          <boxGeometry args={[1.5 * S, h3d - 2 * S, 1.5 * S]} />
+          <boxGeometry args={[1.2 * S, h3d - 2 * S, 1.2 * S]} />
           <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.1} />
         </mesh>
       ))}
@@ -742,24 +1046,25 @@ function RoomFloor({ obj, originX, originY }: { obj: ParsedObject; originX: numb
   // Memoize shape to avoid re-creating on every render
   const floorShape = useMemo(() => {
     if (!obj.points || obj.points.length < 3) return null;
+    // Points are already absolute canvas coordinates (precomputed in parseCanvasJSON).
     // Negate Y because the Shape (XY plane) is rotated -π/2 around X,
     // mapping Shape Y → World -Z.  Furniture uses posZ = +(canvasY - originY),
     // so we negate here to keep room floor and furniture in the same Z direction.
     const shapePoints = obj.points.map(
-      ([x, y]) => new Vector2((x + obj.x - originX) * S, -(y + obj.y - originY) * S)
+      ([x, y]) => new Vector2((x - originX) * S, -(y - originY) * S)
     );
     return new Shape(shapePoints);
-  }, [obj.points, obj.x, obj.y, originX, originY]);
+  }, [obj.points, originX, originY]);
 
   // Compute wall segments from polygon edges in world space.
-  // Walls are placed directly in world coords (not via Shape rotation),
-  // so Z uses the same sign as furniture: +(canvasY - originY) * S.
+  // Points are already absolute canvas coords. Walls are placed directly in
+  // world coords (not via Shape rotation), so Z = +(canvasY - originY) * S.
   const wallSegments = useMemo(() => {
     if (!obj.points || obj.points.length < 3) return [];
     const segments: { x1: number; z1: number; x2: number; z2: number; length: number; angle: number; cx: number; cz: number }[] = [];
     const pts = obj.points.map(([x, y]) => ({
-      x: (x + obj.x - originX) * S,
-      z: (y + obj.y - originY) * S,
+      x: (x - originX) * S,
+      z: (y - originY) * S,
     }));
     for (let i = 0; i < pts.length; i++) {
       const a = pts[i];
@@ -777,7 +1082,7 @@ function RoomFloor({ obj, originX, originY }: { obj: ParsedObject; originX: numb
       });
     }
     return segments;
-  }, [obj.points, obj.x, obj.y, originX, originY]);
+  }, [obj.points, originX, originY]);
 
   if (!floorShape) return null;
 
