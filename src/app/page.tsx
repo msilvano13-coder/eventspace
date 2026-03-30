@@ -36,15 +36,15 @@ const FEATURES = [
   },
   {
     icon: Grid3X3,
-    title: "Interactive Floor Plans",
+    title: "Interactive Floor Plans & 3D View",
     description:
-      "Drag-and-drop furniture, lighting zones, and room shapes onto a live canvas. Assign guests to tables visually.",
+      "Drag-and-drop furniture, lighting zones, and room shapes onto a live canvas. Switch to a stunning 3D view with venue presets, realistic lighting, and detailed furniture — perfect for client proposals.",
   },
   {
     icon: Users,
-    title: "Guest Management",
+    title: "Guest Management & Smart Seating",
     description:
-      "Track RSVPs, meal choices, dietary needs, table assignments, and plus-ones. Import guests via CSV in seconds.",
+      "Track RSVPs, meal choices, dietary needs, and plus-ones. Auto-assign seats with our smart algorithm that respects VIP priority, group cohesion, and keep-together rules.",
   },
   {
     icon: ClipboardList,
@@ -68,7 +68,7 @@ const FEATURES = [
     icon: CalendarDays,
     title: "Day-of Timeline",
     description:
-      "Build a minute-by-minute schedule your team and clients can follow. Drag to reorder on desktop or mobile.",
+      "Build a minute-by-minute schedule your team and clients can follow. Drag to reorder on desktop or mobile. Export to PDF for day-of binders.",
   },
   {
     icon: MessageSquare,
@@ -98,7 +98,7 @@ const FEATURES = [
     icon: Sparkles,
     title: "Branded Client Portal",
     description:
-      "Give every client their own portal with your logo, brand colors, and tagline. They see schedules, RSVP, sign contracts, and message you — all in one place.",
+      "Give every client their own portal with your logo, brand colors, and tagline. They see schedules, RSVP, manage guests, sign contracts, download files, and message you — all in one place.",
   },
 ];
 
@@ -132,7 +132,7 @@ const STEPS = [
 const FAQS: { q: string; a: string }[] = [
   {
     q: "What's the difference between DIY and Professional?",
-    a: "The DIY plan is a one-time $99 purchase — perfect for planning a single event like your wedding or a big party. It includes floor plans, guest management, timelines, mood boards, and a shareable link. Professional is $20/month and unlocks unlimited events plus business tools like contracts, invoicing, vendor management, and a branded client portal.",
+    a: "The DIY plan is a one-time purchase (currently $99, 50% off the regular $199) — perfect for planning a single event like your wedding or a big party. It includes floor plans with 3D visualization, smart seating, guest management, timelines, mood boards, layout templates, and PDF export. Professional is $20/month and unlocks unlimited events plus business tools like invoicing, e-signatures, questionnaires, and a branded client portal.",
   },
   {
     q: "Do I need to install anything?",
@@ -283,9 +283,9 @@ export default function HomePage() {
           </h1>
 
           <p className="mt-6 text-lg sm:text-xl text-stone-600 max-w-2xl mx-auto leading-relaxed">
-            Floor plans, vendor tracking, guest management, contracts, timelines,
-            and a branded client portal — everything professional event planners
-            need in one place.
+            3D floor plans, smart seating, vendor tracking, guest management,
+            contracts, timelines, and a branded client portal — everything
+            professional event planners need in one place.
           </p>
 
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -397,12 +397,19 @@ export default function HomePage() {
 
           <div className="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {/* DIY */}
-            <div className="bg-stone-50 rounded-2xl p-8 border border-stone-200">
+            <div className="bg-stone-50 rounded-2xl p-8 border border-stone-200 relative">
+              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
+                50% Off — Limited Time
+              </span>
               <h3 className="font-heading text-xl font-semibold text-stone-900">DIY</h3>
               <p className="mt-1 text-sm text-stone-500">Plan your own event, your way</p>
               <p className="mt-6">
                 <span className="font-heading text-4xl font-bold text-stone-900">$99</span>
                 <span className="text-stone-400 text-sm"> one-time</span>
+              </p>
+              <p className="mt-1 text-sm text-stone-400">
+                <span className="line-through">$199</span>
+                <span className="ml-1.5 text-emerald-600 font-medium">Save $100</span>
               </p>
               <Link
                 href="/sign-up"
@@ -414,14 +421,17 @@ export default function HomePage() {
               <ul className="space-y-3 text-sm text-stone-600">
                 {[
                   "1 active event",
-                  "Floor plan editor",
+                  "Floor plan editor with 3D view",
+                  "6 venue presets (tent, garden, barn & more)",
+                  "Smart seating algorithm",
                   "Guest management & RSVPs",
                   "Day-of timeline",
                   "Vendor tracking & search",
                   "Contracts & budget",
                   "Color palette & mood board",
                   "Shared files",
-                  "Read-only vendor link",
+                  "Layout templates",
+                  "PDF floor plan export",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2">
                     <Check size={16} className="shrink-0 text-emerald-500 mt-0.5" />
@@ -459,7 +469,7 @@ export default function HomePage() {
                   "Financial reports & dashboard",
                   "Calendar view (all events)",
                   "Preferred vendors list",
-                  "Contract templates",
+                  "Contract templates & e-signatures",
                   "Branded client portal",
                   "CSV import & export",
                   "Priority support",
