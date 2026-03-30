@@ -56,9 +56,12 @@ export default function UpgradePage() {
         )
       : 0;
 
+  // Fresh signup: plan is 'trial' but never started a trial (no trial_ends_at)
+  const isFreshSignup = profile.plan === "trial" && !profile.trialEndsAt;
+
   const isExpired =
     profile.plan === "expired" ||
-    (profile.plan === "trial" && trialDaysLeft <= 0);
+    (profile.plan === "trial" && !isFreshSignup && trialDaysLeft <= 0);
 
   async function handleSelectDiy() {
     setLoadingPlan("diy");
@@ -129,7 +132,7 @@ export default function UpgradePage() {
       <div className="text-center mb-10">
         <div className="inline-flex items-center gap-2 bg-rose-50 text-rose-600 px-4 py-1.5 rounded-full text-sm font-medium mb-4">
           <Sparkles size={14} />
-          {isExpired ? "Your trial has ended" : "Upgrade your plan"}
+          {isExpired ? "Your trial has ended" : isFreshSignup ? "Welcome to EventSpace" : "Upgrade your plan"}
         </div>
         <h1 className="font-heading text-2xl sm:text-3xl font-bold text-stone-900 mb-2">
           {isExpired
@@ -141,7 +144,7 @@ export default function UpgradePage() {
             ? "Pick a plan to keep access to all your events and data."
             : "One event or a whole business — pick the plan that fits."}
         </p>
-        {!isExpired && profile.plan === "trial" && trialDaysLeft > 0 && (
+        {!isExpired && !isFreshSignup && profile.plan === "trial" && trialDaysLeft > 0 && (
           <p className="mt-3 text-sm text-stone-400">
             You have{" "}
             <span className="font-semibold text-rose-500">
