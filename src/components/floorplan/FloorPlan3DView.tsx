@@ -42,10 +42,10 @@ const LINEN_COLORS: Record<View3DSettings["linenColor"], string> = {
 };
 
 const FLOOR_MATERIALS: Record<View3DSettings["floorMaterial"], { color: string; roughness: number; metalness: number }> = {
-  hardwood: { color: "#d8cfc2", roughness: 0.7, metalness: 0.03 },
-  marble: { color: "#e8e4de", roughness: 0.2, metalness: 0.08 },
-  carpet: { color: "#c4b8a8", roughness: 0.95, metalness: 0.0 },
-  concrete: { color: "#c8c4be", roughness: 0.85, metalness: 0.02 },
+  hardwood: { color: "#b8986a", roughness: 0.7, metalness: 0.03 },
+  marble: { color: "#e8e0d0", roughness: 0.15, metalness: 0.12 },
+  carpet: { color: "#8a7b6b", roughness: 0.95, metalness: 0.0 },
+  concrete: { color: "#a0a0a0", roughness: 0.85, metalness: 0.02 },
 };
 
 const LIGHTING_MOODS: Record<View3DSettings["lightingMood"], {
@@ -1176,8 +1176,8 @@ function RoomFloor({ obj, originX, originY, settings, showWalls = true, floorOve
 
   return (
     <group>
-      {/* Floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+      {/* Floor — key forces remount when material changes to ensure R3F applies new color */}
+      <mesh key={`floor-${floorMat.color}-${floorMat.roughness}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
         <meshStandardMaterial color={floorMat.color} side={DoubleSide} roughness={floorMat.roughness} metalness={floorMat.metalness} />
       </mesh>
@@ -1357,7 +1357,7 @@ function FloorPlan3DScene({
 
       {/* Ground plane (fallback if no room) — uses venue floor override when active */}
       {rooms.length === 0 && (
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.01, cz]} receiveShadow>
+        <mesh key={`ground-${effectiveFloor.color}`} rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.01, cz]} receiveShadow>
           <planeGeometry args={[maxDim * 1.5, maxDim * 1.5]} />
           <meshStandardMaterial color={effectiveFloor.color} roughness={effectiveFloor.roughness} metalness={effectiveFloor.metalness} />
         </mesh>
