@@ -126,6 +126,7 @@ function createLightingObject(zone: LightingZone, canvasW: number, canvasH: numb
     top: pixelY,
     originX: "center",
     originY: "center",
+    angle: zone.angle ?? 0,
     selectable: interactive,
     evented: interactive,
     hasControls: false,

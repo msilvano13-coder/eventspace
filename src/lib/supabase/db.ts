@@ -220,6 +220,7 @@ function lightingZoneToRow(lz: LightingZone, floorPlanId: string) {
     x: lz.x,
     y: lz.y,
     size: lz.size,
+    angle: lz.angle ?? 0,
     notes: lz.notes,
   };
 }
@@ -235,6 +236,7 @@ function lightingZoneFromRow(r: any): LightingZone {
     x: r.x,
     y: r.y,
     size: r.size,
+    angle: r.angle ?? 0,
     notes: r.notes,
   };
 }

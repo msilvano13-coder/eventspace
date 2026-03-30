@@ -1,13 +1,65 @@
 # EventSpace Handoff — March 29, 2026
 
-## Current State: Tech Debt Cleanup + 3D Room Fix — In Progress
+## Current State: 3D Upgrade Steps 1-2 Complete — Deployed
 - **Branch:** `main`
-- **Build:** Clean (TypeScript passes)
+- **Build:** Clean
+- **Latest commit:** `d050ce9` — Fix contrast: gold chairs, cream linens, wood legs, darker floor
 - **Deploy:** `eventspace-19lw1wfrf-msilvano13-coders-projects.vercel.app`
 
 ---
 
 ## What Was Done Today (March 29)
+
+### Session 5: 3D Upgrade — Steps 1 & 2
+
+**Step 1: Detailed Procedural Furniture Models** (`ccbf0cd`, `1d58d2e`)
+Replaced basic box/cylinder geometry with detailed models for all 14 furniture categories:
+
+| Category | What Changed |
+|----------|-------------|
+| Round tables | Tablecloth drape cylinder + base disc + pedestal + linen top disc |
+| Rect tables | 4 wood legs + linen overhang panels on all 4 sides |
+| Chairs | 4 tapered legs + seat cushion + solid back panel (Chiavari gold) |
+| Cocktail tables | Thin top + cloth topper + chrome pole + heavy base disc |
+| Sofas | 4 feet + seat with divider + back rest + 2 armrests |
+| Bar/Buffet | Counter with overhang + front panel inset + foot rail (bar) |
+| Stage | Platform + top surface + edge trim (3 sides) + front skirt |
+| DJ Booth | Angled facade + countertop + equipment boxes on top |
+| Dance floor | Surface + edge trim + tile grid lines |
+| Flower arrangement | Tapered vase + rim + flower dome + leaf accents |
+| Draping | Top rod + multiple fabric panels |
+| Uplighting | Dark fixture + colored lens cap + transparent glow cone |
+| Photo booth | Posts + top frame + backdrop curtain |
+| Arch | Tapered columns + crossbar + decorative keystone |
+
+Also created GLTF model registry (`src/lib/furniture-models.ts`) — drop `.glb` files into `public/models/` and uncomment mappings. Procedural geometry serves as fallback.
+
+**Step 2: Scene Polish** (`a258e00`, `f7da5b4`, `d050ce9`)
+
+| Change | Before | After |
+|--------|--------|-------|
+| Environment | "apartment" (residential) | "studio" (neutral, clean reflections) |
+| Key light | Flat white | Warm `#fff5e6` from upper-right |
+| Fill light | Same direction | Cool `#e0e8f0` from opposite side |
+| Bounce | None | Hemisphere light (floor bounce sim) |
+| Tone mapping | None | ACES Filmic (built-in Three.js) |
+| Camera orbit | Instant | Smooth damping (0.08) |
+| Floor | Flat matte `#faf7f0` | Warm wood `#d8cfc2` with sheen |
+| Walls | Plain panels | Baseboard trim + wall + crown molding |
+| Chair color | Catalog light gray | Chiavari gold `#c4a46c` / darker back `#a8905a` |
+| Table legs | Catalog stroke (light) | Wood brown `#8b7355` |
+| Linens | Pure white `#ffffff` | Warm cream `#f5f0e6` |
+| Fog | Cool gray, close | Warm `#f0ece6`, pushed further |
+
+**Postprocessing attempt & rollback:** Tried `@react-three/postprocessing` (SSAO + AGX tone mapping) but it crashed WebGL on some browsers. Reverted to Three.js built-in ACES Filmic tone mapping — same cinematic look, zero crash risk. Package is still in `package.json` but unused.
+
+**Bug fixes this session:**
+- Furniture palette not scrolling (parent div missing `h-full overflow-hidden`)
+- ESLint unused variable blocking Vercel deploy
+- `environmentIntensity` prop not supported in drei 9.121.5
+- `SoftShadows` component crashing on some devices
+
+---
 
 ### Session 4: Tech Debt Cleanup + 3D Room Floor Fix
 

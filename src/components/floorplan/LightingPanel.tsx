@@ -74,6 +74,7 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
       x: 30 + Math.random() * 40,
       y: 30 + Math.random() * 40,
       size: defaults.size,
+      angle: 0,
       notes: "",
     };
     onUpdateZones([...zones, newZone]);
@@ -101,6 +102,7 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
         x: 25 + (i * 25),
         y: 40 + (i % 2 === 0 ? 0 : 20),
         size: defaults.size,
+        angle: 0,
         notes: "",
       };
     });
@@ -110,6 +112,173 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
 
   return (
     <div className="w-72 md:w-72 bg-white border-l border-stone-200 h-full overflow-y-auto">
+      {/* Selected zone edit — at top for quick access */}
+      {selectedZone && (
+        <div className="p-4 border-b border-stone-200 bg-stone-50/50">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-semibold text-stone-800">
+              Edit: {selectedZone.name}
+            </h4>
+            <button
+              onClick={() => onSelectZone(null)}
+              className="text-stone-400 hover:text-stone-600 text-xs"
+            >
+              Done
+            </button>
+          </div>
+
+          {/* Name */}
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">Name</label>
+            <input
+              value={selectedZone.name}
+              onChange={(e) => updateZone(selectedZone.id, { name: e.target.value })}
+              className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-rose-300 bg-white min-h-[44px]"
+            />
+          </div>
+
+          {/* Type */}
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">Type</label>
+            <select
+              value={selectedZone.type}
+              onChange={(e) => updateZone(selectedZone.id, { type: e.target.value as LightingType })}
+              className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-rose-300 bg-white min-h-[44px]"
+            >
+              {LIGHTING_TYPES.map((lt) => (
+                <option key={lt.value} value={lt.value}>{lt.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Color */}
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">Color</label>
+            <div className="flex gap-2 flex-wrap">
+              {COLOR_PRESETS.map((c) => (
+                <button
+                  key={c}
+                  onClick={() => updateZone(selectedZone.id, { color: c })}
+                  className="w-9 h-9 rounded-xl transition-all"
+                  style={{
+                    background: c,
+                    border: selectedZone.color === c ? "2.5px solid #1c1917" : "2px solid transparent",
+                    transform: selectedZone.color === c ? "scale(1.1)" : "scale(1)",
+                  }}
+                />
+              ))}
+              <input
+                type="color"
+                value={selectedZone.color}
+                onChange={(e) => updateZone(selectedZone.id, { color: e.target.value })}
+                className="w-9 h-9 rounded-xl border border-stone-200 cursor-pointer"
+                style={{ padding: 0 }}
+              />
+            </div>
+          </div>
+
+          {/* Intensity */}
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">
+              Intensity — {selectedZone.intensity}%
+            </label>
+            <input
+              type="range"
+              min="5"
+              max="100"
+              value={selectedZone.intensity}
+              onChange={(e) => updateZone(selectedZone.id, { intensity: parseInt(e.target.value) })}
+              className="w-full accent-rose-400 h-2"
+            />
+          </div>
+
+          {/* Angle / Rotation */}
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">
+              Angle — {selectedZone.angle ?? 0}°
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="360"
+              step="5"
+              value={selectedZone.angle ?? 0}
+              onChange={(e) => updateZone(selectedZone.id, { angle: parseInt(e.target.value) })}
+              className="w-full accent-rose-400 h-2"
+            />
+            <div className="flex justify-between text-[10px] text-stone-400 mt-0.5">
+              <span>0°</span>
+              <span>180°</span>
+              <span>360°</span>
+            </div>
+          </div>
+
+          {/* Size */}
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">
+              Size — {selectedZone.size}px
+            </label>
+            <input
+              type="range"
+              min="10"
+              max="200"
+              step="1"
+              value={selectedZone.size}
+              onChange={(e) => updateZone(selectedZone.id, { size: parseInt(e.target.value) })}
+              className="w-full accent-rose-400 h-2"
+            />
+            <div className="flex justify-between text-[10px] text-stone-400 mt-0.5">
+              <span>Small</span>
+              <span>Large</span>
+            </div>
+          </div>
+
+          {/* Snap status */}
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">Snap to Furniture</label>
+            {selectedZone.snappedToFurnitureId ? (
+              <div className="flex items-center gap-2 bg-violet-50 rounded-xl px-3 py-2.5">
+                <Link2 size={12} className="text-violet-500 shrink-0" />
+                <span className="text-xs text-violet-700 font-medium flex-1 truncate">
+                  Snapped to {selectedZone.snappedToFurnitureId}
+                </span>
+                <button
+                  onClick={() => updateZone(selectedZone.id, { snappedToFurnitureId: undefined })}
+                  className="text-[10px] text-violet-400 hover:text-red-500 transition-colors"
+                  title="Unsnap"
+                >
+                  <Link2Off size={12} />
+                </button>
+              </div>
+            ) : (
+              <p className="text-[11px] text-stone-400 italic px-1">
+                Drag light near a table to snap. Within 40px auto-snaps.
+              </p>
+            )}
+          </div>
+
+          {/* Notes */}
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">Notes</label>
+            <input
+              value={selectedZone.notes}
+              onChange={(e) => updateZone(selectedZone.id, { notes: e.target.value })}
+              placeholder="Mount at 6ft, color wash…"
+              className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-rose-300 bg-white min-h-[44px]"
+            />
+          </div>
+
+          {/* Delete */}
+          <button
+            onClick={() => deleteZone(selectedZone.id)}
+            className="flex items-center gap-2 text-sm text-stone-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 px-3 py-2.5 rounded-xl transition-colors w-full min-h-[44px]"
+          >
+            <Trash2 size={14} />
+            Remove zone
+          </button>
+        </div>
+      )}
+
       <div className="p-4 border-b border-stone-100">
         <div className="flex items-center gap-2 mb-3">
           <Lightbulb size={14} className="text-amber-400" />
@@ -198,144 +367,6 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
           </div>
         )}
       </div>
-
-      {/* Selected zone edit */}
-      {selectedZone && (
-        <div className="p-4 border-t border-stone-100">
-          <h4 className="text-sm font-semibold text-stone-800 mb-3">
-            Edit: {selectedZone.name}
-          </h4>
-
-          {/* Name */}
-          <div className="mb-3">
-            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">Name</label>
-            <input
-              value={selectedZone.name}
-              onChange={(e) => updateZone(selectedZone.id, { name: e.target.value })}
-              className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-rose-300 bg-white min-h-[44px]"
-            />
-          </div>
-
-          {/* Type */}
-          <div className="mb-3">
-            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">Type</label>
-            <select
-              value={selectedZone.type}
-              onChange={(e) => updateZone(selectedZone.id, { type: e.target.value as LightingType })}
-              className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-rose-300 bg-white min-h-[44px]"
-            >
-              {LIGHTING_TYPES.map((lt) => (
-                <option key={lt.value} value={lt.value}>{lt.label}</option>
-              ))}
-            </select>
-          </div>
-
-          {/* Color */}
-          <div className="mb-3">
-            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">Color</label>
-            <div className="flex gap-2 flex-wrap">
-              {COLOR_PRESETS.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => updateZone(selectedZone.id, { color: c })}
-                  className="w-9 h-9 rounded-xl transition-all"
-                  style={{
-                    background: c,
-                    border: selectedZone.color === c ? "2.5px solid #1c1917" : "2px solid transparent",
-                    transform: selectedZone.color === c ? "scale(1.1)" : "scale(1)",
-                  }}
-                />
-              ))}
-              <input
-                type="color"
-                value={selectedZone.color}
-                onChange={(e) => updateZone(selectedZone.id, { color: e.target.value })}
-                className="w-9 h-9 rounded-xl border border-stone-200 cursor-pointer"
-                style={{ padding: 0 }}
-              />
-            </div>
-          </div>
-
-          {/* Intensity */}
-          <div className="mb-3">
-            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">
-              Intensity — {selectedZone.intensity}%
-            </label>
-            <input
-              type="range"
-              min="5"
-              max="100"
-              value={selectedZone.intensity}
-              onChange={(e) => updateZone(selectedZone.id, { intensity: parseInt(e.target.value) })}
-              className="w-full accent-rose-400 h-2"
-            />
-          </div>
-
-          {/* Size */}
-          <div className="mb-3">
-            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">
-              Size — {selectedZone.size}px
-            </label>
-            <input
-              type="range"
-              min="10"
-              max="200"
-              step="1"
-              value={selectedZone.size}
-              onChange={(e) => updateZone(selectedZone.id, { size: parseInt(e.target.value) })}
-              className="w-full accent-rose-400 h-2"
-            />
-            <div className="flex justify-between text-[10px] text-stone-400 mt-0.5">
-              <span>Small</span>
-              <span>Large</span>
-            </div>
-          </div>
-
-          {/* Snap status */}
-          <div className="mb-3">
-            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">Snap to Furniture</label>
-            {selectedZone.snappedToFurnitureId ? (
-              <div className="flex items-center gap-2 bg-violet-50 rounded-xl px-3 py-2.5">
-                <Link2 size={12} className="text-violet-500 shrink-0" />
-                <span className="text-xs text-violet-700 font-medium flex-1 truncate">
-                  Snapped to {selectedZone.snappedToFurnitureId}
-                </span>
-                <button
-                  onClick={() => updateZone(selectedZone.id, { snappedToFurnitureId: undefined })}
-                  className="text-[10px] text-violet-400 hover:text-red-500 transition-colors"
-                  title="Unsnap"
-                >
-                  <Link2Off size={12} />
-                </button>
-              </div>
-            ) : (
-              <p className="text-[11px] text-stone-400 italic px-1">
-                Drag light near a table to snap. Within 40px auto-snaps.
-              </p>
-            )}
-          </div>
-
-          {/* Notes */}
-          <div className="mb-3">
-            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">Notes</label>
-            <input
-              value={selectedZone.notes}
-              onChange={(e) => updateZone(selectedZone.id, { notes: e.target.value })}
-              placeholder="Mount at 6ft, color wash…"
-              className="w-full text-sm border border-stone-200 rounded-xl px-3 py-2.5 outline-none focus:border-rose-300 bg-white min-h-[44px]"
-            />
-          </div>
-
-          {/* Delete */}
-          <button
-            onClick={() => deleteZone(selectedZone.id)}
-            className="flex items-center gap-2 text-sm text-stone-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 px-3 py-2.5 rounded-xl transition-colors w-full min-h-[44px]"
-          >
-            <Trash2 size={14} />
-            Remove zone
-          </button>
-        </div>
-      )}
     </div>
   );
 }

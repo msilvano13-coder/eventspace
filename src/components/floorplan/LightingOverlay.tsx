@@ -171,7 +171,7 @@ export default function LightingOverlay({ zones, onUpdateZones, selectedZoneId, 
             style={{
               left: `${zone.x}%`,
               top: `${zone.y}%`,
-              transform: "translate(-50%, -50%)",
+              transform: `translate(-50%, -50%) rotate(${zone.angle ?? 0}deg)`,
               width: `${touchSize}px`,
               height: `${touchSize}px`,
               cursor: enabled ? (dragging === zone.id ? "grabbing" : "grab") : "default",

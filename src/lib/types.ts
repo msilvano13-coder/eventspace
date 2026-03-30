@@ -31,6 +31,7 @@ export interface LightingZone {
   x: number;              // percentage position (0–100)
   y: number;              // percentage position (0–100)
   size: number;           // size in pixels (10–200)
+  angle: number;          // rotation in degrees (0–360)
   notes: string;
   snappedToFurnitureId?: string;  // canvas object data.label when snapped to furniture
 }
