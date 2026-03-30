@@ -2035,7 +2035,19 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
   // Debug: object count for diagnostics
   const debugInfo = useMemo(() => {
     const parsed = parseCanvasJSON(floorPlanJSON);
-    return { jsonLen: floorPlanJSON?.length ?? 0, objCount: parsed.objects.length, furniture: parsed.objects.filter(o => o.type === "furniture").length, rooms: parsed.objects.filter(o => o.type === "room").length };
+    const allObjs = parsed.objects.filter(o => o.type === "furniture" || o.type === "room");
+    let bounds = "n/a";
+    if (allObjs.length > 0) {
+      const oX = parsed.canvasWidth / 2, oY = parsed.canvasHeight / 2;
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (const o of allObjs) {
+        const wx = (o.x - oX) * S, wz = (o.y - oY) * S;
+        minX = Math.min(minX, wx); maxX = Math.max(maxX, wx);
+        minZ = Math.min(minZ, wz); maxZ = Math.max(maxZ, wz);
+      }
+      bounds = `x[${minX.toFixed(1)}..${maxX.toFixed(1)}] z[${minZ.toFixed(1)}..${maxZ.toFixed(1)}]`;
+    }
+    return { jsonLen: floorPlanJSON?.length ?? 0, objCount: parsed.objects.length, furniture: parsed.objects.filter(o => o.type === "furniture").length, rooms: parsed.objects.filter(o => o.type === "room").length, bounds, canvasW: parsed.canvasWidth, canvasH: parsed.canvasHeight };
   }, [floorPlanJSON]);
 
   // Compute camera position + centroid to frame the actual furniture
@@ -2128,8 +2140,10 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
           onToggle={() => setShowSettings(!showSettings)}
         />
         {/* Temporary debug overlay — remove after confirming 3D works on production */}
-        <div className="absolute bottom-2 left-2 text-[10px] text-stone-400 bg-white/80 px-2 py-1 rounded font-mono">
-          JSON:{debugInfo.jsonLen} | Obj:{debugInfo.objCount} | Furniture:{debugInfo.furniture} | Rooms:{debugInfo.rooms}
+        <div className="absolute bottom-2 left-2 text-[10px] text-stone-400 bg-white/80 px-2 py-1 rounded font-mono leading-relaxed">
+          JSON:{debugInfo.jsonLen} | Obj:{debugInfo.objCount} | F:{debugInfo.furniture} | R:{debugInfo.rooms}<br/>
+          Canvas:{debugInfo.canvasW}x{debugInfo.canvasH} | {debugInfo.bounds}<br/>
+          Cam:[{camConfig.position.map(v => v.toFixed(1)).join(",")}] Center:[{centerX.toFixed(1)},{centerZ.toFixed(1)}]
         </div>
       </div>
     </ErrorBoundary>
