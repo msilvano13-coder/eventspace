@@ -1444,8 +1444,8 @@ export default function FloorPlanEditor({
         saveStatus={saveStatus}
       />
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Desktop side panels */}
-        <div className="hidden md:block">
+        {/* Desktop side panels — height bounded so palette scrolls */}
+        <div className="hidden md:block h-full overflow-hidden">
           <FurniturePalette onAddItem={(item) => addFurnitureToCanvas(item)} onAddGroup={(group) => addFurnitureGroup(group)} />
         </div>
 

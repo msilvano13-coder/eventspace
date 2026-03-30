@@ -559,13 +559,12 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
   // ── Chairs — Chiavari style: 4 tapered legs, thin seat, elegant back with slats ──
   if (category === "chair") {
     const seatY = 18 * S * H_MULT; // seat at 18 inches
-    const seatThick = 1 * S;
+    const seatThick = 1.2 * S;
     const backTopY = h3d;
     const backH = backTopY - seatY;
     const legR = 0.5 * S;
     const legInset = 1.5 * S;
-    const slatCount = 3;
-    const slatW = w / (slatCount * 2 + 1);
+    const backThick = 1 * S;
     return (
       <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
         {/* 4 tapered legs */}
@@ -580,45 +579,16 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
             <meshStandardMaterial color={strokeColor} roughness={0.45} metalness={0.1} />
           </mesh>
         ))}
-        {/* Front crossbar */}
-        <mesh position={[0, seatY * 0.35, d / 2 - legInset]} castShadow>
-          <boxGeometry args={[w - legInset * 2, 0.6 * S, 0.6 * S]} />
-          <meshStandardMaterial color={strokeColor} roughness={0.45} metalness={0.1} />
-        </mesh>
-        {/* Side crossbars */}
-        {[-1, 1].map((side) => (
-          <mesh key={`xbar-${side}`} position={[side * (w / 2 - legInset), seatY * 0.35, 0]} castShadow>
-            <boxGeometry args={[0.6 * S, 0.6 * S, d - legInset * 2]} />
-            <meshStandardMaterial color={strokeColor} roughness={0.45} metalness={0.1} />
-          </mesh>
-        ))}
-        {/* Seat — thin cushion */}
+        {/* Seat cushion */}
         <mesh position={[0, seatY, 0]} castShadow receiveShadow>
           <boxGeometry args={[w, seatThick, d]} />
           <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
-        {/* Back frame — top rail */}
-        <mesh position={[0, backTopY, -d / 2 + 0.4 * S]} castShadow receiveShadow>
-          <boxGeometry args={[w, 1 * S, 0.8 * S]} />
-          <meshStandardMaterial color={strokeColor} roughness={0.45} metalness={0.1} />
+        {/* Solid back panel */}
+        <mesh position={[0, seatY + backH / 2 + seatThick / 2, -d / 2 + backThick / 2]} castShadow receiveShadow>
+          <boxGeometry args={[w, backH, backThick]} />
+          <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.05} />
         </mesh>
-        {/* Back vertical slats */}
-        {Array.from({ length: slatCount }).map((_, i) => {
-          const slatX = -w / 2 + slatW + i * (w / (slatCount + 1)) + slatW / 2;
-          return (
-            <mesh key={`slat-${i}`} position={[slatX, seatY + backH / 2, -d / 2 + 0.4 * S]} castShadow>
-              <boxGeometry args={[slatW, backH - 1 * S, 0.6 * S]} />
-              <meshStandardMaterial color={strokeColor} roughness={0.45} metalness={0.1} />
-            </mesh>
-          );
-        })}
-        {/* Back legs (extensions from rear legs) */}
-        {[-1, 1].map((side) => (
-          <mesh key={`bleg-${side}`} position={[side * (w / 2 - legInset), seatY + backH / 2, -d / 2 + legInset]} castShadow>
-            <cylinderGeometry args={[legR * 0.6, legR * 0.7, backH, 6]} />
-            <meshStandardMaterial color={strokeColor} roughness={0.45} metalness={0.1} />
-          </mesh>
-        ))}
         <FurnitureLabel label={obj.label} y={backTopY + 2 * S} />
       </group>
     );

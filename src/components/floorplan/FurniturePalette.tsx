@@ -21,7 +21,7 @@ export default function FurniturePalette({ onAddItem, onAddGroup, mobile }: Prop
       className={
         mobile
           ? "w-full overflow-y-auto"
-          : "w-56 bg-white border-r border-stone-200 overflow-y-auto flex-shrink-0"
+          : "w-56 h-full bg-white border-r border-stone-200 overflow-y-auto flex-shrink-0"
       }
     >
       {!mobile && (
