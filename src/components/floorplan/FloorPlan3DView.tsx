@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback, useEffect, useState, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Text, ContactShadows } from "@react-three/drei";
+import { OrbitControls, ContactShadows } from "@react-three/drei";
 import { Color, Vector2, Shape, DoubleSide, ACESFilmicToneMapping } from "three";
 import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 import { LightingZone } from "@/lib/types";
@@ -453,19 +453,9 @@ function getFurnitureCategory(furnitureId: string): FurnitureCategory {
 
 /** Label that floats above every furniture piece */
 function FurnitureLabel({ label, y }: { label: string; y: number }) {
-  if (!label) return null;
-  return (
-    <Text
-      position={[0, y, 0]}
-      fontSize={0.25}
-      color="#57534e"
-      anchorX="center"
-      anchorY="bottom"
-      rotation={[-Math.PI / 4, 0, 0]}
-    >
-      {label}
-    </Text>
-  );
+  // Text component from drei fetches a font from CDN which is blocked by CSP,
+  // causing Suspense to hang indefinitely. Labels disabled until a local font is bundled.
+  return null;
 }
 
 function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject; originX: number; originY: number; settings: View3DSettings }) {
@@ -1731,9 +1721,6 @@ function FloorPlan3DScene({
 
   return (
     <>
-      {/* DEBUG: bright blue background to test if Canvas renders at all */}
-      <color attach="background" args={["#0066ff"]} />
-
       {/* Scene uses ambient + directional + hemisphere lighting instead of external HDR
          (Environment component fetches HDR from CDN which is blocked by CSP) */}
 
@@ -1797,12 +1784,6 @@ function FloorPlan3DScene({
 
       {/* Venue environment elements (tent, grass, string lights, beams, etc.) — sized to room */}
       <VenueEnvironment preset={activePreset} cx={roomBounds.cx} cz={roomBounds.cz} maxDim={roomBounds.span} />
-
-      {/* DEBUG: test cube at scene center */}
-      <mesh position={[cx, 2, cz]}>
-        <boxGeometry args={[4, 4, 4]} />
-        <meshBasicMaterial color="red" />
-      </mesh>
 
       {/* Room floor */}
       {rooms.map((room, i) => (
@@ -2041,24 +2022,6 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
   const [settings, setSettings] = useState<View3DSettings>(DEFAULT_SETTINGS);
   const [showSettings, setShowSettings] = useState(false);
 
-  // Debug: object count for diagnostics
-  const debugInfo = useMemo(() => {
-    const parsed = parseCanvasJSON(floorPlanJSON);
-    const allObjs = parsed.objects.filter(o => o.type === "furniture" || o.type === "room");
-    let bounds = "n/a";
-    if (allObjs.length > 0) {
-      const oX = parsed.canvasWidth / 2, oY = parsed.canvasHeight / 2;
-      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
-      for (const o of allObjs) {
-        const wx = (o.x - oX) * S, wz = (o.y - oY) * S;
-        minX = Math.min(minX, wx); maxX = Math.max(maxX, wx);
-        minZ = Math.min(minZ, wz); maxZ = Math.max(maxZ, wz);
-      }
-      bounds = `x[${minX.toFixed(1)}..${maxX.toFixed(1)}] z[${minZ.toFixed(1)}..${maxZ.toFixed(1)}]`;
-    }
-    return { jsonLen: floorPlanJSON?.length ?? 0, objCount: parsed.objects.length, furniture: parsed.objects.filter(o => o.type === "furniture").length, rooms: parsed.objects.filter(o => o.type === "room").length, bounds, canvasW: parsed.canvasWidth, canvasH: parsed.canvasHeight };
-  }, [floorPlanJSON]);
-
   // Compute camera position + centroid to frame the actual furniture
   const { camConfig, centerX, centerZ } = useMemo(() => {
     const parsed = parseCanvasJSON(floorPlanJSON);
@@ -2148,12 +2111,6 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
           open={showSettings}
           onToggle={() => setShowSettings(!showSettings)}
         />
-        {/* Temporary debug overlay — remove after confirming 3D works on production */}
-        <div className="absolute bottom-2 left-2 text-[10px] text-stone-400 bg-white/80 px-2 py-1 rounded font-mono leading-relaxed">
-          JSON:{debugInfo.jsonLen} | Obj:{debugInfo.objCount} | F:{debugInfo.furniture} | R:{debugInfo.rooms}<br/>
-          Canvas:{debugInfo.canvasW}x{debugInfo.canvasH} | {debugInfo.bounds}<br/>
-          Cam:[{camConfig.position.map(v => v.toFixed(1)).join(",")}] Center:[{centerX.toFixed(1)},{centerZ.toFixed(1)}]
-        </div>
       </div>
     </ErrorBoundary>
   );
