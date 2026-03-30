@@ -1795,6 +1795,12 @@ function FloorPlan3DScene({
       {/* Venue environment elements (tent, grass, string lights, beams, etc.) — sized to room */}
       <VenueEnvironment preset={activePreset} cx={roomBounds.cx} cz={roomBounds.cz} maxDim={roomBounds.span} />
 
+      {/* DEBUG: test cube at scene center */}
+      <mesh position={[cx, 2, cz]}>
+        <boxGeometry args={[4, 4, 4]} />
+        <meshBasicMaterial color="red" />
+      </mesh>
+
       {/* Room floor */}
       {rooms.map((room, i) => (
         <RoomFloor key={`room-${i}`} obj={room} originX={originX} originY={originY} settings={settings} showWalls={showWalls} floorOverride={activePreset?.floorOverride} />
