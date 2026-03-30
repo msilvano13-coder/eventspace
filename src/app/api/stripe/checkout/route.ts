@@ -79,6 +79,7 @@ export async function POST(request: Request) {
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: "payment",
+        allow_promotion_codes: true,
         line_items: [
           {
             price: process.env.STRIPE_PRICE_DIY!,
@@ -100,6 +101,7 @@ export async function POST(request: Request) {
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
+      allow_promotion_codes: true,
       line_items: [
         {
           price: process.env.STRIPE_PRICE_PROFESSIONAL!,

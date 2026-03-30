@@ -1,15 +1,59 @@
 # EventSpace Handoff — March 30, 2026
 
-## Current State: Session 7 Complete — Fully Deployed + Migration Applied
+## Current State: Session 8 Complete — 3D Lighting + Production Fixes
 - **Branch:** `main`
 - **Build:** Clean (zero errors)
-- **Latest commit:** `9635210` — Enable user_id in toRow functions after scalability migration applied
+- **Latest commit:** `6cfa511` — Fix stack overflow when dragging lighting zones
 - **Deploy:** `eventspace-nine.vercel.app`
 - **Migration:** `scalability-migration.sql` **APPLIED** to Supabase (March 30, 2026)
 
 ---
 
 ## What Was Done Today (March 30)
+
+### Session 8: 3D Lighting Improvements + Production Crash Fixes
+
+**4 Lighting Improvements** (built in prior session, deployed this session)
+1. **Cone beams for spotlights** — visible 3D cone geometry for spotlight-type lights
+2. **Ground light pools** — circular glow on floor beneath each light
+3. **Uplight wall wash** — lights aimed upward cast color onto nearby walls
+4. **Height/spread controls** — per-zone sliders for mounting height and beam spread angle
+
+**Production Crash Fix 1: Environment HDR fetch blocked by CSP**
+- drei's `<Environment>` fetches `.hdr` from `raw.githubusercontent.com`, blocked by `connect-src`
+- Fix: Removed `<Environment>` entirely; scene uses ambient/directional/hemisphere lighting
+- File: `FloorPlan3DView.tsx`
+
+**Production Crash Fix 2: Text font fetch causes infinite Suspense**
+- drei's `<Text>` (troika-three-text) fetches fonts from CDN, also blocked by CSP
+- Since the 3D scene is inside `<Suspense fallback={null}>`, this silently rendered nothing
+- Fix: Disabled `FurnitureLabel` (returns null), removed `Text` import
+- File: `FloorPlan3DView.tsx`
+
+**Production Crash Fix 3: Stack overflow when dragging lights**
+- `object:moving` fired `onUpdateZones()` on every mouse frame → state → useEffect → `syncLightingToCanvas()` → Fabric events → state → infinite recursion
+- Fix: (a) Don't update React state during drag — visual-only canvas movement, (b) removed direct `syncLightingToCanvas()` call from `object:modified`, (c) added re-entrancy guard to `syncLightingToCanvas`
+- File: `FloorPlanEditor.tsx`
+
+**CSP Restrictions (important for future drei usage)**
+The Content-Security-Policy in `next.config.mjs` blocks external CDN fetches. Do NOT re-enable drei `Environment` or `Text` without either updating CSP or bundling assets locally.
+
+**`optimizePackageImports` for three/R3F removed** — reduced to `["fabric"]` only. The three/R3F tree-shaking caused Object3D stack overflow. Could re-test in future but risky.
+
+**Known Limitation: 3D labels disabled** — `FurnitureLabel` returns null. To restore:
+- Bundle a local `.woff`/`.ttf` and pass to drei `<Text font={localPath}>`
+- Or use `<Html>` from drei for HTML overlay labels
+
+**All Session 8 Commits:**
+| Commit | Description |
+|--------|-------------|
+| `6cfa511` | Fix stack overflow when dragging lighting zones |
+| `172a3c3` | Fix eslint no-unused-vars on FurnitureLabel stub |
+| `05b8b69` | Fix unused params lint error |
+| `5c8fe33` | Fix 3D scene not rendering: remove Text component |
+| `0690e2a` | Debug: blue background test (cleaned up) |
+
+---
 
 ### Session 7: Scalability — Scale to 1,000-5,000 Users
 
@@ -387,6 +431,7 @@ Page renders → useEvent(id)        → store.getById(id)
 ✅ Phase 3:  3D polish, layout templates, rotation snapping
 ✅ Tech debt: Upsert pattern, webhook idempotency, eventFromRow split, spinner fix
 ✅ Session 6: Chair rotation, 3D settings panel, venue presets, lighting rotation UX
+✅ Session 8: 3D lighting (cone beams, light pools, wall wash, height/spread) + production crash fixes
 ```
 
 ---
@@ -567,6 +612,7 @@ flower-arrangement, draping, uplighting
 | **Scalability migration** | `supabase/scalability-migration.sql` |
 | Floor plan editor | `src/components/floorplan/FloorPlanEditor.tsx` |
 | Floor plan 3D view | `src/components/floorplan/FloorPlan3DView.tsx` |
+| 3D error boundary | `src/components/floorplan/FloorPlan3DErrorBoundary.tsx` |
 | Lighting panel | `src/components/floorplan/LightingPanel.tsx` |
 | Lighting overlay (2D) | `src/components/floorplan/LightingOverlay.tsx` |
 | Venue environment (3D) | `src/components/floorplan/VenueEnvironment.tsx` |

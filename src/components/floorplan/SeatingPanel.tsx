@@ -115,6 +115,10 @@ function countChairs(obj: any): number {
   return count;
 }
 
+function isSweetheartTable(t: TableInfo): boolean {
+  return t.furnitureId.includes("sweetheart") || t.label.toLowerCase().includes("sweetheart");
+}
+
 export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, relationships: relsProp }: Props) {
   const tables = extractTables(floorPlanJSON);
   const [expandedTable, setExpandedTable] = useState<string | null>(null);
@@ -151,7 +155,7 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
 
   function runAutoSeat() {
     const seatableTables: TableSlot[] = tables
-      .filter((t) => t.maxSeats > 0)
+      .filter((t) => t.maxSeats > 0 && !isSweetheartTable(t))
       .map((t) => {
         // Subtract already-occupied seats so algorithm knows remaining capacity
         const occupied = headCount(t.tableId);
@@ -299,6 +303,7 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
           const seated = guestsAtTable(table.tableId);
           const count = headCount(table.tableId);
           const isExpanded = expandedTable === table.tableId;
+          const isSweetheart = isSweetheartTable(table);
 
           return (
             <div key={table.tableId}>
@@ -360,7 +365,9 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
                   {/* Assign from unassigned pool */}
                   {unassigned.length > 0 && (
                     <div className="pt-1">
-                      {table.maxSeats > 0 && count >= table.maxSeats ? (
+                      {isSweetheart ? (
+                        <p className="text-[10px] text-amber-500 italic px-1">Sweetheart table — reserved for the couple</p>
+                      ) : table.maxSeats > 0 && count >= table.maxSeats ? (
                         <p className="text-[10px] text-red-400 italic px-1">Table is at capacity ({count}/{table.maxSeats})</p>
                       ) : (
                         <>

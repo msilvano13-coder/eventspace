@@ -1,7 +1,7 @@
 "use client";
 
 import { LightingZone, LightingType } from "@/lib/types";
-import { Trash2, Lightbulb, Link2, Link2Off } from "lucide-react";
+import { Trash2, Lightbulb, Link2, Link2Off, Copy } from "lucide-react";
 import { LIGHTING_TYPE_DEFAULTS as TYPE_DEFAULTS } from "@/lib/constants";
 
 interface Props {
@@ -85,6 +85,20 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
 
   function updateZone(id: string, updates: Partial<LightingZone>) {
     onUpdateZones(zones.map((z) => z.id === id ? { ...z, ...updates } : z));
+  }
+
+  function duplicateZone(id: string) {
+    const source = zones.find((z) => z.id === id);
+    if (!source) return;
+    const clone: LightingZone = {
+      ...source,
+      id: crypto.randomUUID(),
+      name: source.name + " (copy)",
+      x: Math.min(source.x + 5, 95),
+      y: Math.min(source.y + 5, 95),
+    };
+    onUpdateZones([...zones, clone]);
+    onSelectZone(clone.id);
   }
 
   function deleteZone(id: string) {
@@ -188,12 +202,16 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
             </label>
             <input
               type="range"
-              min="5"
+              min="1"
               max="100"
               value={selectedZone.intensity}
               onChange={(e) => updateZone(selectedZone.id, { intensity: parseInt(e.target.value) })}
               className="w-full accent-rose-400 h-2"
             />
+            <div className="flex justify-between text-[10px] text-stone-400 mt-0.5">
+              <span>Dim</span>
+              <span>Bright</span>
+            </div>
           </div>
 
           {/* Angle / Rotation */}
@@ -312,14 +330,23 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
             />
           </div>
 
-          {/* Delete */}
-          <button
-            onClick={() => deleteZone(selectedZone.id)}
-            className="flex items-center gap-2 text-sm text-stone-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 px-3 py-2.5 rounded-xl transition-colors w-full min-h-[44px]"
-          >
-            <Trash2 size={14} />
-            Remove zone
-          </button>
+          {/* Duplicate + Delete */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => duplicateZone(selectedZone.id)}
+              className="flex items-center gap-2 text-sm text-stone-500 hover:text-rose-600 hover:bg-rose-50 active:bg-rose-100 px-3 py-2.5 rounded-xl transition-colors flex-1 min-h-[44px]"
+            >
+              <Copy size={14} />
+              Duplicate
+            </button>
+            <button
+              onClick={() => deleteZone(selectedZone.id)}
+              className="flex items-center gap-2 text-sm text-stone-400 hover:text-red-500 hover:bg-red-50 active:bg-red-100 px-3 py-2.5 rounded-xl transition-colors flex-1 min-h-[44px]"
+            >
+              <Trash2 size={14} />
+              Remove
+            </button>
+          </div>
         </div>
       )}
 

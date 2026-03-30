@@ -1489,7 +1489,9 @@ function LightingZone3D({
   const py = (zone.y / 100) * canvasHeight;
   const posX = (px - originX) * S;
   const posZ = (py - originY) * S;
-  const intensity = (zone.intensity / 100) * 3;
+  // Exponential curve: low values barely visible, high values dramatic
+  const t = zone.intensity / 100;
+  const intensity = t * t * 12;
   const color = getCachedColor(zone.color);
   const mountHeight = (zone.height ?? 8);  // in feet (= world units since S = 1/12)
   const spreadRad = ((zone.spread ?? 45) * Math.PI) / 180;
@@ -1521,7 +1523,7 @@ function LightingZone3D({
           <meshStandardMaterial
             color={color}
             transparent
-            opacity={0.04 + (zone.intensity / 100) * 0.06}
+            opacity={0.06 + t * 0.22}
             side={DoubleSide}
             depthWrite={false}
           />
@@ -1545,7 +1547,7 @@ function LightingZone3D({
           <meshBasicMaterial
             color={color}
             transparent
-            opacity={0.08 + (zone.intensity / 100) * 0.12}
+            opacity={0.08 + t * 0.25}
             depthWrite={false}
           />
         </mesh>
@@ -1595,7 +1597,7 @@ function LightingZone3D({
           <meshStandardMaterial
             color={color}
             transparent
-            opacity={0.03 + (zone.intensity / 100) * 0.05}
+            opacity={0.05 + t * 0.20}
             side={DoubleSide}
             depthWrite={false}
           />
@@ -1611,19 +1613,19 @@ function LightingZone3D({
           <meshBasicMaterial
             color={color}
             transparent
-            opacity={0.04 + (zone.intensity / 100) * 0.06}
+            opacity={0.06 + t * 0.18}
             side={DoubleSide}
             depthWrite={false}
           />
         </mesh>
 
-        {/* Ground light pool (subtle) */}
+        {/* Ground light pool — radius scales with spread */}
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
-          <circleGeometry args={[0.4, 24]} />
+          <circleGeometry args={[0.3 + Math.tan(spreadRad / 2) * 0.6, 24]} />
           <meshBasicMaterial
             color={color}
             transparent
-            opacity={0.06 + (zone.intensity / 100) * 0.08}
+            opacity={0.08 + t * 0.20}
             depthWrite={false}
           />
         </mesh>
@@ -1649,11 +1651,11 @@ function LightingZone3D({
       </mesh>
       {/* Ground light pool */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -mountHeight + 0.01, 0]}>
-        <circleGeometry args={[Math.tan(spreadRad / 2) * mountHeight * 0.5, 24]} />
+        <circleGeometry args={[Math.tan(spreadRad / 2) * mountHeight * 0.7, 24]} />
         <meshBasicMaterial
           color={color}
           transparent
-          opacity={0.06 + (zone.intensity / 100) * 0.08}
+          opacity={0.08 + t * 0.20}
           depthWrite={false}
         />
       </mesh>
