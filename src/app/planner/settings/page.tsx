@@ -52,9 +52,14 @@ function SettingsContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
       })
-        .then(() => {
+        .then(async (res) => {
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            console.error("verify-session failed:", data.error || res.status);
+            return;
+          }
           plannerStore.refetch();
-          trackTrialActivated(profile.plan || "unknown");
+          trackTrialActivated(data.plan || "unknown");
         })
         .catch((err) => console.error("verify-session failed:", err));
       setShowSuccess(true);

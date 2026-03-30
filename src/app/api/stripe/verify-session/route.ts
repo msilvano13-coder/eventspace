@@ -76,7 +76,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Failed to update plan" }, { status: 500 });
     }
 
-    return NextResponse.json({ plan });
+    // Clear the middleware profile cache cookie so the updated plan takes effect immediately
+    const response = NextResponse.json({ plan });
+    response.cookies.set("es_profile_cache", "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 0,
+      path: "/",
+    });
+    return response;
   } catch (err) {
     console.error("verify-session error:", err);
     return NextResponse.json({ error: "Verification failed" }, { status: 500 });
