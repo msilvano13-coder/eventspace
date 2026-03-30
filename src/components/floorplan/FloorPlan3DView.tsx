@@ -2,7 +2,7 @@
 
 import { useMemo, useCallback, useEffect, useState, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Text, Environment, ContactShadows } from "@react-three/drei";
+import { OrbitControls, Text, ContactShadows } from "@react-three/drei";
 import { Color, Vector2, Shape, DoubleSide, ACESFilmicToneMapping } from "three";
 import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 import { LightingZone } from "@/lib/types";
@@ -1733,8 +1733,8 @@ function FloorPlan3DScene({
 
   return (
     <>
-      {/* HDRI environment — outdoor presets show background sky */}
-      <Environment preset={envPreset as any} background={showBackground} />
+      {/* Scene uses ambient + directional + hemisphere lighting instead of external HDR
+         (Environment component fetches HDR from CDN which is blocked by CSP) */}
 
       {/* Fog for depth */}
       <fog attach="fog" args={[fogColor, maxDim * 2, maxDim * 5]} />
