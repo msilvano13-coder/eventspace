@@ -2,10 +2,8 @@
 
 import { useMemo, useCallback, useEffect, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Text, Environment, ContactShadows, SoftShadows } from "@react-three/drei";
-import { EffectComposer, SSAO, ToneMapping } from "@react-three/postprocessing";
-import { BlendFunction, ToneMappingMode } from "postprocessing";
-import { Color, Vector2, Shape, DoubleSide } from "three";
+import { OrbitControls, Text, Environment, ContactShadows } from "@react-three/drei";
+import { Color, Vector2, Shape, DoubleSide, ACESFilmicToneMapping } from "three";
 import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 import { LightingZone } from "@/lib/types";
 import { FURNITURE_CATALOG } from "@/lib/constants";
@@ -1185,10 +1183,7 @@ function FloorPlan3DScene({
   return (
     <>
       {/* Neutral studio HDRI for clean reflections */}
-      <Environment preset="studio" background={false} environmentIntensity={0.6} />
-
-      {/* Soft shadows for more natural look */}
-      <SoftShadows size={25} samples={16} focus={0.5} />
+      <Environment preset="studio" background={false} />
 
       {/* Fog for depth — warm tone */}
       <fog attach="fog" args={["#f0ece6", maxDim * 2, maxDim * 5]} />
@@ -1275,22 +1270,6 @@ function FloorPlan3DScene({
         args={[maxDim * 1.5, Math.ceil(maxDim * 1.5 / (20 * S)), "#ddd8d0", "#ebe6de"]}
         position={[cx, -0.004, cz]}
       />
-
-      {/* Post-processing: SSAO for ground contact realism + ACES tone mapping */}
-      <EffectComposer multisampling={4}>
-        <SSAO
-          blendFunction={BlendFunction.MULTIPLY}
-          samples={21}
-          radius={0.15}
-          intensity={18}
-          luminanceInfluence={0.6}
-          worldDistanceThreshold={2}
-          worldDistanceFalloff={0.5}
-          worldProximityThreshold={0.3}
-          worldProximityFalloff={0.3}
-        />
-        <ToneMapping mode={ToneMappingMode.AGX} />
-      </EffectComposer>
 
       <OrbitControls
         makeDefault
@@ -1386,7 +1365,8 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
           gl={{
             antialias: true,
             powerPreference: "default",
-            toneMapping: 0, // Disabled — handled by postprocessing ToneMapping effect
+            toneMapping: ACESFilmicToneMapping,
+            toneMappingExposure: 1.1,
           }}
         >
           <Suspense fallback={null}>
