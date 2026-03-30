@@ -51,7 +51,8 @@ export async function POST(request: Request) {
         if (!plan) break;
 
         // For one-time payments (DIY), only grant access if payment is confirmed
-        if (session.mode === "payment" && session.payment_status !== "paid") {
+        // "no_payment_required" covers 100%-off promo codes where Stripe skips payment.
+        if (session.mode === "payment" && session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
           console.warn(`checkout.session.completed: payment_status=${session.payment_status} for session ${session.id}, deferring plan update`);
           break;
         }

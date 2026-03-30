@@ -50,8 +50,9 @@ export async function POST(request: Request) {
     }
 
     // For one-time payments (DIY), only update if payment is confirmed.
+    // "no_payment_required" covers 100%-off promo codes where Stripe skips payment.
     // If not yet paid, the webhook will handle it when payment confirms.
-    if (session.mode === "payment" && session.payment_status !== "paid") {
+    if (session.mode === "payment" && session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
       return NextResponse.json({ plan, pending: true });
     }
 
