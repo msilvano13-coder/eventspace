@@ -1477,6 +1477,7 @@ function LightingZone3D({
   canvasWidth,
   canvasHeight,
   castShadow,
+  furnitureObjects,
 }: {
   zone: LightingZone;
   originX: number;
@@ -1484,20 +1485,33 @@ function LightingZone3D({
   canvasWidth: number;
   canvasHeight: number;
   castShadow: boolean;
+  furnitureObjects: ParsedObject[];
 }) {
   const px = (zone.x / 100) * canvasWidth;
   const py = (zone.y / 100) * canvasHeight;
   const posX = (px - originX) * S;
   const posZ = (py - originY) * S;
-  // Exponential curve: low values barely visible, high values dramatic
+  // Linear curve for visible intensity across full slider range
   const t = zone.intensity / 100;
-  const intensity = t * t * 12;
+  const intensity = 0.5 + t * 14.5;
   const color = getCachedColor(zone.color);
   const mountHeight = (zone.height ?? 8);  // in feet (= world units since S = 1/12)
   const spreadRad = ((zone.spread ?? 45) * Math.PI) / 180;
   const isDownlight = DOWNLIGHT_TYPES.has(zone.type);
   const isUplight = UPLIGHT_TYPES.has(zone.type);
   const lightDistance = zone.size * S * 6;
+
+  // If snapped to furniture, calculate the surface height to place light on top
+  let snapElevation = 0;
+  if (zone.snappedToFurnitureId) {
+    const snappedObj = furnitureObjects.find(
+      (obj) => obj.label === zone.snappedToFurnitureId
+    );
+    if (snappedObj) {
+      const h = getHeight(snappedObj.furnitureId);
+      snapElevation = h * S;  // convert inches to world units
+    }
+  }
 
   // ── Downlight spotlight types: cone beam from ceiling down ──
   if (isDownlight) {
@@ -1506,12 +1520,15 @@ function LightingZone3D({
 
     return (
       <group position={[posX, 0, posZ]}>
-        {/* Point light at mounting height for illumination */}
-        <pointLight
+        {/* SpotLight from mounting height for real directional illumination */}
+        <spotLight
           color={color}
-          intensity={intensity * 1.5}
-          distance={lightDistance}
-          position={[0, mountHeight * 0.7, 0]}
+          intensity={intensity * 2}
+          distance={lightDistance * 1.5}
+          angle={spreadRad / 2}
+          penumbra={0.4}
+          position={[0, mountHeight, 0]}
+          target-position={[0, 0, 0]}
           castShadow={castShadow}
           shadow-mapSize-width={castShadow ? 512 : undefined}
           shadow-mapSize-height={castShadow ? 512 : undefined}
@@ -1562,12 +1579,15 @@ function LightingZone3D({
 
     return (
       <group position={[posX, 0, posZ]}>
-        {/* Point light for illumination */}
-        <pointLight
+        {/* SpotLight pointing up for real directional illumination */}
+        <spotLight
           color={color}
-          intensity={intensity}
-          distance={lightDistance}
-          position={[0, mountHeight * 0.3, 0]}
+          intensity={intensity * 1.5}
+          distance={lightDistance * 1.5}
+          angle={spreadRad / 2}
+          penumbra={0.3}
+          position={[0, 0.2, 0]}
+          target-position={[0, mountHeight, 0]}
           castShadow={castShadow}
           shadow-mapSize-width={castShadow ? 512 : undefined}
           shadow-mapSize-height={castShadow ? 512 : undefined}
@@ -1634,8 +1654,10 @@ function LightingZone3D({
   }
 
   // ── Other types (string lights, candles, etc.): point light + ground pool ──
+  // If snapped to furniture, place on top of it; otherwise use mountHeight
+  const baseY = snapElevation > 0 ? snapElevation : mountHeight;
   return (
-    <group position={[posX, mountHeight, posZ]}>
+    <group position={[posX, baseY, posZ]}>
       <pointLight
         color={color}
         intensity={intensity}
@@ -1650,8 +1672,8 @@ function LightingZone3D({
         <meshBasicMaterial color={color} transparent opacity={0.8} />
       </mesh>
       {/* Ground light pool */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -mountHeight + 0.01, 0]}>
-        <circleGeometry args={[Math.tan(spreadRad / 2) * mountHeight * 0.7, 24]} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -baseY + 0.01, 0]}>
+        <circleGeometry args={[Math.tan(spreadRad / 2) * baseY * 0.7, 24]} />
         <meshBasicMaterial
           color={color}
           transparent
@@ -1809,6 +1831,7 @@ function FloorPlan3DScene({
             canvasWidth={canvasWidth}
             canvasHeight={canvasHeight}
             castShadow={i < MAX_SHADOW_LIGHTS}
+            furnitureObjects={furniture}
           />
         ))}
 
