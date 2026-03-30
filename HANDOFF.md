@@ -1,10 +1,11 @@
 # EventSpace Handoff — March 30, 2026
 
-## Current State: Session 7 Complete — Deployed
+## Current State: Session 7 Complete — Fully Deployed + Migration Applied
 - **Branch:** `main`
-- **Build:** Clean
-- **Latest commit:** `26f9c0c` — Scale EventSpace for 1,000-5,000 users
+- **Build:** Clean (zero errors)
+- **Latest commit:** `9635210` — Enable user_id in toRow functions after scalability migration applied
 - **Deploy:** `eventspace-nine.vercel.app`
+- **Migration:** `scalability-migration.sql` **APPLIED** to Supabase (March 30, 2026)
 
 ---
 
@@ -14,7 +15,7 @@
 
 Full scalability overhaul across database, query layer, client store, API, and bundle optimization. **No UX changes** at current data volumes — pagination only visible at 50+ events or 100+ guests.
 
-**Database & RLS Optimization** (`supabase/scalability-migration.sql`)
+**Database & RLS Optimization** (`supabase/scalability-migration.sql`) — ✅ APPLIED
 - Denormalized `user_id` onto 5 high-traffic child tables: `guests`, `vendors`, `floor_plans`, `invoices`, `schedule_items`
 - Backfill from parent `events` table + orphan row cleanup before NOT NULL constraint
 - Composite indexes `(user_id, event_id)` on all 5 tables
@@ -31,6 +32,7 @@ Full scalability overhaul across database, query layer, client store, API, and b
   - `replaceFloorPlans`: lighting_zones batch delete
 - `getUserId()` cached with 30s TTL + `clearUserIdCache()` for logout
 - Removed dead `fetchEventFull()` (monolithic 14-way join replaced by lazy loading in Session 2)
+- All 5 `toRow` functions now include `user_id` (enabled post-migration)
 
 **Client Store** (`src/lib/store.ts`)
 - LRU eviction: max 100 cached events, least-recently-accessed evicted on overflow
@@ -44,16 +46,17 @@ Full scalability overhaul across database, query layer, client store, API, and b
 - Middleware profile cache (`src/lib/supabase/middleware.ts`): extended from 5min to 15min, added `console.warn` on bad cookie parse
 - Bundle optimization (`next.config.mjs`): `optimizePackageImports` for `three`, `@react-three/fiber`, `@react-three/drei`, `fabric`
 
-**Deployment Sequencing**
-Code is deployed and backward-compatible. Migration has NOT been applied yet:
-1. Code is live (current state) — works without migration
-2. Apply `supabase/scalability-migration.sql` to add `user_id` columns
-3. Uncomment `user_id` in toRow functions (marked with `// TODO: uncomment after scalability-migration.sql`)
-4. Push toRow update
+**Deployment Status:** ✅ Fully complete
+1. ✅ Code deployed to Vercel
+2. ✅ `scalability-migration.sql` applied to Supabase
+3. ✅ `user_id` enabled in all toRow functions
+4. ✅ Final commit pushed (`9635210`)
 
 **All Session 7 Commits:**
 | Commit | Description |
 |--------|-------------|
+| `9635210` | Enable user_id in toRow functions after scalability migration applied |
+| `3c46d73` | Update HANDOFF.md with Session 7 scalability details |
 | `26f9c0c` | Scale EventSpace for 1,000-5,000 users: RLS, pagination, LRU, bundle optimization |
 | `db91dbf` | Fix venue elements alignment: size to room polygon, not canvas |
 | `76f1a2d` | Enhance 3D procedural furniture geometry for all 10 categories |
@@ -338,19 +341,16 @@ Page renders → useEvent(id)        → store.getById(id)
 
 ### Should Address Soon
 
-1. **Scalability migration not yet applied** — `supabase/scalability-migration.sql` adds `user_id` to 5 child tables. Code is backward-compatible without it, but RLS optimization won't take effect until migration runs. After applying:
-   - Search `db.ts` for `// TODO: uncomment after scalability-migration.sql`
-   - Uncomment `user_id` in `guestToRow`, `vendorToRow`, `floorPlanToRow`, `invoiceToRow`, `scheduleItemToRow`
-   - Re-add `const userId = await getUserId()` in the 5 replace functions
-   - Push the update
-
-2. **Missing DB columns for storage features** — Several tables reference `storage_path` columns in `db.ts` that may not exist in production:
+1. **Missing DB columns for storage features** — Several tables reference `storage_path` columns in `db.ts` that may not exist in production:
    - `event_contracts`: `storage_path`, `storage_signed_path`, `storage_planner_sig`, `storage_client_sig`
    - `mood_board_images`: `storage_path`, `storage_thumb`
    - `shared_files`: `storage_path`
    - `contract_templates`: `storage_path`
 
    **Fix:** Run ALTER TABLE statements from migration.sql + `NOTIFY pgrst, 'reload schema'`
+
+### Resolved (Session 7)
+- ~~Scalability migration not applied~~ → Applied to Supabase, `user_id` enabled in all toRow functions (`9635210`)
 
 ### Resolved (Session 4)
 - ~~`replaceGuests` delete-then-insert~~ → Converted to upsert pattern
