@@ -201,10 +201,11 @@ function eventFromRow(r: any): Event {
 // ── FloorPlan ──
 
 // After running scalability-migration.sql, add userId param and user_id field
-function floorPlanToRow(fp: FloorPlan, eventId: string, index: number) {
+function floorPlanToRow(fp: FloorPlan, eventId: string, index: number, userId: string) {
   return {
     id: fp.id,
     event_id: eventId,
+    user_id: userId,
     name: fp.name,
     json: fp.json ?? null,
     sort_order: index,
@@ -284,10 +285,11 @@ function timelineItemFromRow(r: any): TimelineItem {
 // ── ScheduleItem ──
 
 // After running scalability-migration.sql, add userId param and user_id field
-function scheduleItemToRow(s: ScheduleItem, eventId: string) {
+function scheduleItemToRow(s: ScheduleItem, eventId: string, userId: string) {
   return {
     id: s.id,
     event_id: eventId,
+    user_id: userId,
     time: s.time,
     title: s.title,
     notes: s.notes,
@@ -307,10 +309,11 @@ function scheduleItemFromRow(r: any): ScheduleItem {
 // ── Vendor ──
 
 // After running scalability-migration.sql, add userId param and user_id field
-function vendorToRow(v: Vendor, eventId: string) {
+function vendorToRow(v: Vendor, eventId: string, userId: string) {
   return {
     id: v.id,
     event_id: eventId,
+    user_id: userId,
     name: v.name,
     category: v.category,
     contact: v.contact,
@@ -368,12 +371,11 @@ function vendorPaymentFromRow(r: any): VendorPaymentItem {
 
 // ── Guest ──
 
-function guestToRow(g: Guest, eventId: string) {
+function guestToRow(g: Guest, eventId: string, userId: string) {
   return {
     id: g.id,
     event_id: eventId,
-    // TODO: uncomment after scalability-migration.sql is applied
-    // ...(userId ? { user_id: userId } : {}),
+    user_id: userId,
     name: g.name,
     email: g.email,
     rsvp: g.rsvp,
@@ -431,12 +433,11 @@ function questionnaireAssignmentFromRow(r: any): QuestionnaireAssignment {
 
 // ── Invoice ──
 
-function invoiceToRow(inv: Invoice, eventId: string) {
+function invoiceToRow(inv: Invoice, eventId: string, userId: string) {
   return {
     id: inv.id,
     event_id: eventId,
-    // TODO: uncomment after scalability-migration.sql is applied
-    // ...(userId ? { user_id: userId } : {}),
+    user_id: userId,
     number: inv.number,
     status: inv.status,
     notes: inv.notes,
@@ -1198,6 +1199,7 @@ export async function createEvent(
 
   const floorPlanRows = defaultPlanNames.map((name, i) => ({
     event_id: created.id,
+    user_id: userId,
     name,
     json: null,
     sort_order: i,
@@ -1258,12 +1260,12 @@ export async function replaceGuests(
   guests: Guest[]
 ): Promise<void> {
   const supabase = createClient();
-  // TODO: after scalability-migration.sql, re-add: const userId = await getUserId();
+  const userId = await getUserId();
 
   if (guests.length > 0) {
     const { error: upsertError } = await supabase
       .from("guests")
-      .upsert(guests.map((g) => guestToRow(g, eventId)), { onConflict: "id" });
+      .upsert(guests.map((g) => guestToRow(g, eventId, userId)), { onConflict: "id" });
     if (upsertError) throw new Error(`replaceGuests (upsert): ${upsertError.message}`);
 
     // Delete rows that were removed
@@ -1378,13 +1380,13 @@ export async function replaceVendors(
   vendors: Vendor[]
 ): Promise<void> {
   const supabase = createClient();
-  // TODO: after scalability-migration.sql, re-add: const userId = await getUserId();
+  const userId = await getUserId();
 
   if (vendors.length > 0) {
     // 1. Upsert vendor rows
     const { error: upsertError } = await supabase
       .from("vendors")
-      .upsert(vendors.map((v) => vendorToRow(v, eventId)), { onConflict: "id" });
+      .upsert(vendors.map((v) => vendorToRow(v, eventId, userId)), { onConflict: "id" });
     if (upsertError)
       throw new Error(`replaceVendors (upsert): ${upsertError.message}`);
 
@@ -1464,12 +1466,12 @@ export async function replaceSchedule(
   items: ScheduleItem[]
 ): Promise<void> {
   const supabase = createClient();
-  // TODO: after scalability-migration.sql, re-add: const userId = await getUserId();
+  const userId = await getUserId();
 
   if (items.length > 0) {
     const { error: upsertError } = await supabase
       .from("schedule_items")
-      .upsert(items.map((s) => scheduleItemToRow(s, eventId)), { onConflict: "id" });
+      .upsert(items.map((s) => scheduleItemToRow(s, eventId, userId)), { onConflict: "id" });
     if (upsertError)
       throw new Error(`replaceSchedule (upsert): ${upsertError.message}`);
 
@@ -1496,7 +1498,7 @@ export async function replaceFloorPlans(
   plans: FloorPlan[]
 ): Promise<void> {
   const supabase = createClient();
-  // TODO: after scalability-migration.sql, re-add: const userId = await getUserId();
+  const userId = await getUserId();
 
   const planIds = plans.map((fp) => fp.id);
 
@@ -1504,7 +1506,7 @@ export async function replaceFloorPlans(
   if (plans.length > 0) {
     const { error: upsertError } = await supabase
       .from("floor_plans")
-      .upsert(plans.map((fp, i) => floorPlanToRow(fp, eventId, i)), {
+      .upsert(plans.map((fp, i) => floorPlanToRow(fp, eventId, i, userId)), {
         onConflict: "id",
       });
     if (upsertError)
@@ -1625,13 +1627,13 @@ export async function replaceInvoices(
   invoices: Invoice[]
 ): Promise<void> {
   const supabase = createClient();
-  // TODO: after scalability-migration.sql, re-add: const userId = await getUserId();
+  const userId = await getUserId();
 
   if (invoices.length > 0) {
     // 1. Upsert invoice rows
     const { error: upsertError } = await supabase
       .from("invoices")
-      .upsert(invoices.map((inv) => invoiceToRow(inv, eventId)), { onConflict: "id" });
+      .upsert(invoices.map((inv) => invoiceToRow(inv, eventId, userId)), { onConflict: "id" });
     if (upsertError)
       throw new Error(`replaceInvoices (upsert): ${upsertError.message}`);
 
