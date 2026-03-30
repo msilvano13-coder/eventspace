@@ -1,15 +1,67 @@
 # EventSpace Handoff — March 30, 2026
 
-## Current State: Session 9 Complete — Stripe Coupons, Trial Fix, 3D Lighting, UI Fixes
+## Current State: Session 10 Complete — Client Portal Enhancements, Delete Account Fix, DIY Signup Flow
 - **Branch:** `main`
 - **Build:** Clean (zero errors)
-- **Latest commit:** `43a34f5` — Fix Delete key removing furniture while typing in label input
-- **Deploy:** Vercel (production, auto-deploy on push)
-- **Migration:** `trial-fix-migration.sql` **NEEDS TO BE APPLIED** to Supabase (see below)
+- **Latest commit:** `9c9f2fd` — Fix DIY signup flow — no trial references for fresh signups
+- **Deploy:** Vercel (production)
+- **Migration:** `trial-fix-migration.sql` — ✅ APPLIED
 
 ---
 
 ## What Was Done Today (March 30)
+
+### Session 10: Client Portal, Delete Account, Canvas Fix, DIY Signup
+
+**1. Client Portal — Vendor Deletion** (`6588b57`)
+- Clients can now delete vendors shared by the planner from "Your Vendors" section
+- Added trash icon button (visible on hover) with confirmation dialog before removing
+- Removed the dead "other" button that previously appeared
+- File: `src/app/client/[eventId]/page.tsx`
+
+**2. Client Portal — To-Do List Read/Write** (`6588b57`)
+- To-do list ("Planning Progress") now always visible (not hidden when empty)
+- Clients can **add** new to-dos via inline input at the bottom
+- Clients can **edit** to-do titles via pencil icon (hover to reveal, inline edit)
+- Clients can **delete** to-dos via trash icon (hover to reveal)
+- Toggle completion still works as before
+- File: `src/app/client/[eventId]/page.tsx`
+
+**3. Client Portal — Invoices Quick Link** (`6588b57`)
+- Added Invoices card to the quick links grid (next to Files) showing invoice count
+- Card links to `#invoices` anchor on the full invoices section below
+- Added `scroll-mt-4` to invoices section for smooth anchor scrolling
+- File: `src/app/client/[eventId]/page.tsx`
+
+**4. Delete Account Fix** (`6588b57`)
+- Delete account endpoint was returning 500 errors
+- Table deletions now check for errors and `console.warn` instead of crashing
+- `signOut()` wrapped in try/catch
+- Added webhook events cleanup
+- Better error message for unauthorized: "Your session has expired. Please sign in again and retry."
+- Added `Content-Type: application/json` header to settings page delete fetch
+- Files: `src/app/api/account/delete/route.ts`, `src/app/planner/settings/page.tsx`
+
+**5. Canvas Width/Height Serialization Fix** (`6588b57`)
+- Fabric.js v6 `toJSON()` does NOT serialize canvas `width`/`height` — the 3D view fell back to 800×600 while actual canvas was 1400×900+, causing lighting position mismatch between 2D and 3D
+- Fixed by explicitly injecting `width` and `height` into serialized JSON at both save points (getCanvasJSON + flush-save on unmount)
+- **Note:** Existing floor plans need a re-save to include dimensions
+- File: `src/components/floorplan/FloorPlanEditor.tsx`
+
+**6. DIY Signup Flow — No Trial References** (`9c9f2fd`)
+- Fresh signups (`plan: 'trial'`, `trial_ends_at: NULL`) now see "Welcome to EventSpace" and "Choose Your Plan" instead of "Your trial has ended"
+- Trial-expired messaging only appears for users who actually started and exhausted a Professional trial
+- Added `isFreshSignup` boolean to distinguish new users from expired trials
+- File: `src/app/planner/upgrade/page.tsx`
+
+**All Session 10 Commits:**
+| Commit | Description |
+|--------|-------------|
+| `9c9f2fd` | Fix DIY signup flow — no trial references for fresh signups |
+| `6588b57` | Fix delete account, canvas serialization, and enhance client portal |
+| `01e3a26` | Update HANDOFF.md with Session 9 details |
+
+---
 
 ### Session 9: Stripe Coupons, DIY Paywall, 3D Lighting Fixes, UI Fixes
 
@@ -27,8 +79,7 @@
   - Expired trials see "Subscribe — $20/mo" instead
 - New API route: `src/app/api/start-trial/route.ts` — sets `trial_ends_at = now + 30 days` only when explicitly requested
 - Updated upgrade page: `src/app/planner/upgrade/page.tsx` — separate flows for DIY (checkout) and Professional (trial/subscribe)
-- **DB migration required:** `supabase/trial-fix-migration.sql` — removes auto 30-day default from `trial_ends_at` column and updates `handle_new_user` trigger
-- ⚠️ **ACTION REQUIRED:** Run `trial-fix-migration.sql` in Supabase SQL editor
+- **DB migration:** `supabase/trial-fix-migration.sql` — ✅ APPLIED
 
 **3. 3D Lighting: Visible Intensity & Spread** (`9522a46`)
 - **Intensity:** Replaced quadratic curve (`t² × 12`) with linear mapping (`0.5 + t × 14.5`) — now 1% is visibly dim and 100% is bright, with noticeable changes across the full slider range
