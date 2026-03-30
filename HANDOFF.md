@@ -1,14 +1,76 @@
-# EventSpace Handoff — March 29, 2026
+# EventSpace Handoff — March 30, 2026
 
-## Current State: 3D Upgrade Steps 1-2 Complete — Deployed
+## Current State: Session 6 Complete — Deployed
 - **Branch:** `main`
 - **Build:** Clean
-- **Latest commit:** `d050ce9` — Fix contrast: gold chairs, cream linens, wood legs, darker floor
-- **Deploy:** `eventspace-19lw1wfrf-msilvano13-coders-projects.vercel.app`
+- **Latest commit:** `6913ccb` — Add lighting rotation + move edit panel to top for better UX
+- **Deploy:** `eventspace-nine.vercel.app`
 
 ---
 
-## What Was Done Today (March 29)
+## What Was Done Today (March 30)
+
+### Session 6: Chair Rotation, 3D Settings, Venue Presets, Lighting UX
+
+**Chair Rotation Context-Aware Fix** (`151c522`, `1ebb05a`)
+- Chairs now face outward in aisle/standalone placement, inward when part of a table set
+- Added `inTableSet` boolean to `ParsedObject`, propagated through `processObject` recursion
+- Table-set chairs get `Math.PI` rotation offset; standalone chairs face opposite direction
+- Chair back panel geometry flipped to `d/2 - backThick/2`
+
+**3D Settings Panel** (`1ebb05a`)
+- New configurable settings panel in 3D view with 7 options:
+  - Venue preset selector (tent, garden, rooftop, barn, beach, ballroom)
+  - Floor material (hardwood, marble, carpet, concrete)
+  - Lighting mood (warm, cool, dramatic, natural)
+  - Show/hide walls, shadows, fog, labels
+- `View3DSettings` interface in FloorPlan3DView.tsx
+- Settings panel scrollable with `max-h-[80vh] overflow-y-auto`
+
+**Venue Environment Presets** (`c41c862`)
+- New file: `src/components/floorplan/VenueEnvironment.tsx` (~350 lines)
+- 6 venue presets: Tent/Outdoor, Garden Party, Rooftop, Rustic Barn, Beach, Grand Ballroom
+- Each preset defines floor material, lighting mood, wall visibility, environment HDRI, fog, and procedural elements
+- Procedural 3D geometry components:
+  - `TentStructure` — center pole + 4 corner poles + 4 canopy panels + edge valances
+  - `GrassFloor` — large green plane below Y=0
+  - `SkyDome` — inverted sphere with BackSide light blue material
+  - `StringLights` — 3 parallel catenary curves with TubeGeometry wires + emissive bulbs + pointLights
+  - `ExposedBeams` — ridge beam + cross beams at ceiling height
+  - `LowRailing` — posts + top rail + glass panels around perimeter
+  - `Chandeliers` — chain + torus rings + arms + candle meshes + pointLights
+- New file: `src/lib/venue-models.ts` — GLTF model registry (same drop-in pattern as furniture-models.ts)
+
+**New Tab Crash Fix** (`8b06e0b`)
+- Root cause: stale closure race condition in editor unmount flush-save
+- Old editor captured `handleSave` with stale `validPlans`, deleting newly created plan on unmount
+- Fix: `validPlansRef` and `resolvedPlanIdRef` refs synced every render; `handleSave` reads from refs
+
+**Floor Material Switching Fix** (`d17a362`)
+- Two issues: (a) floor colors nearly identical — changed to visually distinct colors, (b) R3F `extrudeGeometry` material not updating reactively
+- Fix: distinct `FLOOR_MATERIALS` colors + `key` prop on floor mesh to force remount on material change
+
+**Lighting Panel UX + Rotation** (`6913ccb`)
+- Added `angle: number` (0-360°) to `LightingZone` interface in types.ts
+- Restructured `LightingPanel.tsx`: edit section now renders at TOP of panel when zone is selected
+- Added "Done" button to deselect zone, rotation slider (0-360°, step 5°)
+- Applied rotation CSS transform in `LightingOverlay.tsx`: `rotate(${zone.angle ?? 0}deg)`
+- Applied `angle` to Fabric.js group in `FloorPlanEditor.tsx`
+- Backward-compatible DB serialization in `db.ts` with `?? 0` fallback for existing zones
+
+**All Session 6 Commits:**
+| Commit | Description |
+|--------|-------------|
+| `6913ccb` | Add lighting rotation + move edit panel to top for better UX |
+| `d17a362` | Fix floor material switching: distinct colors + force mesh remount |
+| `c41c862` | Add venue environment presets: tent, garden, rooftop, barn, beach, ballroom |
+| `8b06e0b` | Fix crash on new tab: prevent stale flush-save from deleting new plan |
+| `151c522` | Fix chair rotation: face outward on aisle, inward at tables |
+| `1ebb05a` | Fix chair facing direction + add 3D settings panel |
+
+---
+
+## What Was Done (March 29)
 
 ### Session 5: 3D Upgrade — Steps 1 & 2
 
@@ -268,6 +330,7 @@ Page renders → useEvent(id)        → store.getById(id)
 ✅ Phase 2:  Smart seating algorithm, lighting-furniture snap, PDF export
 ✅ Phase 3:  3D polish, layout templates, rotation snapping
 ✅ Tech debt: Upsert pattern, webhook idempotency, eventFromRow split, spinner fix
+✅ Session 6: Chair rotation, 3D settings panel, venue presets, lighting rotation UX
 ```
 
 ---
@@ -447,6 +510,11 @@ flower-arrangement, draping, uplighting
 | **DB migration/schema** | `supabase/migration.sql` |
 | Floor plan editor | `src/components/floorplan/FloorPlanEditor.tsx` |
 | Floor plan 3D view | `src/components/floorplan/FloorPlan3DView.tsx` |
+| Lighting panel | `src/components/floorplan/LightingPanel.tsx` |
+| Lighting overlay (2D) | `src/components/floorplan/LightingOverlay.tsx` |
+| Venue environment (3D) | `src/components/floorplan/VenueEnvironment.tsx` |
+| Venue model registry | `src/lib/venue-models.ts` |
+| Furniture model registry | `src/lib/furniture-models.ts` |
 | Floor plan toolbar | `src/components/floorplan/Toolbar.tsx` |
 | Floor plan properties | `src/components/floorplan/PropertiesPanel.tsx` |
 | Layout templates | `src/lib/layout-templates.ts` |
