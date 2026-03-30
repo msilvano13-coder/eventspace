@@ -421,7 +421,11 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
 
   const fillColor = getCachedColor(obj.fill);
   const strokeColor = getCachedColor(obj.stroke);
-  const whiteColor = getCachedColor("#ffffff");
+  const linenColor = getCachedColor("#f5f0e6");    // warm cream — reads as tablecloth without washing out
+  const woodColor = getCachedColor("#8b7355");      // medium wood brown for table legs
+  const chairGold = getCachedColor("#c4a46c");      // Chiavari gold for chair seats
+  const chairBack = getCachedColor("#a8905a");      // darker gold for chair backs — adds depth
+  const chairLeg = getCachedColor("#9a8050");        // chair leg tone
   const darkColor = getCachedColor("#3a3530");
 
   const category = getFurnitureCategory(obj.furnitureId);
@@ -440,27 +444,27 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
         {/* Pedestal base disc */}
         <mesh position={[0, 1 * S, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[3 * S, 3.5 * S, 2 * S, 16]} />
-          <meshStandardMaterial color={strokeColor} roughness={0.4} metalness={0.15} />
+          <meshStandardMaterial color={woodColor} roughness={0.4} metalness={0.15} />
         </mesh>
         {/* Pedestal column */}
         <mesh position={[0, tableTopY / 2, 0]} castShadow>
           <cylinderGeometry args={[1.2 * S, 1.5 * S, tableTopY - 2 * S, 8]} />
-          <meshStandardMaterial color={strokeColor} roughness={0.4} metalness={0.15} />
+          <meshStandardMaterial color={woodColor} roughness={0.4} metalness={0.15} />
         </mesh>
         {/* Table surface */}
         <mesh position={[0, tableTopY, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[radius, radius, topThick, 32]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <meshStandardMaterial color={woodColor} roughness={0.55} metalness={0.05} />
         </mesh>
         {/* Tablecloth — slightly wider cylinder draped from top */}
         <mesh position={[0, tableTopY - clothDrop / 2, 0]} receiveShadow>
           <cylinderGeometry args={[clothRadius, clothRadius * 1.08, clothDrop, 32]} />
-          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
         </mesh>
         {/* Tablecloth top disc */}
         <mesh position={[0, tableTopY + topThick / 2 + 0.01, 0]} receiveShadow>
           <cylinderGeometry args={[clothRadius, clothRadius, 0.05, 32]} />
-          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
         </mesh>
         <FurnitureLabel label={obj.label} y={tableTopY + topThick + 2 * S} />
       </group>
@@ -476,12 +480,12 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
         {/* Base disc — heavy foot */}
         <mesh position={[0, 0.8 * S, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[3 * S, 3.5 * S, 1.6 * S, 16]} />
-          <meshStandardMaterial color={strokeColor} roughness={0.35} metalness={0.2} />
+          <meshStandardMaterial color={woodColor} roughness={0.35} metalness={0.2} />
         </mesh>
         {/* Thin chrome pole */}
         <mesh position={[0, tableTopY / 2, 0]} castShadow>
           <cylinderGeometry args={[0.6 * S, 0.6 * S, tableTopY - 2 * S, 8]} />
-          <meshStandardMaterial color={strokeColor} roughness={0.2} metalness={0.4} />
+          <meshStandardMaterial color={woodColor} roughness={0.2} metalness={0.4} />
         </mesh>
         {/* Table top — thin */}
         <mesh position={[0, tableTopY, 0]} castShadow receiveShadow>
@@ -491,7 +495,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
         {/* Optional small cloth/topper */}
         <mesh position={[0, tableTopY + 0.55 * S, 0]} receiveShadow>
           <cylinderGeometry args={[radius * 0.85, radius * 0.85, 0.1, 32]} />
-          <meshStandardMaterial color={whiteColor} roughness={0.9} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.9} metalness={0} />
         </mesh>
         <FurnitureLabel label={obj.label} y={tableTopY + 2 * S} />
       </group>
@@ -518,7 +522,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
         {legPositions.map((pos, i) => (
           <mesh key={i} position={pos} castShadow>
             <boxGeometry args={[legW, tableTopY - topThick, legW]} />
-            <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.08} />
+            <meshStandardMaterial color={woodColor} roughness={0.5} metalness={0.08} />
           </mesh>
         ))}
         {/* Table surface */}
@@ -529,27 +533,27 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
         {/* Linen top */}
         <mesh position={[0, tableTopY + 0.05, 0]} receiveShadow>
           <boxGeometry args={[w + clothOverhang * 2, 0.08, d + clothOverhang * 2]} />
-          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
         </mesh>
         {/* Linen drape — front */}
         <mesh position={[0, tableTopY - clothDrop / 2, d / 2 + clothOverhang]} receiveShadow>
           <boxGeometry args={[w + clothOverhang * 2, clothDrop, 0.08]} />
-          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
         </mesh>
         {/* Linen drape — back */}
         <mesh position={[0, tableTopY - clothDrop / 2, -d / 2 - clothOverhang]} receiveShadow>
           <boxGeometry args={[w + clothOverhang * 2, clothDrop, 0.08]} />
-          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
         </mesh>
         {/* Linen drape — left */}
         <mesh position={[-w / 2 - clothOverhang, tableTopY - clothDrop / 2, 0]} receiveShadow>
           <boxGeometry args={[0.08, clothDrop, d + clothOverhang * 2]} />
-          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
         </mesh>
         {/* Linen drape — right */}
         <mesh position={[w / 2 + clothOverhang, tableTopY - clothDrop / 2, 0]} receiveShadow>
           <boxGeometry args={[0.08, clothDrop, d + clothOverhang * 2]} />
-          <meshStandardMaterial color={whiteColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
         </mesh>
         <FurnitureLabel label={obj.label} y={tableTopY + 2 * S} />
       </group>
@@ -567,7 +571,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
     const backThick = 1 * S;
     return (
       <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
-        {/* 4 tapered legs */}
+        {/* 4 tapered legs — warm wood */}
         {([
           [-w / 2 + legInset, -d / 2 + legInset],
           [w / 2 - legInset, -d / 2 + legInset],
@@ -576,18 +580,18 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
         ] as [number, number][]).map(([lx, lz], i) => (
           <mesh key={`leg-${i}`} position={[lx, seatY / 2, lz]} castShadow>
             <cylinderGeometry args={[legR * 0.7, legR, seatY, 6]} />
-            <meshStandardMaterial color={strokeColor} roughness={0.45} metalness={0.1} />
+            <meshStandardMaterial color={chairLeg} roughness={0.45} metalness={0.1} />
           </mesh>
         ))}
-        {/* Seat cushion */}
+        {/* Seat cushion — Chiavari gold */}
         <mesh position={[0, seatY, 0]} castShadow receiveShadow>
           <boxGeometry args={[w, seatThick, d]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <meshStandardMaterial color={chairGold} roughness={0.6} metalness={0.08} />
         </mesh>
-        {/* Solid back panel */}
+        {/* Solid back panel — darker gold for depth */}
         <mesh position={[0, seatY + backH / 2 + seatThick / 2, -d / 2 + backThick / 2]} castShadow receiveShadow>
           <boxGeometry args={[w, backH, backThick]} />
-          <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.05} />
+          <meshStandardMaterial color={chairBack} roughness={0.5} metalness={0.06} />
         </mesh>
         <FurnitureLabel label={obj.label} y={backTopY + 2 * S} />
       </group>
@@ -826,7 +830,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
         {/* Backdrop curtain */}
         <mesh position={[0, postH / 2, -d / 2 + 0.5 * S]}>
           <boxGeometry args={[w - 2 * S, postH - 4 * S, 0.3 * S]} />
-          <meshStandardMaterial color={whiteColor} roughness={0.95} metalness={0} transparent opacity={0.9} />
+          <meshStandardMaterial color={linenColor} roughness={0.95} metalness={0} transparent opacity={0.9} />
         </mesh>
         <FurnitureLabel label={obj.label} y={postH + 2 * S} />
       </group>
@@ -1059,10 +1063,10 @@ function RoomFloor({ obj, originX, originY }: { obj: ParsedObject; originX: numb
 
   return (
     <group>
-      {/* Floor — warm wood-tone, subtle sheen */}
+      {/* Floor — warm wood-tone, slightly darker so furniture pops */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
-        <meshStandardMaterial color="#ede5d8" side={DoubleSide} roughness={0.7} metalness={0.03} />
+        <meshStandardMaterial color="#d8cfc2" side={DoubleSide} roughness={0.7} metalness={0.03} />
       </mesh>
       {/* Baseboard trim along walls */}
       {wallSegments.map((seg, i) => (
@@ -1226,7 +1230,7 @@ function FloorPlan3DScene({
       {rooms.length === 0 && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.01, cz]} receiveShadow>
           <planeGeometry args={[maxDim * 1.5, maxDim * 1.5]} />
-          <meshStandardMaterial color="#ebe6de" roughness={0.85} metalness={0.02} />
+          <meshStandardMaterial color="#d8cfc2" roughness={0.85} metalness={0.02} />
         </mesh>
       )}
 
