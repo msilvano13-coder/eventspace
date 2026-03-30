@@ -450,12 +450,12 @@ export const FURNITURE_GROUPS: FurnitureGroup[] = [
 
 // ── Lighting type defaults ──
 
-export const LIGHTING_TYPE_DEFAULTS: Record<LightingType, { name: string; color: string; size: number; intensity: number }> = {
-  uplight:   { name: "Uplight",      color: "#c084fc", size: 50,  intensity: 80 },
-  spotlight: { name: "Spotlight",    color: "#fbbf24", size: 60,  intensity: 70 },
-  pinspot:   { name: "Pin Spot",     color: "#f5f5f4", size: 30,  intensity: 60 },
-  gobo:      { name: "Gobo",         color: "#fb7185", size: 45,  intensity: 50 },
-  wash:      { name: "Wash Light",   color: "#60a5fa", size: 80,  intensity: 65 },
-  string:    { name: "String Light", color: "#fde68a", size: 40,  intensity: 75 },
-  candles:   { name: "Candles",      color: "#f59e0b", size: 20,  intensity: 40 },
+export const LIGHTING_TYPE_DEFAULTS: Record<LightingType, { name: string; color: string; size: number; intensity: number; height: number; spread: number }> = {
+  uplight:   { name: "Uplight",      color: "#c084fc", size: 50,  intensity: 80, height: 1,  spread: 45 },
+  spotlight: { name: "Spotlight",    color: "#fbbf24", size: 60,  intensity: 70, height: 12, spread: 30 },
+  pinspot:   { name: "Pin Spot",     color: "#f5f5f4", size: 30,  intensity: 60, height: 14, spread: 15 },
+  gobo:      { name: "Gobo",         color: "#fb7185", size: 45,  intensity: 50, height: 12, spread: 40 },
+  wash:      { name: "Wash Light",   color: "#60a5fa", size: 80,  intensity: 65, height: 10, spread: 90 },
+  string:    { name: "String Light", color: "#fde68a", size: 40,  intensity: 75, height: 10, spread: 60 },
+  candles:   { name: "Candles",      color: "#f59e0b", size: 20,  intensity: 40, height: 3,  spread: 80 },
 };

@@ -3,7 +3,7 @@
 import { useMemo, useCallback, useEffect, useState, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Text, Environment, ContactShadows } from "@react-three/drei";
-import { Color, Vector2, Shape, DoubleSide, ACESFilmicToneMapping } from "three";
+import { Color, Vector2, Shape, DoubleSide, ACESFilmicToneMapping, Object3D } from "three";
 import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 import { LightingZone } from "@/lib/types";
 import { FURNITURE_CATALOG } from "@/lib/constants";
@@ -1473,6 +1473,12 @@ function RoomFloor({ obj, originX, originY, settings, showWalls = true, floorOve
 /** Max shadow-casting point lights to protect GPU */
 const MAX_SHADOW_LIGHTS = 4;
 
+/** Downward-pointing types that get cone beams */
+const DOWNLIGHT_TYPES = new Set(["spotlight", "pinspot", "gobo"]);
+
+/** Ground-level uplight types that wash walls */
+const UPLIGHT_TYPES = new Set(["uplight", "wash"]);
+
 function LightingZone3D({
   zone,
   originX,
@@ -1488,26 +1494,185 @@ function LightingZone3D({
   canvasHeight: number;
   castShadow: boolean;
 }) {
+  const spotTarget = useMemo(() => new Object3D(), []);
   const px = (zone.x / 100) * canvasWidth;
   const py = (zone.y / 100) * canvasHeight;
   const posX = (px - originX) * S;
   const posZ = (py - originY) * S;
   const intensity = (zone.intensity / 100) * 3;
   const color = getCachedColor(zone.color);
+  const mountHeight = (zone.height ?? 8);  // in feet (= world units since S = 1/12)
+  const spreadRad = ((zone.spread ?? 45) * Math.PI) / 180;
+  const isDownlight = DOWNLIGHT_TYPES.has(zone.type);
+  const isUplight = UPLIGHT_TYPES.has(zone.type);
+  const lightDistance = zone.size * S * 6;
 
+  // ── Downlight spotlight types: cone beam from ceiling down ──
+  if (isDownlight) {
+    const coneHeight = mountHeight * 0.85;
+    const coneRadius = Math.tan(spreadRad / 2) * coneHeight;
+    const spotAngle = spreadRad / 2;
+
+    return (
+      <group position={[posX, 0, posZ]}>
+        {/* Spotlight target at ground */}
+        <primitive object={spotTarget} position={[0, 0, 0]} />
+
+        {/* Spot light from mounting height pointing down */}
+        <spotLight
+          color={color}
+          intensity={intensity * 2}
+          distance={lightDistance}
+          angle={spotAngle}
+          penumbra={0.5}
+          position={[0, mountHeight, 0]}
+          target={spotTarget}
+          castShadow={castShadow}
+          shadow-mapSize-width={castShadow ? 512 : undefined}
+          shadow-mapSize-height={castShadow ? 512 : undefined}
+        />
+
+        {/* Visible cone beam geometry */}
+        <mesh position={[0, mountHeight - coneHeight / 2, 0]} rotation={[0, 0, 0]}>
+          <coneGeometry args={[coneRadius, coneHeight, 24, 1, true]} />
+          <meshStandardMaterial
+            color={color}
+            transparent
+            opacity={0.04 + (zone.intensity / 100) * 0.06}
+            side={DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+
+        {/* Fixture housing at mounting height */}
+        <mesh position={[0, mountHeight, 0]}>
+          <cylinderGeometry args={[0.08, 0.12, 0.2, 8]} />
+          <meshStandardMaterial color="#333" roughness={0.3} metalness={0.4} />
+        </mesh>
+
+        {/* Lens glow */}
+        <mesh position={[0, mountHeight - 0.12, 0]}>
+          <sphereGeometry args={[0.06, 8, 8]} />
+          <meshBasicMaterial color={color} transparent opacity={0.9} />
+        </mesh>
+
+        {/* Ground light pool */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+          <circleGeometry args={[coneRadius * 1.1, 32]} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={0.08 + (zone.intensity / 100) * 0.12}
+            depthWrite={false}
+          />
+        </mesh>
+      </group>
+    );
+  }
+
+  // ── Uplight types: glow cone upward + wall wash ──
+  if (isUplight) {
+    const coneHeight = mountHeight * 1.2;
+    const coneRadius = Math.tan(spreadRad / 2) * coneHeight;
+
+    return (
+      <group position={[posX, 0, posZ]}>
+        {/* Point light for illumination */}
+        <pointLight
+          color={color}
+          intensity={intensity}
+          distance={lightDistance}
+          position={[0, mountHeight * 0.3, 0]}
+          castShadow={castShadow}
+          shadow-mapSize-width={castShadow ? 512 : undefined}
+          shadow-mapSize-height={castShadow ? 512 : undefined}
+        />
+
+        {/* Fixture on ground */}
+        <mesh position={[0, 0.1, 0]}>
+          <cylinderGeometry args={[0.1, 0.12, 0.2, 10]} />
+          <meshStandardMaterial color="#2a2a2a" roughness={0.4} metalness={0.3} />
+        </mesh>
+
+        {/* Colored lens cap */}
+        <mesh position={[0, 0.22, 0]}>
+          <cylinderGeometry args={[0.08, 0.1, 0.04, 10]} />
+          <meshStandardMaterial
+            color={color}
+            emissive={color}
+            emissiveIntensity={0.5}
+            roughness={0.2}
+            metalness={0.1}
+          />
+        </mesh>
+
+        {/* Upward glow cone */}
+        <mesh position={[0, 0.2 + coneHeight / 2, 0]} rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[coneRadius, coneHeight, 24, 1, true]} />
+          <meshStandardMaterial
+            color={color}
+            transparent
+            opacity={0.03 + (zone.intensity / 100) * 0.05}
+            side={DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+
+        {/* Wall wash — vertical plane simulating light hitting a wall */}
+        {/* Rendered as a semi-transparent disc tilted back at the spread angle */}
+        <mesh
+          position={[0, coneHeight * 0.6, 0]}
+          rotation={[0, (zone.angle ?? 0) * Math.PI / 180, 0]}
+        >
+          <planeGeometry args={[coneRadius * 1.6, coneHeight * 0.8]} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={0.04 + (zone.intensity / 100) * 0.06}
+            side={DoubleSide}
+            depthWrite={false}
+          />
+        </mesh>
+
+        {/* Ground light pool (subtle) */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+          <circleGeometry args={[0.4, 24]} />
+          <meshBasicMaterial
+            color={color}
+            transparent
+            opacity={0.06 + (zone.intensity / 100) * 0.08}
+            depthWrite={false}
+          />
+        </mesh>
+      </group>
+    );
+  }
+
+  // ── Other types (string lights, candles, etc.): point light + ground pool ──
   return (
-    <group position={[posX, 5, posZ]}>
+    <group position={[posX, mountHeight, posZ]}>
       <pointLight
         color={color}
         intensity={intensity}
-        distance={zone.size * S * 6}
+        distance={lightDistance}
         castShadow={castShadow}
         shadow-mapSize-width={castShadow ? 512 : undefined}
         shadow-mapSize-height={castShadow ? 512 : undefined}
       />
+      {/* Fixture indicator */}
       <mesh>
         <sphereGeometry args={[0.12, 12, 12]} />
         <meshBasicMaterial color={color} transparent opacity={0.8} />
+      </mesh>
+      {/* Ground light pool */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -mountHeight + 0.01, 0]}>
+        <circleGeometry args={[Math.tan(spreadRad / 2) * mountHeight * 0.5, 24]} />
+        <meshBasicMaterial
+          color={color}
+          transparent
+          opacity={0.06 + (zone.intensity / 100) * 0.08}
+          depthWrite={false}
+        />
       </mesh>
     </group>
   );

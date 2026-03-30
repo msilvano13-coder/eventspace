@@ -75,6 +75,8 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
       y: 30 + Math.random() * 40,
       size: defaults.size,
       angle: 0,
+      height: defaults.height,
+      spread: defaults.spread,
       notes: "",
     };
     onUpdateZones([...zones, newZone]);
@@ -103,6 +105,8 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
         y: 40 + (i % 2 === 0 ? 0 : 20),
         size: defaults.size,
         angle: 0,
+        height: defaults.height,
+        spread: defaults.spread,
         notes: "",
       };
     });
@@ -230,6 +234,46 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
             <div className="flex justify-between text-[10px] text-stone-400 mt-0.5">
               <span>Small</span>
               <span>Large</span>
+            </div>
+          </div>
+
+          {/* Height */}
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">
+              Height — {selectedZone.height ?? 8}ft
+            </label>
+            <input
+              type="range"
+              min="1"
+              max="20"
+              step="1"
+              value={selectedZone.height ?? 8}
+              onChange={(e) => updateZone(selectedZone.id, { height: parseInt(e.target.value) })}
+              className="w-full accent-rose-400 h-2"
+            />
+            <div className="flex justify-between text-[10px] text-stone-400 mt-0.5">
+              <span>Floor</span>
+              <span>Ceiling</span>
+            </div>
+          </div>
+
+          {/* Spread */}
+          <div className="mb-3">
+            <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">
+              Beam Spread — {selectedZone.spread ?? 45}°
+            </label>
+            <input
+              type="range"
+              min="10"
+              max="120"
+              step="5"
+              value={selectedZone.spread ?? 45}
+              onChange={(e) => updateZone(selectedZone.id, { spread: parseInt(e.target.value) })}
+              className="w-full accent-rose-400 h-2"
+            />
+            <div className="flex justify-between text-[10px] text-stone-400 mt-0.5">
+              <span>Narrow</span>
+              <span>Wide</span>
             </div>
           </div>
 

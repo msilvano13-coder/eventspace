@@ -240,6 +240,8 @@ function lightingZoneToRow(lz: LightingZone, floorPlanId: string) {
     y: lz.y,
     size: lz.size,
     angle: lz.angle ?? 0,
+    height: lz.height ?? 8,
+    spread: lz.spread ?? 45,
     notes: lz.notes,
   };
 }
@@ -256,6 +258,8 @@ function lightingZoneFromRow(r: any): LightingZone {
     y: r.y,
     size: r.size,
     angle: r.angle ?? 0,
+    height: r.height ?? 8,
+    spread: r.spread ?? 45,
     notes: r.notes,
   };
 }
@@ -2225,7 +2229,8 @@ function clientEventFromRow(r: any): Event {
       json: fp.json ?? null,
       lightingZones: (fp.lighting_zones ?? []).map((lz: any) => ({
         id: lz.id, name: lz.name, type: lz.type, color: lz.color,
-        intensity: lz.intensity, x: lz.x, y: lz.y, size: lz.size, notes: lz.notes,
+        intensity: lz.intensity, x: lz.x, y: lz.y, size: lz.size,
+        angle: lz.angle ?? 0, height: lz.height ?? 8, spread: lz.spread ?? 45, notes: lz.notes,
       })),
     })),
     timeline: (r.timeline_items ?? []).map((t: any) => ({

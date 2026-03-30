@@ -32,6 +32,8 @@ export interface LightingZone {
   y: number;              // percentage position (0–100)
   size: number;           // size in pixels (10–200)
   angle: number;          // rotation in degrees (0–360)
+  height: number;         // mounting height in feet (1–20), default varies by type
+  spread: number;         // beam spread angle in degrees (10–120), default varies by type
   notes: string;
   snappedToFurnitureId?: string;  // canvas object data.label when snapped to furniture
 }
