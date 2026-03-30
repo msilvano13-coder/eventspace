@@ -1731,6 +1731,9 @@ function FloorPlan3DScene({
 
   return (
     <>
+      {/* DEBUG: bright blue background to test if Canvas renders at all */}
+      <color attach="background" args={["#0066ff"]} />
+
       {/* Scene uses ambient + directional + hemisphere lighting instead of external HDR
          (Environment component fetches HDR from CDN which is blocked by CSP) */}
 
