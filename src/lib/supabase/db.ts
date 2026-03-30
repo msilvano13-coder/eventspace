@@ -24,6 +24,8 @@ import type {
   Inquiry,
   PreferredVendor,
   ContractTemplate,
+  ContractAuditEntry,
+  ContractAuditAction,
 } from "@/lib/types";
 import { MAX_EVENTS } from "@/lib/plan-features";
 import type { PlanType } from "@/lib/types";
@@ -559,6 +561,10 @@ function eventContractToRow(c: EventContract, eventId: string) {
     storage_signed_path: c.storageSignedPath ?? null,
     storage_planner_sig: c.storagePlannerSig ?? null,
     storage_client_sig: c.storageClientSig ?? null,
+    planner_disclosure_accepted_at: c.plannerDisclosureAcceptedAt ?? null,
+    planner_disclosure_ip: c.plannerDisclosureIp ?? null,
+    client_disclosure_accepted_at: c.clientDisclosureAcceptedAt ?? null,
+    client_disclosure_ip: c.clientDisclosureIp ?? null,
   };
 }
 
@@ -588,6 +594,10 @@ function eventContractFromRow(r: any): EventContract {
     storageSignedPath: r.storage_signed_path ?? null,
     storagePlannerSig: r.storage_planner_sig ?? null,
     storageClientSig: r.storage_client_sig ?? null,
+    plannerDisclosureAcceptedAt: r.planner_disclosure_accepted_at ?? null,
+    plannerDisclosureIp: r.planner_disclosure_ip ?? null,
+    clientDisclosureAcceptedAt: r.client_disclosure_accepted_at ?? null,
+    clientDisclosureIp: r.client_disclosure_ip ?? null,
   };
 }
 
@@ -2413,4 +2423,57 @@ export async function clientUpdateDiscoveredVendors(shareToken: string, vendors:
   }));
   const { error } = await supabase.rpc('client_update_discovered_vendors', { p_share_token: shareToken, p_vendors: rows });
   if (error) throw new Error(`clientUpdateDiscoveredVendors: ${error.message}`);
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Contract Audit Trail
+// ══════════════════════════════════════════════════════════════════════════════
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function auditEntryFromRow(r: any): ContractAuditEntry {
+  return {
+    id: r.id,
+    eventId: r.event_id,
+    contractId: r.contract_id,
+    userId: r.user_id ?? null,
+    actorType: r.actor_type,
+    action: r.action,
+    ipAddress: r.ip_address ?? null,
+    userAgent: r.user_agent ?? null,
+    metadata: r.metadata ?? {},
+    createdAt: r.created_at,
+  };
+}
+
+/** Log an audit entry for a contract action (planner-side, authenticated). */
+export async function logContractAudit(params: {
+  eventId: string;
+  contractId: string;
+  action: ContractAuditAction;
+  metadata?: Record<string, unknown>;
+}): Promise<void> {
+  const supabase = createClient();
+  const userId = await getUserId();
+  const { error } = await supabase.from("contract_audit_log").insert({
+    event_id: params.eventId,
+    contract_id: params.contractId,
+    user_id: userId,
+    actor_type: "planner",
+    action: params.action,
+    metadata: params.metadata ?? {},
+  });
+  if (error) console.error("logContractAudit:", error.message);
+}
+
+/** Fetch the full audit trail for a specific contract. */
+export async function fetchContractAuditLog(contractId: string): Promise<ContractAuditEntry[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("contract_audit_log")
+    .select("*")
+    .eq("contract_id", contractId)
+    .order("created_at", { ascending: true })
+    .limit(500);
+  if (error) throw new Error(`fetchContractAuditLog: ${error.message}`);
+  return (data ?? []).map(auditEntryFromRow);
 }

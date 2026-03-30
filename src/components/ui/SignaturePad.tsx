@@ -8,13 +8,16 @@ interface SignaturePadProps {
   title?: string;
   onSign: (signature: string, name: string) => void;
   onCancel: () => void;
+  /** Called when user accepts the e-signature disclosure, before signing. */
+  onDisclosureAccepted?: () => void;
 }
 
-export default function SignaturePad({ open, title = "Sign Contract", onSign, onCancel }: SignaturePadProps) {
+export default function SignaturePad({ open, title = "Sign Contract", onSign, onCancel, onDisclosureAccepted }: SignaturePadProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [drawing, setDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
   const [name, setName] = useState("");
+  const [disclosureAccepted, setDisclosureAccepted] = useState(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
 
   const clear = useCallback(() => {
@@ -30,6 +33,7 @@ export default function SignaturePad({ open, title = "Sign Contract", onSign, on
     if (open) {
       setName("");
       setHasDrawn(false);
+      setDisclosureAccepted(false);
       // Slight delay so canvas is rendered
       setTimeout(() => {
         const canvas = canvasRef.current;
@@ -156,10 +160,29 @@ export default function SignaturePad({ open, title = "Sign Contract", onSign, on
             </div>
           </div>
 
-          {/* Legal text */}
-          <p className="text-[11px] text-stone-400 leading-relaxed">
-            By signing above, I acknowledge that this electronic signature is the legal equivalent of my handwritten signature on this contract.
-          </p>
+          {/* E-Signature Disclosure */}
+          <div className="bg-stone-50 border border-stone-200 rounded-xl p-3">
+            <p className="text-[11px] text-stone-500 leading-relaxed font-medium mb-2">
+              Electronic Signature Disclosure
+            </p>
+            <p className="text-[11px] text-stone-400 leading-relaxed mb-3">
+              By checking the box below and signing, I agree that: (1) my electronic signature is the legal equivalent of my handwritten signature on this contract; (2) I consent to conduct this transaction electronically under the ESIGN Act and applicable state law; (3) I have reviewed the contract and intend to be legally bound by its terms; and (4) I understand a record of this signature, including timestamp and identity, will be retained.
+            </p>
+            <label className="flex items-start gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={disclosureAccepted}
+                onChange={(e) => {
+                  setDisclosureAccepted(e.target.checked);
+                  if (e.target.checked) onDisclosureAccepted?.();
+                }}
+                className="mt-0.5 rounded border-stone-300 text-rose-500 focus:ring-rose-400/30"
+              />
+              <span className="text-[11px] text-stone-600 leading-relaxed">
+                I have read and agree to the Electronic Signature Disclosure above.
+              </span>
+            </label>
+          </div>
         </div>
 
         <div className="flex gap-3 px-6 py-4 border-t border-stone-100 bg-stone-50/50">
@@ -171,7 +194,7 @@ export default function SignaturePad({ open, title = "Sign Contract", onSign, on
           </button>
           <button
             onClick={handleSign}
-            disabled={!hasDrawn || !name.trim()}
+            disabled={!hasDrawn || !name.trim() || !disclosureAccepted}
             className="flex-1 px-4 py-2.5 text-sm font-medium bg-rose-400 hover:bg-rose-500 text-white rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Apply Signature

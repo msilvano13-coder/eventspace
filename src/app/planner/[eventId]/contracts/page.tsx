@@ -9,12 +9,12 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import SignaturePad from "@/components/ui/SignaturePad";
 import {
   ArrowLeft, FileText, Plus, Download, Trash2, Upload, X, Check,
-  UserCheck, Building2, PenTool,
+  UserCheck, Building2, PenTool, History, Shield,
 } from "lucide-react";
 import { downloadBase64File, formatBytes, PDF_MAX_SIZE, validatePdfFile, downloadFromUrl } from "@/lib/pdf-utils";
 import { uploadToStorage, getSignedUrl, deleteFromStorage, uploadBase64ToStorage } from "@/lib/supabase/storage";
-import { getUserId } from "@/lib/supabase/db";
-import type { EventContract } from "@/lib/types";
+import { getUserId, logContractAudit, fetchContractAuditLog } from "@/lib/supabase/db";
+import type { EventContract, ContractAuditEntry } from "@/lib/types";
 
 export default function EventContractsPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -35,6 +35,9 @@ export default function EventContractsPage() {
   const [signingContractId, setSigningContractId] = useState<string | null>(null);
   const toastTimeout = useRef<ReturnType<typeof setTimeout>>();
   const [sigUrls, setSigUrls] = useState<Record<string, string>>({});
+  const [auditLogId, setAuditLogId] = useState<string | null>(null);
+  const [auditEntries, setAuditEntries] = useState<ContractAuditEntry[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   // Fetch signed URLs for signatures stored in Supabase Storage
   useEffect(() => {
@@ -118,6 +121,10 @@ export default function EventContractsPage() {
       storageSignedPath: null,
       storagePlannerSig: null,
       storageClientSig: null,
+      plannerDisclosureAcceptedAt: null,
+      plannerDisclosureIp: null,
+      clientDisclosureAcceptedAt: null,
+      clientDisclosureIp: null,
       ...overrides,
     };
   }
@@ -135,6 +142,7 @@ export default function EventContractsPage() {
       storagePath: template.storagePath ?? null,
     });
     updateEvent(event!.id, { contracts: [...contracts, contract] });
+    logContractAudit({ eventId: event!.id, contractId: contract.id, action: "contract_created", metadata: { contractName: template.name } });
     showToast(`Assigned "${template.name}"${vendor ? ` to ${vendor.name}` : ""}`);
     resetModal();
   }
@@ -170,6 +178,7 @@ export default function EventContractsPage() {
         storagePath,
       });
       updateEvent(event!.id, { contracts: [...contracts, contract] });
+      logContractAudit({ eventId: event!.id, contractId: contract.id, action: "contract_created", metadata: { contractName: uploadName.trim() } });
       showToast(`Added "${uploadName}"${vendor ? ` for ${vendor.name}` : ""}`);
       resetModal();
     } catch (err: unknown) {
@@ -185,12 +194,26 @@ export default function EventContractsPage() {
       if (contract.storagePlannerSig) deleteFromStorage("event-files", contract.storagePlannerSig).catch(console.error);
       if (contract.storageClientSig) deleteFromStorage("event-files", contract.storageClientSig).catch(console.error);
     }
+    logContractAudit({ eventId: event!.id, contractId, action: "contract_deleted", metadata: { contractName: contract?.name } });
     updateEvent(event!.id, { contracts: contracts.filter((c) => c.id !== contractId) });
     showToast("Contract removed");
   }
 
+  function handlePlannerDisclosureAccepted() {
+    if (!signingContractId) return;
+    const now = new Date().toISOString();
+    const updated = contracts.map((c) =>
+      c.id === signingContractId
+        ? { ...c, plannerDisclosureAcceptedAt: now }
+        : c
+    );
+    updateEvent(event!.id, { contracts: updated });
+    logContractAudit({ eventId: event!.id, contractId: signingContractId, action: "disclosure_accepted" });
+  }
+
   async function handlePlannerSign(signature: string, signedName: string) {
     if (!signingContractId) return;
+    const contractName = contracts.find((c) => c.id === signingContractId)?.name;
     try {
       const userId = await getUserId();
       const path = await uploadBase64ToStorage(
@@ -215,6 +238,7 @@ export default function EventContractsPage() {
       updateEvent(event!.id, { contracts: updated });
       showToast("Planner signature applied (stored locally)");
     }
+    logContractAudit({ eventId: event!.id, contractId: signingContractId, action: "signature_applied", metadata: { actorName: signedName, contractName } });
     setSigningContractId(null);
   }
 
@@ -225,10 +249,11 @@ export default function EventContractsPage() {
     }
     const updated = contracts.map((c) =>
       c.id === contractId
-        ? { ...c, plannerSignature: null, plannerSignedAt: null, plannerSignedName: null, storagePlannerSig: null }
+        ? { ...c, plannerSignature: null, plannerSignedAt: null, plannerSignedName: null, storagePlannerSig: null, plannerDisclosureAcceptedAt: null, plannerDisclosureIp: null }
         : c
     );
     updateEvent(event!.id, { contracts: updated });
+    logContractAudit({ eventId: event!.id, contractId, action: "signature_removed", metadata: { contractName: contract?.name } });
     showToast("Planner signature removed");
   }
 
@@ -288,6 +313,7 @@ export default function EventContractsPage() {
                 } else {
                   downloadBase64File(contract.fileData, contract.fileName);
                 }
+                logContractAudit({ eventId: event!.id, contractId: contract.id, action: "contract_downloaded", metadata: { contractName: contract.name } });
               }}
               className="p-1.5 text-stone-400 hover:text-teal-500 hover:bg-teal-50 rounded-lg transition-colors"
               title="Download"
@@ -314,6 +340,21 @@ export default function EventContractsPage() {
                 <UserCheck size={14} />
               </button>
             )}
+            <button
+              onClick={async () => {
+                setAuditLogId(contract.id);
+                setAuditLoading(true);
+                try {
+                  const entries = await fetchContractAuditLog(contract.id);
+                  setAuditEntries(entries);
+                } catch { setAuditEntries([]); }
+                setAuditLoading(false);
+              }}
+              className="p-1.5 text-stone-300 hover:text-indigo-500 hover:bg-indigo-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+              title="Audit trail"
+            >
+              <History size={14} />
+            </button>
             <button
               onClick={() => setConfirmDeleteId(contract.id)}
               className="p-1.5 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
@@ -342,9 +383,14 @@ export default function EventContractsPage() {
                   <p className="text-[10px] text-stone-400">
                     {new Date(contract.plannerSignedAt!).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
                   </p>
+                  {contract.plannerDisclosureAcceptedAt && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 mt-1">
+                      <Shield size={10} /> Disclosure accepted
+                    </span>
+                  )}
                   <button
                     onClick={() => removePlannerSignature(contract.id)}
-                    className="text-[10px] text-stone-400 hover:text-red-500 mt-1.5"
+                    className="text-[10px] text-stone-400 hover:text-red-500 mt-1.5 block"
                   >
                     Remove signature
                   </button>
@@ -375,6 +421,11 @@ export default function EventContractsPage() {
                   <p className="text-[10px] text-stone-400">
                     {new Date(contract.clientSignedAt!).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
                   </p>
+                  {contract.clientDisclosureAcceptedAt && (
+                    <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 mt-1">
+                      <Shield size={10} /> Disclosure accepted
+                    </span>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center justify-center h-12">
@@ -650,6 +701,7 @@ export default function EventContractsPage() {
         title="Sign as Planner"
         onSign={handlePlannerSign}
         onCancel={() => setSigningContractId(null)}
+        onDisclosureAccepted={handlePlannerDisclosureAccepted}
       />
 
       {/* Toast */}
@@ -667,6 +719,65 @@ export default function EventContractsPage() {
         onConfirm={() => { if (confirmDeleteId) removeContract(confirmDeleteId); setConfirmDeleteId(null); }}
         onCancel={() => setConfirmDeleteId(null)}
       />
+
+      {/* Audit Trail Modal */}
+      {auditLogId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setAuditLogId(null)}>
+          <div className="absolute inset-0 bg-stone-900/30" />
+          <div
+            className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
+              <div className="flex items-center gap-2">
+                <History size={16} className="text-indigo-500" />
+                <h2 className="text-sm font-heading font-semibold text-stone-800">Audit Trail</h2>
+              </div>
+              <button onClick={() => setAuditLogId(null)} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {auditLoading ? (
+                <p className="text-sm text-stone-400 text-center py-8">Loading audit trail...</p>
+              ) : auditEntries.length === 0 ? (
+                <p className="text-sm text-stone-400 text-center py-8">No audit entries yet. Entries are recorded when the migration is applied.</p>
+              ) : (
+                <div className="space-y-0">
+                  {auditEntries.map((entry, i) => (
+                    <div key={entry.id} className="flex gap-3">
+                      <div className="flex flex-col items-center">
+                        <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                          entry.action === "signature_applied" ? "bg-emerald-500" :
+                          entry.action === "signature_removed" ? "bg-red-400" :
+                          entry.action === "disclosure_accepted" ? "bg-indigo-500" :
+                          entry.action === "contract_deleted" ? "bg-red-500" :
+                          "bg-stone-300"
+                        }`} />
+                        {i < auditEntries.length - 1 && <div className="w-px flex-1 bg-stone-200 my-1" />}
+                      </div>
+                      <div className="pb-4 min-w-0">
+                        <p className="text-xs font-medium text-stone-700">
+                          {entry.action.replace(/_/g, " ").replace(/^\w/, c => c.toUpperCase())}
+                        </p>
+                        <p className="text-[10px] text-stone-400 mt-0.5">
+                          {entry.actorType === "planner" ? "Planner" : "Client"}
+                          {entry.metadata.actorName ? ` (${entry.metadata.actorName as string})` : ""}
+                          {" · "}
+                          {new Date(entry.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" })}
+                        </p>
+                        {entry.ipAddress && (
+                          <p className="text-[10px] text-stone-300 mt-0.5">IP: {entry.ipAddress}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1113,13 +1113,37 @@ function ClientBudget({ event, onUpdate }: { event: Event; onUpdate: (budget: Bu
   );
 }
 
+// ── Client Audit Helper ──
+async function logClientAudit(shareToken: string, eventId: string, contractId: string, action: string, metadata?: Record<string, unknown>) {
+  try {
+    await fetch("/api/audit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shareToken, eventId, contractId, action, metadata }),
+    });
+  } catch { /* best-effort — don't block signing flow */ }
+}
+
 // ── Client Contract Card ──
 function ClientContractsSection({ event, updateEvent }: { event: Event; updateEvent: (id: string, data: Partial<Event>) => void }) {
   const [signingContractId, setSigningContractId] = useState<string | null>(null);
   const contracts = event.contracts ?? [];
 
+  function handleClientDisclosureAccepted() {
+    if (!signingContractId || !event.shareToken) return;
+    const now = new Date().toISOString();
+    const updated = contracts.map((c) =>
+      c.id === signingContractId
+        ? { ...c, clientDisclosureAcceptedAt: now }
+        : c
+    );
+    updateEvent(event.id, { contracts: updated });
+    logClientAudit(event.shareToken, event.id, signingContractId, "disclosure_accepted");
+  }
+
   async function handleClientSign(signature: string, signedName: string) {
     if (!signingContractId) return;
+    const contractName = contracts.find((c) => c.id === signingContractId)?.name;
     let storageClientSigPath: string | null = null;
     // Try to upload signature PNG to Storage via API
     if (event.shareToken) {
@@ -1143,6 +1167,9 @@ function ClientContractsSection({ event, updateEvent }: { event: Event; updateEv
         : c
     );
     updateEvent(event.id, { contracts: updated });
+    if (event.shareToken) {
+      logClientAudit(event.shareToken, event.id, signingContractId, "signature_applied", { actorName: signedName, contractName });
+    }
     setSigningContractId(null);
   }
 
@@ -1207,6 +1234,7 @@ function ClientContractsSection({ event, updateEvent }: { event: Event; updateEv
         title="Sign Contract"
         onSign={handleClientSign}
         onCancel={() => setSigningContractId(null)}
+        onDisclosureAccepted={handleClientDisclosureAccepted}
       />
     </div>
   );

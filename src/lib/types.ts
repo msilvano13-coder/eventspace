@@ -312,6 +312,36 @@ export interface EventContract {
   storageSignedPath: string | null;
   storagePlannerSig: string | null;
   storageClientSig: string | null;
+  // E-signature disclosure tracking
+  plannerDisclosureAcceptedAt: string | null;
+  plannerDisclosureIp: string | null;
+  clientDisclosureAcceptedAt: string | null;
+  clientDisclosureIp: string | null;
+}
+
+// ── Contract Audit Trail ──
+
+export type ContractAuditAction =
+  | "contract_created"
+  | "contract_viewed"
+  | "contract_downloaded"
+  | "disclosure_accepted"
+  | "signature_applied"
+  | "signature_removed"
+  | "signed_copy_uploaded"
+  | "contract_deleted";
+
+export interface ContractAuditEntry {
+  id: string;
+  eventId: string;
+  contractId: string;
+  userId: string | null;
+  actorType: "planner" | "client";
+  action: ContractAuditAction;
+  ipAddress: string | null;
+  userAgent: string | null;
+  metadata: Record<string, unknown>;
+  createdAt: string;
 }
 
 // ── Preferred Vendors (planner-level saved list) ──
