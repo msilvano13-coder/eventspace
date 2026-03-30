@@ -324,7 +324,7 @@ export default function FloorPlanPage() {
 
       {/* Editor + Side Panels */}
       <div className="flex-1 relative overflow-hidden flex">
-        <div className="flex-1 relative">
+        <div className="flex-1 relative overflow-hidden">
           {show3D ? (
             activePlan && (
               <FloorPlan3DView

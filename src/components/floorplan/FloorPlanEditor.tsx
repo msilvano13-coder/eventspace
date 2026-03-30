@@ -1463,7 +1463,7 @@ export default function FloorPlanEditor({
           <canvas ref={canvasRef} />
         </div>
 
-        <div className="hidden md:block">
+        <div className="hidden md:block h-full">
           <PropertiesPanel
             selected={selectedInfo}
             onUpdateLabel={handleUpdateLabel}
