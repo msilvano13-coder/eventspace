@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useEffect, Suspense } from "react";
+import { useMemo, useCallback, useEffect, useState, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Text, Environment, ContactShadows } from "@react-three/drei";
 import { Color, Vector2, Shape, DoubleSide, ACESFilmicToneMapping } from "three";
@@ -8,6 +8,56 @@ import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 import { LightingZone } from "@/lib/types";
 import { FURNITURE_CATALOG } from "@/lib/constants";
 import { ErrorBoundary } from "./FloorPlan3DErrorBoundary";
+
+// ── 3D Settings ──
+
+interface View3DSettings {
+  chairStyle: "solid-back" | "chiavari" | "folding" | "ghost";
+  linenColor: "ivory" | "white" | "blush" | "navy" | "sage" | "gold";
+  floorMaterial: "hardwood" | "marble" | "carpet" | "concrete";
+  lightingMood: "warm" | "cool" | "neutral" | "dramatic";
+  showLabels: boolean;
+  showShadows: boolean;
+}
+
+const DEFAULT_SETTINGS: View3DSettings = {
+  chairStyle: "solid-back",
+  linenColor: "ivory",
+  floorMaterial: "hardwood",
+  lightingMood: "warm",
+  showLabels: true,
+  showShadows: true,
+};
+
+const LINEN_COLORS: Record<View3DSettings["linenColor"], string> = {
+  ivory: "#f5f0e6",
+  white: "#ffffff",
+  blush: "#f0d4d4",
+  navy: "#2c3e6b",
+  sage: "#b2c4a8",
+  gold: "#d4b96a",
+};
+
+const FLOOR_MATERIALS: Record<View3DSettings["floorMaterial"], { color: string; roughness: number; metalness: number }> = {
+  hardwood: { color: "#d8cfc2", roughness: 0.7, metalness: 0.03 },
+  marble: { color: "#e8e4de", roughness: 0.2, metalness: 0.08 },
+  carpet: { color: "#c4b8a8", roughness: 0.95, metalness: 0.0 },
+  concrete: { color: "#c8c4be", roughness: 0.85, metalness: 0.02 },
+};
+
+const LIGHTING_MOODS: Record<View3DSettings["lightingMood"], {
+  ambientIntensity: number;
+  ambientColor: string;
+  keyColor: string;
+  keyIntensity: number;
+  fillColor: string;
+  fillIntensity: number;
+}> = {
+  warm: { ambientIntensity: 0.5, ambientColor: "#fdf8f0", keyColor: "#fff5e6", keyIntensity: 1.0, fillColor: "#e0e8f0", fillIntensity: 0.2 },
+  cool: { ambientIntensity: 0.5, ambientColor: "#f0f4f8", keyColor: "#e8f0ff", keyIntensity: 0.9, fillColor: "#f0e8e0", fillIntensity: 0.25 },
+  neutral: { ambientIntensity: 0.6, ambientColor: "#f5f5f5", keyColor: "#ffffff", keyIntensity: 0.8, fillColor: "#f0f0f0", fillIntensity: 0.3 },
+  dramatic: { ambientIntensity: 0.15, ambientColor: "#f5e8d8", keyColor: "#ffe0b0", keyIntensity: 1.4, fillColor: "#d0d8e8", fillIntensity: 0.1 },
+};
 
 // ── Parsing helpers ──
 
@@ -410,7 +460,7 @@ function FurnitureLabel({ label, y }: { label: string; y: number }) {
   );
 }
 
-function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: number; originY: number }) {
+function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject; originX: number; originY: number; settings: View3DSettings }) {
   const h3d = getHeight(obj.furnitureId) * S;
   const pbr = getPBR(obj.furnitureId);
 
@@ -421,7 +471,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
 
   const fillColor = getCachedColor(obj.fill);
   const strokeColor = getCachedColor(obj.stroke);
-  const linenColor = getCachedColor("#f5f0e6");    // warm cream — reads as tablecloth without washing out
+  const linenColor = getCachedColor(LINEN_COLORS[settings.linenColor]);
   const woodColor = getCachedColor("#8b7355");      // medium wood brown for table legs
   const chairGold = getCachedColor("#c4a46c");      // Chiavari gold for chair seats
   const chairBack = getCachedColor("#a8905a");      // darker gold for chair backs — adds depth
@@ -466,7 +516,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
           <cylinderGeometry args={[clothRadius, clothRadius, 0.05, 32]} />
           <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={tableTopY + topThick + 2 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={tableTopY + topThick + 2 * S} />}
       </group>
     );
   }
@@ -497,7 +547,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
           <cylinderGeometry args={[radius * 0.85, radius * 0.85, 0.1, 32]} />
           <meshStandardMaterial color={linenColor} roughness={0.9} metalness={0} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={tableTopY + 2 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={tableTopY + 2 * S} />}
       </group>
     );
   }
@@ -555,7 +605,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
           <boxGeometry args={[0.08, clothDrop, d + clothOverhang * 2]} />
           <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={tableTopY + 2 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={tableTopY + 2 * S} />}
       </group>
     );
   }
@@ -571,29 +621,81 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
     const backThick = 1 * S;
     return (
       <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
-        {/* 4 tapered legs — warm wood */}
-        {([
+        {/* Legs — style-dependent */}
+        {settings.chairStyle !== "ghost" && ([
           [-w / 2 + legInset, -d / 2 + legInset],
           [w / 2 - legInset, -d / 2 + legInset],
           [-w / 2 + legInset, d / 2 - legInset],
           [w / 2 - legInset, d / 2 - legInset],
         ] as [number, number][]).map(([lx, lz], i) => (
-          <mesh key={`leg-${i}`} position={[lx, seatY / 2, lz]} castShadow>
-            <cylinderGeometry args={[legR * 0.7, legR, seatY, 6]} />
+          <mesh key={`leg-${i}`} position={[lx, seatY / 2, lz]} castShadow={settings.showShadows}>
+            <cylinderGeometry args={[settings.chairStyle === "folding" ? legR * 0.5 : legR * 0.7, legR, seatY, 6]} />
             <meshStandardMaterial color={chairLeg} roughness={0.45} metalness={0.1} />
           </mesh>
         ))}
-        {/* Seat cushion — Chiavari gold */}
-        <mesh position={[0, seatY, 0]} castShadow receiveShadow>
-          <boxGeometry args={[w, seatThick, d]} />
-          <meshStandardMaterial color={chairGold} roughness={0.6} metalness={0.08} />
+        {/* Folding chair X-brace */}
+        {settings.chairStyle === "folding" && (
+          <>
+            <mesh position={[0, seatY * 0.5, 0]} rotation={[0.3, 0, 0]} castShadow={settings.showShadows}>
+              <boxGeometry args={[0.3 * S, seatY * 0.9, 0.3 * S]} />
+              <meshStandardMaterial color={chairLeg} roughness={0.4} metalness={0.15} />
+            </mesh>
+            <mesh position={[0, seatY * 0.5, 0]} rotation={[-0.3, 0, 0]} castShadow={settings.showShadows}>
+              <boxGeometry args={[0.3 * S, seatY * 0.9, 0.3 * S]} />
+              <meshStandardMaterial color={chairLeg} roughness={0.4} metalness={0.15} />
+            </mesh>
+          </>
+        )}
+        {/* Seat */}
+        <mesh position={[0, seatY, 0]} castShadow={settings.showShadows} receiveShadow>
+          <boxGeometry args={[w, settings.chairStyle === "folding" ? seatThick * 0.6 : seatThick, d]} />
+          <meshStandardMaterial
+            color={chairGold}
+            roughness={settings.chairStyle === "ghost" ? 0.1 : 0.6}
+            metalness={settings.chairStyle === "ghost" ? 0.1 : 0.08}
+            transparent={settings.chairStyle === "ghost"}
+            opacity={settings.chairStyle === "ghost" ? 0.4 : 1}
+          />
         </mesh>
-        {/* Solid back panel — darker gold for depth */}
-        <mesh position={[0, seatY + backH / 2 + seatThick / 2, -d / 2 + backThick / 2]} castShadow receiveShadow>
-          <boxGeometry args={[w, backH, backThick]} />
-          <meshStandardMaterial color={chairBack} roughness={0.5} metalness={0.06} />
-        </mesh>
-        <FurnitureLabel label={obj.label} y={backTopY + 2 * S} />
+        {/* Chair back — style depends on settings */}
+        {settings.chairStyle === "solid-back" && (
+          <mesh position={[0, seatY + backH / 2 + seatThick / 2, d / 2 - backThick / 2]} castShadow={settings.showShadows} receiveShadow>
+            <boxGeometry args={[w, backH, backThick]} />
+            <meshStandardMaterial color={chairBack} roughness={0.5} metalness={0.06} />
+          </mesh>
+        )}
+        {settings.chairStyle === "chiavari" && (
+          <>
+            {/* 3 vertical slats */}
+            {[-1, 0, 1].map((offset) => (
+              <mesh key={`slat-${offset}`} position={[offset * (w * 0.28), seatY + backH / 2 + seatThick / 2, d / 2 - backThick / 2]} castShadow={settings.showShadows} receiveShadow>
+                <boxGeometry args={[w * 0.12, backH, backThick]} />
+                <meshStandardMaterial color={chairBack} roughness={0.45} metalness={0.1} />
+              </mesh>
+            ))}
+            {/* Top rail */}
+            <mesh position={[0, seatY + backH + seatThick / 2, d / 2 - backThick / 2]} castShadow={settings.showShadows} receiveShadow>
+              <boxGeometry args={[w, backThick * 1.5, backThick]} />
+              <meshStandardMaterial color={chairBack} roughness={0.45} metalness={0.1} />
+            </mesh>
+          </>
+        )}
+        {settings.chairStyle === "folding" && (
+          <>
+            {/* Thin back panel */}
+            <mesh position={[0, seatY + backH * 0.4 + seatThick / 2, d / 2 - backThick / 2]} castShadow={settings.showShadows} receiveShadow>
+              <boxGeometry args={[w * 0.9, backH * 0.8, backThick * 0.5]} />
+              <meshStandardMaterial color={chairBack} roughness={0.7} metalness={0.02} />
+            </mesh>
+          </>
+        )}
+        {settings.chairStyle === "ghost" && (
+          <mesh position={[0, seatY + backH / 2 + seatThick / 2, d / 2 - backThick / 2]} castShadow={false} receiveShadow>
+            <boxGeometry args={[w, backH, backThick]} />
+            <meshStandardMaterial color={chairBack} roughness={0.1} metalness={0.1} transparent opacity={0.4} />
+          </mesh>
+        )}
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={backTopY + 2 * S} />}
       </group>
     );
   }
@@ -639,7 +741,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
             <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
           </mesh>
         ))}
-        <FurnitureLabel label={obj.label} y={seatTopY + backH + 2 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={seatTopY + backH + 2 * S} />}
       </group>
     );
   }
@@ -675,7 +777,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
             <meshStandardMaterial color={getCachedColor("#b8a080")} roughness={0.25} metalness={0.35} />
           </mesh>
         )}
-        <FurnitureLabel label={obj.label} y={counterH + 2 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={counterH + 2 * S} />}
       </group>
     );
   }
@@ -726,7 +828,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
           }
           return lines;
         })()}
-        <FurnitureLabel label={obj.label} y={floorH + 2 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={floorH + 2 * S} />}
       </group>
     );
   }
@@ -763,7 +865,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
           <boxGeometry args={[w + 0.4, h3d, 0.1]} />
           <meshStandardMaterial color={darkColor} roughness={0.9} metalness={0} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={h3d + 2 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={h3d + 2 * S} />}
       </group>
     );
   }
@@ -797,7 +899,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
           <boxGeometry args={[w * 0.3, 1 * S, d * 0.5]} />
           <meshStandardMaterial color={darkColor} roughness={0.3} metalness={0.15} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={consoleH + 4 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={consoleH + 4 * S} />}
       </group>
     );
   }
@@ -832,7 +934,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
           <boxGeometry args={[w - 2 * S, postH - 4 * S, 0.3 * S]} />
           <meshStandardMaterial color={linenColor} roughness={0.95} metalness={0} transparent opacity={0.9} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={postH + 2 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={postH + 2 * S} />}
       </group>
     );
   }
@@ -864,7 +966,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
           <sphereGeometry args={[2 * S, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
           <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={postH + 3 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={postH + 3 * S} />}
       </group>
     );
   }
@@ -903,7 +1005,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
             <meshStandardMaterial color={getCachedColor("#5a7a50")} roughness={0.8} metalness={0} />
           </mesh>
         ))}
-        <FurnitureLabel label={obj.label} y={vaseH + sphereR * 2 + 2 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={vaseH + sphereR * 2 + 2 * S} />}
       </group>
     );
   }
@@ -933,7 +1035,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
             />
           </mesh>
         ))}
-        <FurnitureLabel label={obj.label} y={h3d + 2 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={h3d + 2 * S} />}
       </group>
     );
   }
@@ -958,7 +1060,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
           <coneGeometry args={[4 * S, 16 * S, 16, 1, true]} />
           <meshStandardMaterial color={fillColor} transparent opacity={0.06} side={DoubleSide} depthWrite={false} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={h3d + 2 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={h3d + 2 * S} />}
       </group>
     );
   }
@@ -972,7 +1074,7 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
           <cylinderGeometry args={[radius, radius, h3d, 32]} />
           <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
         </mesh>
-        <FurnitureLabel label={obj.label} y={h3d + 2 * S} />
+        {settings.showLabels && <FurnitureLabel label={obj.label} y={h3d + 2 * S} />}
       </group>
     );
   }
@@ -1010,12 +1112,12 @@ function FurnitureMesh({ obj, originX, originY }: { obj: ParsedObject; originX: 
           <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.1} />
         </mesh>
       ))}
-      <FurnitureLabel label={obj.label} y={h3d + 2 * S} />
+      {settings.showLabels && <FurnitureLabel label={obj.label} y={h3d + 2 * S} />}
     </group>
   );
 }
 
-function RoomFloor({ obj, originX, originY }: { obj: ParsedObject; originX: number; originY: number }) {
+function RoomFloor({ obj, originX, originY, settings }: { obj: ParsedObject; originX: number; originY: number; settings: View3DSettings }) {
   // Memoize shape to avoid re-creating on every render
   const floorShape = useMemo(() => {
     if (!obj.points || obj.points.length < 3) return null;
@@ -1066,7 +1168,7 @@ function RoomFloor({ obj, originX, originY }: { obj: ParsedObject; originX: numb
       {/* Floor — warm wood-tone, slightly darker so furniture pops */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
-        <meshStandardMaterial color="#d8cfc2" side={DoubleSide} roughness={0.7} metalness={0.03} />
+        <meshStandardMaterial color={FLOOR_MATERIALS[settings.floorMaterial].color} side={DoubleSide} roughness={FLOOR_MATERIALS[settings.floorMaterial].roughness} metalness={FLOOR_MATERIALS[settings.floorMaterial].metalness} />
       </mesh>
       {/* Baseboard trim along walls */}
       {wallSegments.map((seg, i) => (
@@ -1171,7 +1273,8 @@ function FloorPlan3DScene({
   lightingEnabled,
   centerX: cx,
   centerZ: cz,
-}: FloorPlan3DViewProps & { centerX: number; centerZ: number }) {
+  settings,
+}: FloorPlan3DViewProps & { centerX: number; centerZ: number; settings: View3DSettings }) {
   const { objects, canvasWidth, canvasHeight } = useMemo(
     () => parseCanvasJSON(floorPlanJSON),
     [floorPlanJSON]
@@ -1192,14 +1295,14 @@ function FloorPlan3DScene({
       {/* Fog for depth — warm tone */}
       <fog attach="fog" args={["#f0ece6", maxDim * 2, maxDim * 5]} />
 
-      {/* Scene lighting — warm key + cool fill for dimension */}
-      <ambientLight intensity={lightingEnabled ? 0.2 : 0.5} color="#fdf8f0" />
-      {/* Key light — warm directional from upper-right */}
+      {/* Scene lighting — mood-driven key + fill for dimension */}
+      <ambientLight intensity={lightingEnabled ? LIGHTING_MOODS[settings.lightingMood].ambientIntensity * 0.4 : LIGHTING_MOODS[settings.lightingMood].ambientIntensity} color={LIGHTING_MOODS[settings.lightingMood].ambientColor} />
+      {/* Key light — directional from upper-right */}
       <directionalLight
         position={[cx + maxDim * 0.4, maxDim * 0.6, cz + maxDim * 0.3]}
-        intensity={lightingEnabled ? 0.4 : 1.0}
-        color="#fff5e6"
-        castShadow
+        intensity={lightingEnabled ? LIGHTING_MOODS[settings.lightingMood].keyIntensity * 0.4 : LIGHTING_MOODS[settings.lightingMood].keyIntensity}
+        color={LIGHTING_MOODS[settings.lightingMood].keyColor}
+        castShadow={settings.showShadows}
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
         shadow-camera-left={-maxDim}
@@ -1209,11 +1312,11 @@ function FloorPlan3DScene({
         shadow-bias={-0.0002}
         shadow-normalBias={0.02}
       />
-      {/* Fill light — cool blue from opposite side */}
+      {/* Fill light — from opposite side */}
       <directionalLight
         position={[cx - maxDim * 0.3, maxDim * 0.4, cz - maxDim * 0.3]}
-        intensity={0.2}
-        color="#e0e8f0"
+        intensity={LIGHTING_MOODS[settings.lightingMood].fillIntensity}
+        color={LIGHTING_MOODS[settings.lightingMood].fillColor}
       />
       {/* Rim light for edge separation */}
       <directionalLight
@@ -1230,29 +1333,31 @@ function FloorPlan3DScene({
       {rooms.length === 0 && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.01, cz]} receiveShadow>
           <planeGeometry args={[maxDim * 1.5, maxDim * 1.5]} />
-          <meshStandardMaterial color="#d8cfc2" roughness={0.85} metalness={0.02} />
+          <meshStandardMaterial color={FLOOR_MATERIALS[settings.floorMaterial].color} roughness={FLOOR_MATERIALS[settings.floorMaterial].roughness} metalness={FLOOR_MATERIALS[settings.floorMaterial].metalness} />
         </mesh>
       )}
 
       {/* Contact shadows — softer and more spread out */}
-      <ContactShadows
-        position={[cx, -0.005, cz]}
-        opacity={0.3}
-        scale={maxDim * 1.5}
-        blur={3}
-        far={maxDim}
-        resolution={512}
-        color="#7a6e60"
-      />
+      {settings.showShadows && (
+        <ContactShadows
+          position={[cx, -0.005, cz]}
+          opacity={0.3}
+          scale={maxDim * 1.5}
+          blur={3}
+          far={maxDim}
+          resolution={512}
+          color="#7a6e60"
+        />
+      )}
 
       {/* Room floor */}
       {rooms.map((room, i) => (
-        <RoomFloor key={`room-${i}`} obj={room} originX={originX} originY={originY} />
+        <RoomFloor key={`room-${i}`} obj={room} originX={originX} originY={originY} settings={settings} />
       ))}
 
       {/* Furniture */}
       {furniture.map((obj, i) => (
-        <FurnitureMesh key={`f-${i}`} obj={obj} originX={originX} originY={originY} />
+        <FurnitureMesh key={`f-${i}`} obj={obj} originX={originX} originY={originY} settings={settings} />
       ))}
 
       {/* Lighting zones — cap shadow-casting to MAX_SHADOW_LIGHTS */}
@@ -1291,8 +1396,162 @@ function FloorPlan3DScene({
   );
 }
 
+function Settings3DPanel({
+  settings,
+  onChange,
+  open,
+  onToggle,
+}: {
+  settings: View3DSettings;
+  onChange: (s: View3DSettings) => void;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  const update = <K extends keyof View3DSettings>(key: K, value: View3DSettings[K]) => {
+    onChange({ ...settings, [key]: value });
+  };
+
+  return (
+    <div className="absolute top-3 right-3 z-10">
+      {/* Gear toggle button */}
+      <button
+        onClick={onToggle}
+        className={`w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+          open
+            ? "bg-indigo-50 text-indigo-600 border border-indigo-200"
+            : "bg-white/90 text-stone-500 hover:text-stone-700 border border-stone-200 shadow-sm"
+        }`}
+        title="3D View Settings"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </button>
+
+      {/* Settings panel */}
+      {open && (
+        <div className="absolute top-11 right-0 w-64 bg-white/95 backdrop-blur-sm rounded-xl shadow-lg border border-stone-200 p-4 space-y-4">
+          <h3 className="text-xs font-semibold text-stone-700 uppercase tracking-wider">3D Settings</h3>
+
+          {/* Chair Style */}
+          <div>
+            <label className="text-xs font-medium text-stone-500 mb-1.5 block">Chair Style</label>
+            <div className="flex flex-wrap gap-1.5">
+              {(["solid-back", "chiavari", "folding", "ghost"] as const).map((style) => (
+                <button
+                  key={style}
+                  onClick={() => update("chairStyle", style)}
+                  className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+                    settings.chairStyle === style
+                      ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
+                      : "bg-stone-50 text-stone-500 border border-stone-200 hover:bg-stone-100"
+                  }`}
+                >
+                  {style.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Linen Color */}
+          <div>
+            <label className="text-xs font-medium text-stone-500 mb-1.5 block">Linen Color</label>
+            <div className="flex flex-wrap gap-1.5">
+              {(["ivory", "white", "blush", "navy", "sage", "gold"] as const).map((color) => (
+                <button
+                  key={color}
+                  onClick={() => update("linenColor", color)}
+                  className={`px-2.5 py-1 text-xs rounded-full transition-colors flex items-center gap-1.5 ${
+                    settings.linenColor === color
+                      ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
+                      : "bg-stone-50 text-stone-500 border border-stone-200 hover:bg-stone-100"
+                  }`}
+                >
+                  <span className="w-2.5 h-2.5 rounded-full border border-stone-300" style={{ backgroundColor: LINEN_COLORS[color] }} />
+                  {color.charAt(0).toUpperCase() + color.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Floor Material */}
+          <div>
+            <label className="text-xs font-medium text-stone-500 mb-1.5 block">Floor</label>
+            <div className="flex flex-wrap gap-1.5">
+              {(["hardwood", "marble", "carpet", "concrete"] as const).map((mat) => (
+                <button
+                  key={mat}
+                  onClick={() => update("floorMaterial", mat)}
+                  className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+                    settings.floorMaterial === mat
+                      ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
+                      : "bg-stone-50 text-stone-500 border border-stone-200 hover:bg-stone-100"
+                  }`}
+                >
+                  {mat.charAt(0).toUpperCase() + mat.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Lighting Mood */}
+          <div>
+            <label className="text-xs font-medium text-stone-500 mb-1.5 block">Lighting</label>
+            <div className="flex flex-wrap gap-1.5">
+              {(["warm", "cool", "neutral", "dramatic"] as const).map((mood) => (
+                <button
+                  key={mood}
+                  onClick={() => update("lightingMood", mood)}
+                  className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+                    settings.lightingMood === mood
+                      ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
+                      : "bg-stone-50 text-stone-500 border border-stone-200 hover:bg-stone-100"
+                  }`}
+                >
+                  {mood.charAt(0).toUpperCase() + mood.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Toggles */}
+          <div className="flex items-center justify-between pt-1 border-t border-stone-100">
+            <span className="text-xs text-stone-500">Labels</span>
+            <button
+              onClick={() => update("showLabels", !settings.showLabels)}
+              className={`w-8 h-[18px] rounded-full transition-colors relative ${
+                settings.showLabels ? "bg-indigo-500" : "bg-stone-300"
+              }`}
+            >
+              <span className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform ${
+                settings.showLabels ? "left-4" : "left-0.5"
+              }`} />
+            </button>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-stone-500">Shadows</span>
+            <button
+              onClick={() => update("showShadows", !settings.showShadows)}
+              className={`w-8 h-[18px] rounded-full transition-colors relative ${
+                settings.showShadows ? "bg-indigo-500" : "bg-stone-300"
+              }`}
+            >
+              <span className={`absolute top-0.5 w-3.5 h-3.5 rounded-full bg-white shadow-sm transition-transform ${
+                settings.showShadows ? "left-4" : "left-0.5"
+              }`} />
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
   const { floorPlanJSON } = props;
+  const [settings, setSettings] = useState<View3DSettings>(DEFAULT_SETTINGS);
+  const [showSettings, setShowSettings] = useState(false);
 
   // Compute camera position + centroid to frame the actual furniture
   const { camConfig, centerX, centerZ } = useMemo(() => {
@@ -1360,7 +1619,7 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
 
   return (
     <ErrorBoundary>
-      <div className="w-full h-full bg-gradient-to-b from-stone-200 to-stone-300">
+      <div className="w-full h-full bg-gradient-to-b from-stone-200 to-stone-300 relative">
         <Canvas
           shadows
           camera={camConfig}
@@ -1374,9 +1633,15 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
           }}
         >
           <Suspense fallback={null}>
-            <FloorPlan3DScene {...props} centerX={centerX} centerZ={centerZ} />
+            <FloorPlan3DScene {...props} centerX={centerX} centerZ={centerZ} settings={settings} />
           </Suspense>
         </Canvas>
+        <Settings3DPanel
+          settings={settings}
+          onChange={setSettings}
+          open={showSettings}
+          onToggle={() => setShowSettings(!showSettings)}
+        />
       </div>
     </ErrorBoundary>
   );
