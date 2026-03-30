@@ -5,6 +5,7 @@ import { plannerStore } from "@/lib/planner-store";
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Camera, Save, X, CreditCard, ExternalLink, CheckCircle2, Loader2, Mail, Shield, Calendar, AlertTriangle, Trash2, ShieldOff } from "lucide-react";
+import { trackTrialActivated } from "@/lib/analytics";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { uploadToStorage, getPublicUrl, deleteFromStorage } from "@/lib/supabase/storage";
@@ -51,7 +52,10 @@ function SettingsContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sessionId }),
       })
-        .then(() => plannerStore.refetch())
+        .then(() => {
+          plannerStore.refetch();
+          trackTrialActivated(profile.plan || "unknown");
+        })
         .catch((err) => console.error("verify-session failed:", err));
       setShowSuccess(true);
       const timer = setTimeout(() => setShowSuccess(false), 5000);

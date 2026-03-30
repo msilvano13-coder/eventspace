@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
+import { identifyUser } from "@/lib/analytics";
 
 export default function SignInPage() {
   return (
@@ -31,12 +32,16 @@ function SignInForm() {
     setLoading(true);
 
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       setError(error.message);
       setLoading(false);
       return;
+    }
+
+    if (data.user) {
+      identifyUser(data.user.id, { email: data.user.email });
     }
 
     router.refresh();

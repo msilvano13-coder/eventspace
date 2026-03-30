@@ -4,6 +4,7 @@ import { usePlannerProfile } from "@/hooks/useStore";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Sparkles, Loader2 } from "lucide-react";
+import { trackPlanPurchased } from "@/lib/analytics";
 
 const DIY_FEATURES = [
   "1 active event",
@@ -69,6 +70,7 @@ export default function UpgradePage() {
       });
       const data = await res.json();
       if (data.url) {
+        trackPlanPurchased(plan, plan === "diy" ? 99 : 20);
         window.location.href = data.url;
       } else {
         alert(data.error || "Something went wrong");

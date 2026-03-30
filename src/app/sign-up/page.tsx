@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2 } from "lucide-react";
+import { trackSignupCompleted } from "@/lib/analytics";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -43,6 +44,8 @@ export default function SignUpPage() {
       setLoading(false);
       return;
     }
+
+    trackSignupCompleted();
 
     // Redirect to sign-in with success message
     router.push("/sign-in?registered=true");
