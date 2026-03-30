@@ -1,15 +1,61 @@
 # EventSpace Handoff — March 30, 2026
 
-## Current State: Session 8 Complete — 3D Lighting + Production Fixes
+## Current State: Session 9 Complete — Stripe Coupons, Trial Fix, 3D Lighting, UI Fixes
 - **Branch:** `main`
 - **Build:** Clean (zero errors)
-- **Latest commit:** `6cfa511` — Fix stack overflow when dragging lighting zones
-- **Deploy:** `eventspace-nine.vercel.app`
-- **Migration:** `scalability-migration.sql` **APPLIED** to Supabase (March 30, 2026)
+- **Latest commit:** `43a34f5` — Fix Delete key removing furniture while typing in label input
+- **Deploy:** Vercel (production, auto-deploy on push)
+- **Migration:** `trial-fix-migration.sql` **NEEDS TO BE APPLIED** to Supabase (see below)
 
 ---
 
 ## What Was Done Today (March 30)
+
+### Session 9: Stripe Coupons, DIY Paywall, 3D Lighting Fixes, UI Fixes
+
+**1. Stripe Promotion Codes** (`b5a055a`)
+- Added `allow_promotion_codes: true` to both DIY and Professional Stripe Checkout sessions
+- Customers now see a promo code input field on the hosted Stripe checkout page
+- Works with any coupon/promotion code created in the Stripe Dashboard
+- File: `src/app/api/stripe/checkout/route.ts`
+
+**2. DIY Plan Paywall — No Free Trial** (`c68ce4e`)
+- **Problem:** All new users got a 30-day free trial automatically (via `handle_new_user` DB trigger), allowing DIY users to access the planner without paying
+- **Fix:** New users now land on the upgrade page immediately. They must choose:
+  - **DIY** → Stripe checkout for $99 (immediate payment required)
+  - **Professional** → "Start 30-Day Free Trial" button activates trial explicitly
+  - Expired trials see "Subscribe — $20/mo" instead
+- New API route: `src/app/api/start-trial/route.ts` — sets `trial_ends_at = now + 30 days` only when explicitly requested
+- Updated upgrade page: `src/app/planner/upgrade/page.tsx` — separate flows for DIY (checkout) and Professional (trial/subscribe)
+- **DB migration required:** `supabase/trial-fix-migration.sql` — removes auto 30-day default from `trial_ends_at` column and updates `handle_new_user` trigger
+- ⚠️ **ACTION REQUIRED:** Run `trial-fix-migration.sql` in Supabase SQL editor
+
+**3. 3D Lighting: Visible Intensity & Spread** (`9522a46`)
+- **Intensity:** Replaced quadratic curve (`t² × 12`) with linear mapping (`0.5 + t × 14.5`) — now 1% is visibly dim and 100% is bright, with noticeable changes across the full slider range
+- **Beam spread:** Replaced `pointLight` (omnidirectional) with `spotLight` for downlights and uplights — the `angle` property now uses the actual spread slider value (10° = tight beam, 120° = flood)
+- **Candles on furniture:** When a light has `snappedToFurnitureId`, it now looks up the furniture's height and positions the light on the surface (e.g., 30" for standard tables, 42" for high-tops)
+- File: `src/components/floorplan/FloorPlan3DView.tsx`
+
+**4. Properties Panel Fix** (`e593b37`)
+- Properties panel (right side, rename/rotate/delete) was not appearing when selecting furniture
+- Added `h-full` to PropertiesPanel wrapper and `overflow-hidden` to editor parent container so flex layout resolves height correctly
+- Files: `src/components/floorplan/FloorPlanEditor.tsx`, `src/app/planner/[eventId]/floorplan/page.tsx`
+
+**5. Delete Key in Label Input Fix** (`43a34f5`)
+- Pressing Delete/Backspace while editing a furniture label in the properties panel was deleting the selected canvas object instead of deleting text in the input
+- Added check to skip canvas delete handler when keypress originates from `<input>`, `<textarea>`, or `contenteditable` elements
+- File: `src/components/floorplan/FloorPlanEditor.tsx`
+
+**All Session 9 Commits:**
+| Commit | Description |
+|--------|-------------|
+| `43a34f5` | Fix Delete key removing furniture while typing in label input |
+| `e593b37` | Fix properties panel not showing when selecting furniture |
+| `9522a46` | Fix 3D lighting: visible intensity/spread, candles on furniture |
+| `c68ce4e` | Require payment for DIY plan — no free trial |
+| `b5a055a` | Enable promotion codes on Stripe checkout and fix floorplan UI |
+
+---
 
 ### Session 8: 3D Lighting Improvements + Production Crash Fixes
 
