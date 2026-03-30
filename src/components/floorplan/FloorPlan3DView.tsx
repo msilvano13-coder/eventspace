@@ -3,7 +3,7 @@
 import { useMemo, useCallback, useEffect, useState, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, Text, Environment, ContactShadows } from "@react-three/drei";
-import { Color, Vector2, Shape, DoubleSide, ACESFilmicToneMapping, Object3D } from "three";
+import { Color, Vector2, Shape, DoubleSide, ACESFilmicToneMapping } from "three";
 import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 import { LightingZone } from "@/lib/types";
 import { FURNITURE_CATALOG } from "@/lib/constants";
@@ -1494,7 +1494,6 @@ function LightingZone3D({
   canvasHeight: number;
   castShadow: boolean;
 }) {
-  const spotTarget = useMemo(() => new Object3D(), []);
   const px = (zone.x / 100) * canvasWidth;
   const py = (zone.y / 100) * canvasHeight;
   const posX = (px - originX) * S;
@@ -1511,29 +1510,22 @@ function LightingZone3D({
   if (isDownlight) {
     const coneHeight = mountHeight * 0.85;
     const coneRadius = Math.tan(spreadRad / 2) * coneHeight;
-    const spotAngle = spreadRad / 2;
 
     return (
       <group position={[posX, 0, posZ]}>
-        {/* Spotlight target at ground */}
-        <primitive object={spotTarget} position={[0, 0, 0]} />
-
-        {/* Spot light from mounting height pointing down */}
-        <spotLight
+        {/* Point light at mounting height for illumination */}
+        <pointLight
           color={color}
-          intensity={intensity * 2}
+          intensity={intensity * 1.5}
           distance={lightDistance}
-          angle={spotAngle}
-          penumbra={0.5}
-          position={[0, mountHeight, 0]}
-          target={spotTarget}
+          position={[0, mountHeight * 0.7, 0]}
           castShadow={castShadow}
           shadow-mapSize-width={castShadow ? 512 : undefined}
           shadow-mapSize-height={castShadow ? 512 : undefined}
         />
 
         {/* Visible cone beam geometry */}
-        <mesh position={[0, mountHeight - coneHeight / 2, 0]} rotation={[0, 0, 0]}>
+        <mesh position={[0, mountHeight - coneHeight / 2, 0]}>
           <coneGeometry args={[coneRadius, coneHeight, 24, 1, true]} />
           <meshStandardMaterial
             color={color}
