@@ -2,7 +2,9 @@
 
 import { useMemo, useCallback, useEffect, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, Text, Environment, ContactShadows } from "@react-three/drei";
+import { OrbitControls, Text, Environment, ContactShadows, SoftShadows } from "@react-three/drei";
+import { EffectComposer, SSAO, ToneMapping } from "@react-three/postprocessing";
+import { BlendFunction, ToneMappingMode } from "postprocessing";
 import { Color, Vector2, Shape, DoubleSide } from "three";
 import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 import { LightingZone } from "@/lib/types";
@@ -1059,12 +1061,23 @@ function RoomFloor({ obj, originX, originY }: { obj: ParsedObject; originX: numb
 
   return (
     <group>
-      {/* Floor */}
+      {/* Floor — warm wood-tone, subtle sheen */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
-        <meshStandardMaterial color="#faf7f0" side={DoubleSide} roughness={0.85} metalness={0} />
+        <meshStandardMaterial color="#ede5d8" side={DoubleSide} roughness={0.7} metalness={0.03} />
       </mesh>
-      {/* Walls — slightly transparent so interior is visible */}
+      {/* Baseboard trim along walls */}
+      {wallSegments.map((seg, i) => (
+        <mesh
+          key={`base-${i}`}
+          position={[seg.cx, 0.15, seg.cz]}
+          rotation={[0, -seg.angle, 0]}
+        >
+          <boxGeometry args={[seg.length, 0.3, wallThickness + 0.06]} />
+          <meshStandardMaterial color="#d5cdc2" roughness={0.6} metalness={0.05} />
+        </mesh>
+      ))}
+      {/* Walls — subtle translucent with slight warmth */}
       {wallSegments.map((seg, i) => (
         <mesh
           key={`wall-${i}`}
@@ -1075,13 +1088,24 @@ function RoomFloor({ obj, originX, originY }: { obj: ParsedObject; originX: numb
         >
           <boxGeometry args={[seg.length, WALL_HEIGHT, wallThickness]} />
           <meshStandardMaterial
-            color="#e8e4dc"
-            roughness={0.9}
+            color="#f0ebe4"
+            roughness={0.92}
             metalness={0}
             transparent
-            opacity={0.25}
+            opacity={0.2}
             depthWrite={false}
           />
+        </mesh>
+      ))}
+      {/* Crown molding at wall top */}
+      {wallSegments.map((seg, i) => (
+        <mesh
+          key={`crown-${i}`}
+          position={[seg.cx, WALL_HEIGHT - 0.08, seg.cz]}
+          rotation={[0, -seg.angle, 0]}
+        >
+          <boxGeometry args={[seg.length, 0.16, wallThickness + 0.04]} />
+          <meshStandardMaterial color="#e0d8ce" roughness={0.5} metalness={0.06} />
         </mesh>
       ))}
     </group>
@@ -1160,17 +1184,22 @@ function FloorPlan3DScene({
 
   return (
     <>
-      {/* Environment map for realistic reflections */}
-      <Environment preset="apartment" background={false} />
+      {/* Neutral studio HDRI for clean reflections */}
+      <Environment preset="studio" background={false} environmentIntensity={0.6} />
 
-      {/* Fog for depth */}
-      <fog attach="fog" args={["#e7e5e4", maxDim * 1.5, maxDim * 4]} />
+      {/* Soft shadows for more natural look */}
+      <SoftShadows size={25} samples={16} focus={0.5} />
 
-      {/* Scene lighting */}
-      <ambientLight intensity={lightingEnabled ? 0.15 : 0.4} />
+      {/* Fog for depth — warm tone */}
+      <fog attach="fog" args={["#f0ece6", maxDim * 2, maxDim * 5]} />
+
+      {/* Scene lighting — warm key + cool fill for dimension */}
+      <ambientLight intensity={lightingEnabled ? 0.2 : 0.5} color="#fdf8f0" />
+      {/* Key light — warm directional from upper-right */}
       <directionalLight
-        position={[cx + 10, 20, cz + 10]}
-        intensity={lightingEnabled ? 0.3 : 0.8}
+        position={[cx + maxDim * 0.4, maxDim * 0.6, cz + maxDim * 0.3]}
+        intensity={lightingEnabled ? 0.4 : 1.0}
+        color="#fff5e6"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -1178,30 +1207,43 @@ function FloorPlan3DScene({
         shadow-camera-right={maxDim}
         shadow-camera-top={maxDim}
         shadow-camera-bottom={-maxDim}
-        shadow-bias={-0.0001}
+        shadow-bias={-0.0002}
+        shadow-normalBias={0.02}
       />
-      {/* Fill light from opposite side */}
-      <directionalLight position={[cx - 8, 12, cz - 8]} intensity={0.15} />
-      {/* Rim light for edge definition */}
-      <directionalLight position={[cx, 8, cz - 15]} intensity={0.1} />
+      {/* Fill light — cool blue from opposite side */}
+      <directionalLight
+        position={[cx - maxDim * 0.3, maxDim * 0.4, cz - maxDim * 0.3]}
+        intensity={0.2}
+        color="#e0e8f0"
+      />
+      {/* Rim light for edge separation */}
+      <directionalLight
+        position={[cx, maxDim * 0.3, cz - maxDim * 0.5]}
+        intensity={0.12}
+        color="#f0ece6"
+      />
+      {/* Bounce light from below — simulates floor reflection */}
+      <hemisphereLight
+        args={["#faf7f0", "#d4c8b8", 0.15]}
+      />
 
       {/* Ground plane (fallback if no room) */}
       {rooms.length === 0 && (
         <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.01, cz]} receiveShadow>
           <planeGeometry args={[maxDim * 1.5, maxDim * 1.5]} />
-          <meshStandardMaterial color="#e7e5e4" roughness={0.9} metalness={0} />
+          <meshStandardMaterial color="#ebe6de" roughness={0.85} metalness={0.02} />
         </mesh>
       )}
 
-      {/* Contact shadows for soft ground shadows */}
+      {/* Contact shadows — softer and more spread out */}
       <ContactShadows
         position={[cx, -0.005, cz]}
-        opacity={0.35}
+        opacity={0.3}
         scale={maxDim * 1.5}
-        blur={2.5}
+        blur={3}
         far={maxDim}
         resolution={512}
-        color="#8a7a6a"
+        color="#7a6e60"
       />
 
       {/* Room floor */}
@@ -1228,17 +1270,35 @@ function FloorPlan3DScene({
           />
         ))}
 
-      {/* Grid on the ground — centered on furniture */}
+      {/* Subtle ground grid — lighter, only visible up close */}
       <gridHelper
-        args={[maxDim * 1.5, Math.ceil(maxDim * 1.5 / (20 * S)), "#d6d3d1", "#e7e5e4"]}
-        position={[cx, -0.005, cz]}
+        args={[maxDim * 1.5, Math.ceil(maxDim * 1.5 / (20 * S)), "#ddd8d0", "#ebe6de"]}
+        position={[cx, -0.004, cz]}
       />
+
+      {/* Post-processing: SSAO for ground contact realism + ACES tone mapping */}
+      <EffectComposer multisampling={4}>
+        <SSAO
+          blendFunction={BlendFunction.MULTIPLY}
+          samples={21}
+          radius={0.15}
+          intensity={18}
+          luminanceInfluence={0.6}
+          worldDistanceThreshold={2}
+          worldDistanceFalloff={0.5}
+          worldProximityThreshold={0.3}
+          worldProximityFalloff={0.3}
+        />
+        <ToneMapping mode={ToneMappingMode.AGX} />
+      </EffectComposer>
 
       <OrbitControls
         makeDefault
         enablePan
         enableZoom
         enableRotate
+        enableDamping
+        dampingFactor={0.08}
         target={[cx, 0, cz]}
         maxPolarAngle={Math.PI / 2 - 0.05}
         minDistance={1}
@@ -1323,7 +1383,11 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
           camera={camConfig}
           dpr={[1, 2]}
           onCreated={handleCreated}
-          gl={{ antialias: true, powerPreference: "default" }}
+          gl={{
+            antialias: true,
+            powerPreference: "default",
+            toneMapping: 0, // Disabled — handled by postprocessing ToneMapping effect
+          }}
         >
           <Suspense fallback={null}>
             <FloorPlan3DScene {...props} centerX={centerX} centerZ={centerZ} />
