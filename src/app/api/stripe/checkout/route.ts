@@ -86,8 +86,8 @@ export async function POST(request: Request) {
             quantity: 1,
           },
         ],
-        success_url: `${origin}/planner/settings?session_id={CHECKOUT_SESSION_ID}&plan=diy`,
-        cancel_url: `${origin}/planner/settings`,
+        success_url: `${origin}/api/stripe/checkout-complete?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${origin}/planner/upgrade`,
         metadata: {
           supabase_user_id: user.id,
           plan: "diy",
@@ -108,8 +108,8 @@ export async function POST(request: Request) {
           quantity: 1,
         },
       ],
-      success_url: `${origin}/planner/settings?session_id={CHECKOUT_SESSION_ID}&plan=professional`,
-      cancel_url: `${origin}/planner/settings`,
+      success_url: `${origin}/api/stripe/checkout-complete?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/planner/upgrade`,
       metadata: {
         supabase_user_id: user.id,
         plan: "professional",
