@@ -126,6 +126,7 @@ export interface ScheduleItem {
   time: string;   // "HH:MM" 24-hour format
   title: string;
   notes: string;
+  showOnWeddingPage: boolean;
 }
 
 export interface SharedFile {

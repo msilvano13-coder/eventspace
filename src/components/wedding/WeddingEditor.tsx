@@ -22,7 +22,7 @@ import {
 } from "@/lib/types";
 import { getSignedUrl } from "@/lib/supabase/storage";
 
-const DEFAULT_SECTIONS = ["hero", "story", "schedule", "venue", "rsvp", "faq", "travel", "registry", "gallery"];
+const DEFAULT_SECTIONS = ["hero", "story", "schedule", "venue", "rsvp", "faq", "travel", "registry"];
 
 const SECTION_LABELS: Record<string, string> = {
   hero: "Hero Banner",
@@ -33,7 +33,6 @@ const SECTION_LABELS: Record<string, string> = {
   faq: "Q&A",
   travel: "Travel & Accommodations",
   registry: "Registry",
-  gallery: "Gallery (from Mood Board)",
 };
 
 export interface WeddingEditorProps {

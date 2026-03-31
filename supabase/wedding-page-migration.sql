@@ -14,7 +14,7 @@ ALTER TABLE public.events
   ADD COLUMN IF NOT EXISTS wedding_travel_info jsonb NOT NULL DEFAULT '[]'::jsonb,
   ADD COLUMN IF NOT EXISTS wedding_faq jsonb NOT NULL DEFAULT '[]'::jsonb,
   ADD COLUMN IF NOT EXISTS wedding_registry_links jsonb NOT NULL DEFAULT '[]'::jsonb,
-  ADD COLUMN IF NOT EXISTS wedding_sections_order jsonb NOT NULL DEFAULT '["hero","story","schedule","venue","rsvp","faq","travel","registry","gallery"]'::jsonb;
+  ADD COLUMN IF NOT EXISTS wedding_sections_order jsonb NOT NULL DEFAULT '["hero","story","schedule","venue","rsvp","faq","travel","registry"]'::jsonb;
 
 -- Index for slug lookups
 CREATE UNIQUE INDEX IF NOT EXISTS idx_events_wedding_slug ON public.events (wedding_slug) WHERE wedding_slug IS NOT NULL;
@@ -35,7 +35,6 @@ DECLARE
   v_user_id uuid;
   v_result jsonb;
   v_schedule jsonb;
-  v_gallery jsonb;
 BEGIN
   -- Find the event by slug, must be enabled
   SELECT e.id, e.user_id INTO v_event_id, v_user_id
@@ -57,19 +56,8 @@ BEGIN
   ), '[]'::jsonb)
   INTO v_schedule
   FROM schedule_items s
-  WHERE s.event_id = v_event_id;
-
-  -- Fetch mood board images for gallery
-  SELECT COALESCE(jsonb_agg(
-    jsonb_build_object(
-      'id', m.id,
-      'caption', m.caption,
-      'storage_path', m.storage_path
-    )
-  ), '[]'::jsonb)
-  INTO v_gallery
-  FROM mood_board_images m
-  WHERE m.event_id = v_event_id;
+  WHERE s.event_id = v_event_id
+    AND s.show_on_wedding_page IS NOT FALSE;
 
   -- Build result (excludes share_token and user_id — these are sensitive and
   -- must never be exposed on the public wedding page)
@@ -86,8 +74,7 @@ BEGIN
     'faq', e.wedding_faq,
     'registryLinks', e.wedding_registry_links,
     'sectionsOrder', e.wedding_sections_order,
-    'schedule', v_schedule,
-    'gallery', v_gallery
+    'schedule', v_schedule
   ) INTO v_result
   FROM events e
   WHERE e.id = v_event_id;

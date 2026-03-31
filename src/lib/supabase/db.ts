@@ -79,7 +79,7 @@ function eventToRow(
     wedding_travel_info: e.weddingTravelInfo ?? [],
     wedding_faq: e.weddingFaq ?? [],
     wedding_registry_links: e.weddingRegistryLinks ?? [],
-    wedding_sections_order: e.weddingSectionsOrder ?? ['hero','story','schedule','venue','rsvp','faq','travel','registry','gallery'],
+    wedding_sections_order: e.weddingSectionsOrder ?? ['hero','story','schedule','venue','rsvp','faq','travel','registry'],
   };
 }
 
@@ -139,7 +139,7 @@ function eventCoreFields(r: any) {
     weddingTravelInfo: r.wedding_travel_info ?? [],
     weddingFaq: r.wedding_faq ?? [],
     weddingRegistryLinks: r.wedding_registry_links ?? [],
-    weddingSectionsOrder: r.wedding_sections_order ?? ['hero','story','schedule','venue','rsvp','faq','travel','registry','gallery'],
+    weddingSectionsOrder: r.wedding_sections_order ?? ['hero','story','schedule','venue','rsvp','faq','travel','registry'],
   };
 }
 
@@ -324,6 +324,7 @@ function scheduleItemToRow(s: ScheduleItem, eventId: string, userId: string) {
     time: s.time,
     title: s.title,
     notes: s.notes,
+    show_on_wedding_page: s.showOnWeddingPage ?? true,
   };
 }
 
@@ -334,6 +335,7 @@ function scheduleItemFromRow(r: any): ScheduleItem {
     time: r.time,
     title: r.title,
     notes: r.notes,
+    showOnWeddingPage: r.show_on_wedding_page ?? true,
   };
 }
 
@@ -2215,7 +2217,7 @@ function clientEventFromRow(r: any): Event {
     weddingTravelInfo: r.wedding_travel_info ?? [],
     weddingFaq: r.wedding_faq ?? [],
     weddingRegistryLinks: r.wedding_registry_links ?? [],
-    weddingSectionsOrder: r.wedding_sections_order ?? ['hero','story','schedule','venue','rsvp','faq','travel','registry','gallery'],
+    weddingSectionsOrder: r.wedding_sections_order ?? ['hero','story','schedule','venue','rsvp','faq','travel','registry'],
     floorPlans: (r.floor_plans ?? []).map((fp: any) => ({
       id: fp.id,
       name: fp.name,
@@ -2232,6 +2234,7 @@ function clientEventFromRow(r: any): Event {
     })),
     schedule: (r.schedule_items ?? []).map((s: any) => ({
       id: s.id, time: s.time, title: s.title, notes: s.notes,
+      showOnWeddingPage: s.show_on_wedding_page ?? true,
     })),
     vendors: (r.vendors ?? []).map((v: any) => ({
       id: v.id, name: v.name, category: v.category, contact: v.contact,

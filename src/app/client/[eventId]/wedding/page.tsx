@@ -52,7 +52,6 @@ export default function ClientWeddingEditorPage() {
           infoNotes={
             <>
               <p><strong>Schedule:</strong> The timeline on your wedding page comes from the Day-of Schedule on your portal.</p>
-              <p><strong>Gallery:</strong> Photos are pulled from the Mood Board.</p>
               <p><strong>RSVP:</strong> Guests search by name and submit their response. You&apos;ll see responses in the Guest List.</p>
             </>
           }

@@ -5,7 +5,7 @@ import EventLoader from "@/components/ui/EventLoader";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { ArrowLeft, Plus, Pencil, Trash2, X, Download, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, Pencil, Trash2, X, Download, GripVertical, Eye, EyeOff } from "lucide-react";
 import { ScheduleItem } from "@/lib/types";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
@@ -98,9 +98,16 @@ export default function TimelinePage() {
     if (editingId === id) cancelEdit();
   }
 
+  function toggleWeddingVisibility(id: string) {
+    const updated = (event!.schedule ?? []).map((s) =>
+      s.id === id ? { ...s, showOnWeddingPage: !(s.showOnWeddingPage ?? true) } : s
+    );
+    updateEvent(event!.id, { schedule: updated });
+  }
+
   function saveNew() {
     if (!newTitle.trim() || !newTime) return;
-    const item: ScheduleItem = { id: crypto.randomUUID(), time: newTime, title: newTitle.trim(), notes: newNotes };
+    const item: ScheduleItem = { id: crypto.randomUUID(), time: newTime, title: newTitle.trim(), notes: newNotes, showOnWeddingPage: true };
     updateEvent(event!.id, { schedule: [...(event!.schedule ?? []), item] });
     setNewTime(""); setNewTitle(""); setNewNotes("");
     newTitleRef.current?.focus();
@@ -300,6 +307,17 @@ export default function TimelinePage() {
                         {item.notes && <p className="text-xs text-stone-400 mt-1 leading-relaxed">{item.notes}</p>}
                       </div>
                       <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                        <button
+                          onClick={() => toggleWeddingVisibility(item.id)}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            (item.showOnWeddingPage ?? true)
+                              ? "text-rose-400 hover:text-rose-500 hover:bg-rose-50"
+                              : "text-stone-300 hover:text-stone-500 hover:bg-stone-100"
+                          }`}
+                          title={(item.showOnWeddingPage ?? true) ? "Visible on wedding page" : "Hidden from wedding page"}
+                        >
+                          {(item.showOnWeddingPage ?? true) ? <Eye size={13} /> : <EyeOff size={13} />}
+                        </button>
                         <button onClick={() => startEdit(item)} className="p-1.5 text-stone-300 hover:text-stone-500 hover:bg-stone-100 rounded-lg transition-colors">
                           <Pencil size={13} />
                         </button>

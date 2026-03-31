@@ -92,7 +92,7 @@ export default function InquiriesPage() {
       weddingTravelInfo: [],
       weddingFaq: [],
       weddingRegistryLinks: [],
-      weddingSectionsOrder: ['hero','story','schedule','venue','rsvp','faq','travel','registry','gallery'],
+      weddingSectionsOrder: ['hero','story','schedule','venue','rsvp','faq','travel','registry'],
     });
     deleteInquiry(inq.id);
     setConfirmBookId(null);

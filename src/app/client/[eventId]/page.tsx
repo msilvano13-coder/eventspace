@@ -5,7 +5,7 @@ import { useEvent, useEventSubEntities, useStoreActions, useQuestionnaires, useP
 import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, ChevronRight, CheckCircle2, Receipt, Users, Wallet, Search, Phone, Globe, Download, Upload, UserCheck, PenTool, Plus, Trash2, Pencil, X, UtensilsCrossed, AlertTriangle, Image, Mail } from "lucide-react";
+import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, ChevronRight, CheckCircle2, Receipt, Users, Wallet, Search, Phone, Globe, Download, Upload, UserCheck, PenTool, Plus, Trash2, Pencil, X, UtensilsCrossed, AlertTriangle, Image, Mail, Eye, EyeOff } from "lucide-react";
 import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY, Vendor, VendorCategory, VendorPaymentItem, EventContract, ScheduleItem } from "@/lib/types";
 import { readPdfAsBase64, downloadBase64File, formatBytes } from "@/lib/pdf-utils";
 import MessageThread from "@/components/event/MessageThread";
@@ -1006,7 +1006,7 @@ function ClientTimeline({ event, onUpdate }: { event: Event; onUpdate: (schedule
       onUpdate(raw.map((s) => s.id === editingId ? { ...s, time: timeVal, title: titleVal.trim(), notes: notesVal } : s));
       setEditingId(null);
     } else {
-      onUpdate([...raw, { id: crypto.randomUUID(), time: timeVal, title: titleVal.trim(), notes: notesVal }]);
+      onUpdate([...raw, { id: crypto.randomUUID(), time: timeVal, title: titleVal.trim(), notes: notesVal, showOnWeddingPage: true }]);
       setAdding(false);
     }
     resetForm();
@@ -1021,6 +1021,12 @@ function ClientTimeline({ event, onUpdate }: { event: Event; onUpdate: (schedule
   function remove(id: string) {
     onUpdate((event.schedule ?? []).filter((s) => s.id !== id));
     if (editingId === id) cancel();
+  }
+
+  function toggleWeddingVisibility(id: string) {
+    onUpdate((event.schedule ?? []).map((s) =>
+      s.id === id ? { ...s, showOnWeddingPage: !(s.showOnWeddingPage ?? true) } : s
+    ));
   }
 
   const showForm = adding || editingId !== null;
@@ -1115,6 +1121,18 @@ function ClientTimeline({ event, onUpdate }: { event: Event; onUpdate: (schedule
                         )}
                       </div>
                       <div className="flex items-center gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 ml-2">
+                        <button
+                          onClick={() => toggleWeddingVisibility(item.id)}
+                          className={`p-1 rounded transition-colors ${
+                            (item.showOnWeddingPage ?? true)
+                              ? "text-rose-400 hover:text-rose-500"
+                              : "text-stone-300 hover:text-stone-500"
+                          }`}
+                          title={(item.showOnWeddingPage ?? true) ? "Visible on wedding page" : "Hidden from wedding page"}
+                          aria-label="Toggle wedding page visibility"
+                        >
+                          {(item.showOnWeddingPage ?? true) ? <Eye size={12} /> : <EyeOff size={12} />}
+                        </button>
                         <button onClick={() => startEdit(item)} className="text-stone-400 hover:text-stone-600 p-1" aria-label="Edit">
                           <Pencil size={12} />
                         </button>

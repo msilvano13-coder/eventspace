@@ -50,7 +50,6 @@ export default function WeddingEditorPage() {
         infoNotes={
           <>
             <p><strong>Schedule:</strong> The timeline shown on your wedding page comes from your event&apos;s Day-of Schedule. <Link href={`/planner/${eventId}`} className="underline">Edit it on the event page</Link>.</p>
-            <p><strong>Gallery:</strong> Photos are pulled from your <Link href={`/planner/${eventId}/moodboard`} className="underline">Mood Board</Link>.</p>
             <p><strong>RSVP:</strong> Guests search by name and submit their response. Responses appear on your <Link href={`/planner/${eventId}/guests`} className="underline">Guests</Link> page.</p>
           </>
         }

@@ -17,7 +17,6 @@ export interface WeddingPageData {
   registryLinks: RegistryLink[];
   sectionsOrder: string[];
   schedule: ScheduleEntry[];
-  gallery: GalleryImage[];
 }
 
 export interface VenueDetails {
@@ -52,12 +51,6 @@ export interface ScheduleEntry {
   notes: string;
 }
 
-export interface GalleryImage {
-  id: string;
-  caption: string;
-  storagePath: string;
-}
-
 export interface RsvpGuest {
   id: string;
   name: string;
@@ -89,13 +82,8 @@ export async function fetchWeddingPage(slug: string): Promise<WeddingPageData | 
     travelInfo: data.travelInfo || [],
     faq: data.faq || [],
     registryLinks: data.registryLinks || [],
-    sectionsOrder: data.sectionsOrder || ["hero", "story", "schedule", "venue", "rsvp", "faq", "travel", "registry", "gallery"],
+    sectionsOrder: data.sectionsOrder || ["hero", "story", "schedule", "venue", "rsvp", "faq", "travel", "registry"],
     schedule: data.schedule || [],
-    gallery: (data.gallery || []).map((g: Record<string, unknown>) => ({
-      id: g.id as string,
-      caption: (g.caption as string) || "",
-      storagePath: (g.storage_path as string) || "",
-    })),
   };
 }
 
@@ -146,7 +134,7 @@ export async function weddingRsvpSubmit(
   return result === true;
 }
 
-// ── Get signed URL for hero image / gallery ──
+// ── Get signed URL for hero image ──
 
 export async function getWeddingImageUrl(
   slug: string,

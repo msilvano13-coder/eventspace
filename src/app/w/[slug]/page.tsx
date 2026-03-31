@@ -16,7 +16,6 @@ import {
   HelpCircle,
   Plane,
   Gift,
-  Camera,
   ChevronDown,
 } from "lucide-react";
 import {
@@ -586,57 +585,6 @@ function RegistrySection({ registryLinks }: { registryLinks: WeddingPageData["re
   );
 }
 
-function GallerySection({
-  gallery,
-  slug,
-}: {
-  gallery: WeddingPageData["gallery"];
-  slug: string;
-}) {
-  const [urls, setUrls] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (!gallery || gallery.length === 0) return;
-    gallery.forEach(async (img) => {
-      if (!img.storagePath) return;
-      const url = await getWeddingImageUrl(slug, img.storagePath);
-      if (url) setUrls((prev) => ({ ...prev, [img.id]: url }));
-    });
-  }, [gallery, slug]);
-
-  if (!gallery || gallery.length === 0) return null;
-
-  return (
-    <section id="gallery" className="py-20 px-4 bg-stone-50">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <Camera size={20} className="mx-auto text-rose-400 mb-4" />
-          <h2 className="font-heading text-2xl sm:text-3xl font-bold text-stone-900">
-            Gallery
-          </h2>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {gallery.map((img) => (
-            <div key={img.id} className="aspect-square rounded-xl overflow-hidden bg-stone-200">
-              {urls[img.id] ? (
-                <img
-                  src={urls[img.id]}
-                  alt={img.caption || "Wedding photo"}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Loader2 size={20} className="animate-spin text-stone-400" />
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
 // ── Section map ──
 
 const SECTION_RENDERERS: Record<string, string> = {
@@ -648,7 +596,6 @@ const SECTION_RENDERERS: Record<string, string> = {
   faq: "faq",
   travel: "travel",
   registry: "registry",
-  gallery: "gallery",
 };
 
 // ── Main Page ──
@@ -692,8 +639,6 @@ export default function WeddingPage() {
           return <TravelSection key="travel" travelInfo={data.travelInfo} />;
         case "registry":
           return <RegistrySection key="registry" registryLinks={data.registryLinks} />;
-        case "gallery":
-          return <GallerySection key="gallery" gallery={data.gallery} slug={data.slug} />;
         default:
           return null;
       }
