@@ -1,17 +1,98 @@
 # EventSpace Handoff — March 30, 2026
 
-## Current State: Session 11 Complete — DIY Plan Fixes + Guest RSVP Page
+## Current State: Session 12 Complete — Wedding Website Feature + Client Portal Improvements
 - **Branch:** `main`
 - **Build:** Clean (zero errors)
-- **Latest commit:** `add189e` — Add guest self-service RSVP page
+- **Latest commit:** `cbd651e` — Make wedding website editor collaborative
 - **Deploy:** Vercel (production)
 - **Migrations:**
   - `trial-fix-migration.sql` — ✅ APPLIED
   - `rsvp-migration.sql` — ✅ APPLIED (3 RPCs: rsvp_get_event_info, rsvp_lookup_guest, rsvp_update_guest)
+  - `wedding-page-migration.sql` — ✅ APPLIED (10 columns on events, 3 RPCs: wedding_get_page, wedding_rsvp_lookup, wedding_rsvp_submit)
 
 ---
 
-## What Was Done Today (March 30)
+## What Was Done Today (March 31)
+
+### Session 12: Wedding Website Feature — Full Public Pages + Collaborative Editing
+
+**Feature:** Couples (and planners) can now create a full wedding website at a custom URL like `/w/mike-and-ashley`. Inspired by The Knot / Zola wedding websites, built natively into EventSpace.
+
+**Public Wedding Page (`/w/[slug]`)** — `14c2598`
+- Beautiful single-page scroll with sticky navigation
+- **9 configurable sections:** Hero banner (with countdown timer), Our Story, Schedule (from day-of timeline), Venue (with Google Maps link + parking notes), RSVP (inline guest lookup + submit), Q&A (accordion), Travel & Accommodations, Registry (external links), Gallery (from mood board)
+- Section order is customizable by the planner/couple
+- Empty sections auto-hide — no blank gaps
+- Hero supports full-bleed background photo with dark overlay
+- RSVP uses slug-based RPCs (no share_token in URL)
+- Gallery loads images via signed URLs from Supabase storage
+- Fully responsive, mobile-first design
+
+**Planner Wedding Editor (`/planner/[eventId]/wedding`)** — `14c2598`
+- New "Wedding Website" card on event detail page
+- Full editor: publish toggle, custom URL slug, hero photo upload with compression, headline, story textarea, venue details (address, description, map link, parking), FAQ builder (add/remove Q&A pairs), travel info cards (title, description, optional URL), registry links (name + URL), section order with up/down controls
+- Preview and Copy Link buttons when published
+- Schedule and Gallery pull from existing event data (day-of schedule + mood board)
+
+**Client Portal Wedding Editor (`/client/[eventId]/wedding`)** — `cbd651e`
+- Same full editing capability as the planner — truly collaborative
+- Shared `WeddingEditor` component (`src/components/wedding/WeddingEditor.tsx`) used by both planner and client
+- Wedding Website card always visible in client portal quick links grid
+- Shows "Set up your page" or "Published — Edit" based on status
+
+**Client Portal — Collapsible Guest List** — `98c35e2`
+- Guest List & RSVP section now starts collapsed by default
+- Header shows guest count + accepted/pending stats
+- Click to expand/collapse
+- Reduces scroll fatigue for events with large guest lists
+- Import CSV modal still accessible regardless of collapse state
+
+**Database Changes (migration: `wedding-page-migration.sql`):**
+- 10 new columns on `events`: `wedding_page_enabled`, `wedding_slug` (unique), `wedding_headline`, `wedding_story`, `wedding_hero_storage_path`, `wedding_venue_details` (jsonb), `wedding_travel_info` (jsonb array), `wedding_faq` (jsonb array), `wedding_registry_links` (jsonb array), `wedding_sections_order` (jsonb array)
+- Partial unique index on `wedding_slug` (only non-null values)
+- 3 new SECURITY DEFINER RPCs:
+  - `wedding_get_page(slug)` — returns all public page data including schedule + gallery
+  - `wedding_rsvp_lookup(slug, name)` — wraps existing RSVP lookup by slug
+  - `wedding_rsvp_submit(slug, guest_id, ...)` — wraps existing RSVP submit by slug
+
+**Files Changed:**
+| File | Change |
+|------|--------|
+| `src/app/w/[slug]/page.tsx` | NEW — public wedding page (9 sections) |
+| `src/components/wedding/WeddingEditor.tsx` | NEW — shared editor component |
+| `src/app/planner/[eventId]/wedding/page.tsx` | NEW — planner editor wrapper |
+| `src/app/client/[eventId]/wedding/page.tsx` | NEW — client editor wrapper |
+| `src/lib/supabase/wedding.ts` | NEW — data fetching + RSVP functions |
+| `supabase/wedding-page-migration.sql` | NEW — schema + RPCs |
+| `src/lib/types.ts` | Added wedding types to Event interface |
+| `src/lib/supabase/db.ts` | Added wedding fields to eventToRow, eventFieldsToRow, eventCoreFields |
+| `src/lib/seed-data.ts` | Added wedding field defaults |
+| `src/app/planner/[eventId]/page.tsx` | Added Wedding Website card to nav grid |
+| `src/app/planner/inquiries/page.tsx` | Added wedding defaults to createEvent |
+| `src/app/client/[eventId]/page.tsx` | Collapsible guest list + wedding link card |
+
+**All Session 12 Commits:**
+| Commit | Description |
+|--------|-------------|
+| `cbd651e` | Make wedding website editor collaborative — shared between planner and client |
+| `98c35e2` | Add wedding website card to client portal + collapsible guest list |
+| `14c2598` | Add wedding website feature — public couple pages with RSVP, schedule, gallery |
+
+**Known Issue — Not Yet Fixed:**
+- Sidebar shows full Professional navigation for fresh signups on the upgrade page before plan selection. Cosmetic only.
+
+**Future Wedding Website Enhancements (discussed, not built):**
+- Planner-defined meal options per event (currently free text)
+- Email invitations with wedding page link
+- Per-guest magic-link tokens for pre-filled RSVP
+- Custom color themes / font selection for the public page
+- Embedded Google Maps iframe in venue section
+- Photo upload directly from the wedding editor (currently uses mood board)
+- RSVP deadline with auto-close
+
+---
+
+## What Was Done (March 30)
 
 ### Session 11: DIY Plan Activation — Three Bugs Fixed
 
