@@ -1,11 +1,13 @@
 # EventSpace Handoff — March 30, 2026
 
-## Current State: Session 11 Complete — DIY Plan Activation Fixes (Middleware Cache, Sign-Up Funnel, Promo Codes)
+## Current State: Session 11 Complete — DIY Plan Fixes + Guest RSVP Page
 - **Branch:** `main`
 - **Build:** Clean (zero errors)
-- **Latest commit:** `f52c2a5` — Fix DIY plan not activating with 100%-off promo codes
+- **Latest commit:** `add189e` — Add guest self-service RSVP page
 - **Deploy:** Vercel (production)
-- **Migration:** `trial-fix-migration.sql` — ✅ APPLIED
+- **Migrations:**
+  - `trial-fix-migration.sql` — ✅ APPLIED
+  - `rsvp-migration.sql` — ✅ APPLIED (3 RPCs: rsvp_get_event_info, rsvp_lookup_guest, rsvp_update_guest)
 
 ---
 
@@ -42,9 +44,23 @@
 - **Fix:** Added `session.payment_status !== "no_payment_required"` to the guard clause in both verify-session and webhook
 - Files: `src/app/api/stripe/verify-session/route.ts`, `src/app/api/stripe/webhook/route.ts`
 
+**4. Guest Self-Service RSVP Page** (`add189e`)
+- New public route: `/rsvp/[shareToken]` — no login required
+- **Flow:** Guest searches by full name → sees accept/decline form with meal choice, dietary notes, plus-one name → confirmation screen
+- **3 new Supabase RPCs** (migration: `rsvp-migration.sql`):
+  - `rsvp_get_event_info(p_share_token)` — returns event name/date/venue only (no guest data exposed)
+  - `rsvp_lookup_guest(p_share_token, p_name)` — server-side case-insensitive name search, returns only matched guest(s), prevents guest list enumeration
+  - `rsvp_update_guest(p_share_token, p_guest_id, p_rsvp, ...)` — updates a single guest row (not the delete-all pattern used by the client portal)
+- **Security:** Guest list never sent to browser; name lookup is server-side. Single-row UPDATE prevents race conditions with planner edits.
+- **Planner side:** New rose "RSVP Link" button on guests page (`/planner/[eventId]/guests`) copies `yourdomain.com/rsvp/[shareToken]` to clipboard
+- **UI:** Minimal standalone page with EventSpace branding. Three phases: search → form → confirmed. Accept shows "Joyfully Accept" with meal/dietary/plus-one fields; decline shows "Regretfully Decline" with no additional fields. Plus-one field only appears if planner marked guest as having a plus-one.
+- **Multiple name matches:** If two guests share a name, a disambiguation list shows with masked emails (e.g., `ja***@gmail.com`)
+- Files: `src/app/rsvp/[shareToken]/page.tsx`, `src/lib/supabase/rsvp.ts`, `supabase/rsvp-migration.sql`, `src/app/planner/[eventId]/guests/page.tsx`
+
 **All Session 11 Commits:**
 | Commit | Description |
 |--------|-------------|
+| `add189e` | Add guest self-service RSVP page |
 | `f52c2a5` | Fix DIY plan not activating with 100%-off promo codes |
 | `39de265` | Fix DIY sign-up funnel — stop funneling all users into pro trial |
 | `09e2054` | Fix DIY users stuck as trial — clear middleware profile cache after plan update |
@@ -52,8 +68,11 @@
 **Known Issue — Not Yet Fixed:**
 - Sidebar shows full Professional navigation (Inquiries, Calendar, Questionnaires, etc.) for fresh signups on the upgrade page before they've chosen a plan. Cosmetic only — no access to those routes (middleware blocks them).
 
-**Discussed but deferred:**
-- Guest self-service RSVP feature — recommended Option 1 (magic-link RSVP page with per-guest token). See conversation for full options breakdown.
+**Future RSVP Enhancements (discussed, not built):**
+- Planner-defined meal options per event (currently free text)
+- Email invitations with RSVP link sent from the planner dashboard
+- Per-guest magic-link tokens for pre-filled RSVP (no name search needed)
+- Email verification to prevent link-forwarding abuse
 
 ---
 
