@@ -113,7 +113,7 @@ function HeroSection({ data, heroUrl }: { data: WeddingPageData; heroUrl: string
   return (
     <section className="pt-16 pb-12 px-4 text-center" style={{ background: "linear-gradient(to bottom, rgba(var(--w-rgb), 0.05), white, rgb(250 250 249))" }}>
       <div className="max-w-2xl mx-auto mb-10">
-        <p className="text-sm tracking-[0.3em] uppercase mb-6" style={A}>
+        <p className="text-sm tracking-[0.3em] uppercase mb-6 text-stone-400">
           We&apos;re getting married
         </p>
         <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight text-stone-900">
@@ -130,7 +130,7 @@ function HeroSection({ data, heroUrl }: { data: WeddingPageData; heroUrl: string
           </p>
         )}
         {days !== null && days > 0 && (
-          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium" style={{ ...ABgLight, color: "var(--w-dark)" }}>
+          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium text-stone-700" style={ABgLight}>
             <Heart size={16} />
             {days} {days === 1 ? "day" : "days"} to go
           </div>
@@ -202,7 +202,7 @@ function ScheduleSection({ schedule }: { schedule: WeddingPageData["schedule"] }
                       )}
                     </div>
                     {item.time && (
-                      <span className="text-sm font-medium whitespace-nowrap" style={A}>
+                      <span className="text-sm font-medium whitespace-nowrap text-stone-700">
                         {formatTime(item.time)}
                       </span>
                     )}
@@ -251,8 +251,7 @@ function VenueSection({ venue, venueDetails }: { venue: string; venueDetails: We
               href={venueDetails.mapUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm font-medium"
-              style={A}
+              className="inline-flex items-center gap-2 text-sm font-medium text-stone-600 hover:text-stone-800"
             >
               <MapPin size={14} />
               View on Google Maps
@@ -511,8 +510,7 @@ function RsvpSection({ slug }: { slug: string }) {
               )}
               <button
                 onClick={() => { setPhase("search"); setGuest(null); setName(""); setMatches([]); }}
-                className="mt-6 text-xs font-medium"
-                style={A}
+                className="mt-6 text-xs font-medium text-stone-500 hover:text-stone-700"
               >
                 RSVP for another guest
               </button>
@@ -587,8 +585,7 @@ function TravelSection({ travelInfo }: { travelInfo: WeddingPageData["travelInfo
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-medium mt-3"
-                  style={A}
+                  className="inline-flex items-center gap-1.5 text-xs font-medium mt-3 text-stone-500 hover:text-stone-700"
                 >
                   More info <ExternalLink size={11} />
                 </a>
@@ -622,7 +619,7 @@ function RegistrySection({ registryLinks }: { registryLinks: WeddingPageData["re
               className="flex items-center justify-between bg-stone-50 rounded-xl border border-stone-200 p-5 transition-colors group hover:opacity-80"
             >
               <span className="font-medium text-stone-800">{link.name}</span>
-              <ExternalLink size={16} className="text-stone-300" style={A} />
+              <ExternalLink size={16} className="text-stone-400" />
             </a>
           ))}
         </div>
