@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { v4 as uuid } from "uuid";
 import {
   Globe,
@@ -75,6 +75,8 @@ export default function WeddingEditor({ event, onSave, onHeroUpload, backHref, i
   const [slugError, setSlugError] = useState("");
   const [copied, setCopied] = useState(false);
   const [uploadingHero, setUploadingHero] = useState(false);
+  const [heroError, setHeroError] = useState("");
+  const heroInputRef = useRef<HTMLInputElement>(null);
 
   // ── Hydrate from event ──
   useEffect(() => {
@@ -100,16 +102,20 @@ export default function WeddingEditor({ event, onSave, onHeroUpload, backHref, i
   async function handleHeroUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setHeroError("");
     setUploadingHero(true);
     try {
       const path = await onHeroUpload(file);
       setHeroPath(path);
       const url = await getSignedUrl("event-files", path);
       setHeroPreviewUrl(url);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Hero upload failed:", err);
+      setHeroError(err?.message || "Upload failed. Please try again.");
     }
     setUploadingHero(false);
+    // Reset input so the same file can be re-selected
+    if (heroInputRef.current) heroInputRef.current.value = "";
   }
 
   // ── Save ──
@@ -251,17 +257,20 @@ export default function WeddingEditor({ event, onSave, onHeroUpload, backHref, i
                   </button>
                 </div>
               ) : (
-                <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-stone-200 rounded-xl cursor-pointer hover:border-rose-300 hover:bg-rose-50/30 transition-colors">
-                  {uploadingHero ? (
-                    <Loader2 size={20} className="animate-spin text-rose-400" />
-                  ) : (
-                    <>
-                      <Upload size={20} className="text-stone-300 mb-2" />
-                      <span className="text-xs text-stone-400">Click to upload a photo</span>
-                    </>
-                  )}
-                  <input type="file" accept="image/*" onChange={handleHeroUpload} className="hidden" />
-                </label>
+                <>
+                  <label className="flex flex-col items-center justify-center h-32 border-2 border-dashed border-stone-200 rounded-xl cursor-pointer hover:border-rose-300 hover:bg-rose-50/30 transition-colors">
+                    {uploadingHero ? (
+                      <Loader2 size={20} className="animate-spin text-rose-400" />
+                    ) : (
+                      <>
+                        <Upload size={20} className="text-stone-300 mb-2" />
+                        <span className="text-xs text-stone-400">Click to upload a photo</span>
+                      </>
+                    )}
+                    <input ref={heroInputRef} type="file" accept="image/*" onChange={handleHeroUpload} className="sr-only" />
+                  </label>
+                  {heroError && <p className="text-xs text-red-500 mt-2">{heroError}</p>}
+                </>
               )}
             </div>
           </div>
