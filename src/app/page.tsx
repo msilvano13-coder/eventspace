@@ -253,7 +253,7 @@ function JourneyStep({
   step: string;
   title: string;
   description: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: React.ComponentType<{ size?: string | number; className?: string }>;
   isLast: boolean;
 }) {
   return (
