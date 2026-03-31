@@ -168,18 +168,6 @@ export default function ClientPortalPage() {
             <h3 className="font-heading font-semibold text-stone-800 group-hover:text-blue-500 text-sm">Files</h3>
             <p className="text-xs text-stone-400 mt-1">{(event.files ?? []).length} shared files</p>
           </Link>
-          {(event.invoices ?? []).filter((inv) => inv.status !== "draft").length > 0 && (
-            <a
-              href="#invoices"
-              className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
-            >
-              <Receipt size={22} className="text-emerald-400 mb-2" />
-              <h3 className="font-heading font-semibold text-stone-800 group-hover:text-emerald-500 text-sm">Invoices</h3>
-              <p className="text-xs text-stone-400 mt-1">
-                {(event.invoices ?? []).filter((inv) => inv.status !== "draft").length} invoice{(event.invoices ?? []).filter((inv) => inv.status !== "draft").length !== 1 ? "s" : ""}
-              </p>
-            </a>
-          )}
           <Link
             href={`/client/${event.id}/wedding`}
             className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
@@ -479,16 +467,20 @@ export default function ClientPortalPage() {
           </div>
         )}
 
-        {/* Discovered Vendors */}
-        {(event.discoveredVendors ?? []).length > 0 && (
+        {/* Discovered Vendors — hide ones already added to vendor list */}
+        {(() => {
+          const pendingDiscovered = (event.discoveredVendors ?? []).filter(
+            (dv) => !(event.vendors ?? []).some((ev) => ev.name === dv.name && ev.phone === dv.phone)
+          );
+          return pendingDiscovered.length > 0 ? (
           <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
             <div className="flex items-center gap-2 px-5 pt-5 pb-4 border-b border-stone-100">
               <Search size={15} className="text-teal-400" />
               <h2 className="font-heading font-semibold text-stone-800">Discovered Vendors</h2>
-              <span className="text-xs text-stone-400 ml-1">({(event.discoveredVendors ?? []).length})</span>
+              <span className="text-xs text-stone-400 ml-1">({pendingDiscovered.length})</span>
             </div>
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(event.discoveredVendors ?? []).map((v) => (
+              {pendingDiscovered.map((v) => (
                 <div key={v.id} className="border border-stone-200 rounded-xl p-4 hover:border-stone-300 transition-colors relative">
                   <div className="flex items-start justify-between mb-1.5">
                     <h3 className="text-sm font-semibold text-stone-800 leading-tight">{v.name}</h3>
@@ -531,46 +523,39 @@ export default function ClientPortalPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-2 mt-3 pt-2.5 border-t border-stone-100">
-                    {/* Check if already accepted (exists in vendors list) */}
-                    {(event.vendors ?? []).some((ev) => ev.name === v.name && ev.phone === v.phone) ? (
-                      <span className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-600">
-                        <CheckCircle2 size={13} />
-                        Accepted
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          const validCategories: VendorCategory[] = [
-                            "catering", "photography", "videography", "music", "flowers",
-                            "cake", "venue", "hair & makeup", "transport", "officiant", "other",
-                          ];
-                          const mappedCategory = validCategories.includes(v.category as VendorCategory)
-                            ? (v.category as VendorCategory)
-                            : "other";
+                    <button
+                      onClick={() => {
+                        const validCategories: VendorCategory[] = [
+                          "catering", "photography", "videography", "music", "flowers",
+                          "cake", "venue", "hair & makeup", "transport", "officiant", "other",
+                        ];
+                        const mappedCategory = validCategories.includes(v.category as VendorCategory)
+                          ? (v.category as VendorCategory)
+                          : "other";
 
-                          const newVendor: Vendor = {
-                            id: crypto.randomUUID(),
-                            name: v.name,
-                            category: mappedCategory,
-                            contact: v.name,
-                            phone: v.phone || "",
-                            email: "",
-                            notes: "",
-                            mealChoice: "",
-                            contractTotal: 0,
-                            payments: [],
-                          };
+                        const newVendor: Vendor = {
+                          id: crypto.randomUUID(),
+                          name: v.name,
+                          category: mappedCategory,
+                          contact: v.name,
+                          phone: v.phone || "",
+                          email: "",
+                          notes: "",
+                          mealChoice: "",
+                          contractTotal: 0,
+                          payments: [],
+                        };
 
-                          updateEvent(event.id, {
-                            vendors: [...(event.vendors || []), newVendor],
-                          });
-                        }}
-                        className="flex items-center gap-1.5 text-[11px] font-medium text-teal-600 hover:text-teal-700 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors"
-                      >
-                        <Check size={12} />
-                        Accept Vendor
-                      </button>
-                    )}
+                        updateEvent(event.id, {
+                          vendors: [...(event.vendors || []), newVendor],
+                          discoveredVendors: (event.discoveredVendors || []).filter((dv) => dv.id !== v.id),
+                        });
+                      }}
+                      className="flex items-center gap-1.5 text-[11px] font-medium text-teal-600 hover:text-teal-700 bg-teal-50 hover:bg-teal-100 px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      <Check size={12} />
+                      Accept Vendor
+                    </button>
                     <div className="flex-1" />
                     {v.googleMapsUrl && (
                       <a
@@ -588,7 +573,8 @@ export default function ClientPortalPage() {
               ))}
             </div>
           </div>
-        )}
+          ) : null;
+        })()}
 
         {/* Invoices */}
         {(event.invoices ?? []).filter((inv) => inv.status !== "draft").length > 0 && (
