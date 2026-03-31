@@ -3,7 +3,7 @@
 ## Current State: Session 13 Complete — Full Security Audit + Client Vendor Enhancements
 - **Branch:** `main`
 - **Build:** Clean (zero errors)
-- **Latest commit:** `c2f814b` — Security audit fixes, RLS optimization, and client vendor enhancements
+- **Latest commit:** `7d65797` — Remove unused DollarSign import that broke Vercel build
 - **Deploy:** Vercel (production) — auto-deploys on push
 - **Migrations:**
   - `trial-fix-migration.sql` — ✅ APPLIED
@@ -65,6 +65,20 @@ Comprehensive audit of the entire platform to ensure it's bulletproof for 1000 c
 | `supabase/wedding-page-migration.sql` | Remove shareToken/userId from public RPC |
 | `supabase/atomic-replace-migration.sql` | **NEW** — atomic vendor/invoice RPCs |
 | `supabase/remaining-rls-optimization.sql` | **NEW** — user_id denormalization + RLS upgrade |
+
+#### Build Fix
+- `c2f814b` deploy failed on Vercel due to unused `DollarSign` import (ESLint treats as error). Fixed in `7d65797`.
+
+#### Known Scalability Items (Not Yet Addressed)
+These are infrastructure-level items needed for 1000 **simultaneous** users (code is solid, infra has limits):
+
+| Priority | Issue | Fix | Effort |
+|----------|-------|-----|--------|
+| 🔴 CRITICAL | No Supabase connection pooling — each request opens a direct DB connection | Enable pgbouncer pooler in Supabase dashboard, use pooler URL | 5 min |
+| 🔴 CRITICAL | In-memory rate limiters don't share state across Vercel serverless instances | Move to Upstash Redis or Supabase-backed rate limiting | 2-3 hrs |
+| 🟡 HIGH | Unbounded client stores (InquiryStore, QuestionnaireStore, PreferredVendorStore, ContractTemplateStore) | Add LRU eviction + size caps | 2-3 hrs |
+| 🟡 HIGH | Stripe webhooks processed inline (no queue) | Add async queue (Vercel KV / Bull.js) | 4-5 hrs |
+| 🟡 MEDIUM | Silent 500-item truncation on sub-entity fetches | Implement cursor pagination | 4-6 hrs |
 
 ---
 
