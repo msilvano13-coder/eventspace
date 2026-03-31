@@ -30,14 +30,19 @@ export async function POST(request: Request) {
 
   // Idempotency: atomic claim via INSERT (unique constraint on stripe_event_id)
   // If another instance already claimed this event, the INSERT fails and we skip.
+  // Only skip on unique constraint violations (code 23505), NOT on missing table or other errors.
   const { error: claimError } = await supabaseAdmin
     .from("stripe_webhook_events")
     .insert({ stripe_event_id: event.id, event_type: event.type });
 
   if (claimError) {
-    // Unique constraint violation = duplicate delivery — skip
-    console.log(`Webhook event ${event.id} already processed (deduplicated)`);
-    return NextResponse.json({ received: true, deduplicated: true });
+    if (claimError.code === "23505") {
+      // Unique constraint violation = genuine duplicate delivery — skip
+      console.log(`Webhook event ${event.id} already processed (deduplicated)`);
+      return NextResponse.json({ received: true, deduplicated: true });
+    }
+    // Any other error (missing table, permission, etc.) — log but continue processing
+    console.warn(`Webhook idempotency insert failed (non-duplicate): ${claimError.code} ${claimError.message}. Processing anyway.`);
   }
 
   try {

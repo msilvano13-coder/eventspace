@@ -73,7 +73,12 @@ export async function POST(request: Request) {
       }
     }
 
-    const origin = new URL(request.url).origin;
+    // Use NEXT_PUBLIC_SITE_URL or VERCEL_PROJECT_PRODUCTION_URL for reliable origin
+    const origin =
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      (process.env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : new URL(request.url).origin);
     console.log("[checkout] origin:", origin, "user:", user.id, "plan:", plan);
 
     if (plan === "diy") {
