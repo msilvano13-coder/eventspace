@@ -1,15 +1,61 @@
 # EventSpace Handoff — March 30, 2026
 
-## Current State: Session 10 Complete — Client Portal Enhancements, Delete Account Fix, DIY Signup Flow
+## Current State: Session 11 Complete — DIY Plan Activation Fixes (Middleware Cache, Sign-Up Funnel, Promo Codes)
 - **Branch:** `main`
 - **Build:** Clean (zero errors)
-- **Latest commit:** `9c9f2fd` — Fix DIY signup flow — no trial references for fresh signups
+- **Latest commit:** `f52c2a5` — Fix DIY plan not activating with 100%-off promo codes
 - **Deploy:** Vercel (production)
 - **Migration:** `trial-fix-migration.sql` — ✅ APPLIED
 
 ---
 
 ## What Was Done Today (March 30)
+
+### Session 11: DIY Plan Activation — Three Bugs Fixed
+
+**Problem:** Users signing up for the DIY plan ($99 one-time) were stuck on `plan: 'trial'` in Supabase and never activated as DIY users. The full Professional sidebar was shown, and the app behaved as if they were on an expired trial.
+
+**Root Causes & Fixes:**
+
+**1. Middleware profile cache cookie not cleared after plan update** (`09e2054`)
+- The middleware caches the profile (`plan`, `trial_ends_at`) in a signed HMAC cookie for 15 minutes
+- After Stripe checkout, `verify-session` updated the DB to `plan: 'diy'`, but the stale cookie still said `plan: 'trial'`
+- Every subsequent navigation read the cookie, saw expired trial, and redirected to `/planner/upgrade`
+- **Fix:** `verify-session` now sets `es_profile_cache` cookie to `maxAge: 0` on success, forcing the middleware to re-fetch from DB
+- Settings page now also checks `res.ok` before calling `plannerStore.refetch()` and uses the response plan for analytics
+- Files: `src/app/api/stripe/verify-session/route.ts`, `src/app/planner/settings/page.tsx`
+
+**2. Sign-up funnel funneled all users into Pro trial** (`39de265`)
+- Sign-up page said "Start your 30-day free trial of Professional" with no plan selection
+- On the upgrade page, the Pro "Start 30-Day Free Trial" button had the prominent rose CTA; DIY was a plain white "Buy Now"
+- Users intending to buy DIY naturally clicked the Pro trial button
+- **Fix:** Sign-up page now accepts `?plan=diy` query param with plan-specific messaging ("Create your account to get started with DIY" vs generic "Get started — choose your plan after sign-up")
+- Plan param threads through sign-in → upgrade page
+- Upgrade page swaps card styling when `?plan=diy`: DIY gets rose border/CTA, Pro gets toned down
+- DIY CTAs on homepage/marketing should link to `/sign-up?plan=diy`
+- Files: `src/app/sign-up/page.tsx`, `src/app/sign-in/page.tsx`, `src/app/planner/upgrade/page.tsx`
+
+**3. 100%-off promo codes silently blocked plan activation** (`f52c2a5`)
+- Stripe sets `payment_status` to `"no_payment_required"` (not `"paid"`) when a promo code covers the full amount
+- Both `verify-session` and the webhook only accepted `"paid"`, causing the plan update to be silently skipped
+- The BETA promo code (100% off) triggered this — users completed checkout but stayed on `trial`
+- **Fix:** Added `session.payment_status !== "no_payment_required"` to the guard clause in both verify-session and webhook
+- Files: `src/app/api/stripe/verify-session/route.ts`, `src/app/api/stripe/webhook/route.ts`
+
+**All Session 11 Commits:**
+| Commit | Description |
+|--------|-------------|
+| `f52c2a5` | Fix DIY plan not activating with 100%-off promo codes |
+| `39de265` | Fix DIY sign-up funnel — stop funneling all users into pro trial |
+| `09e2054` | Fix DIY users stuck as trial — clear middleware profile cache after plan update |
+
+**Known Issue — Not Yet Fixed:**
+- Sidebar shows full Professional navigation (Inquiries, Calendar, Questionnaires, etc.) for fresh signups on the upgrade page before they've chosen a plan. Cosmetic only — no access to those routes (middleware blocks them).
+
+**Discussed but deferred:**
+- Guest self-service RSVP feature — recommended Option 1 (magic-link RSVP page with per-guest token). See conversation for full options breakdown.
+
+---
 
 ### Session 10: Client Portal, Delete Account, Canvas Fix, DIY Signup
 
