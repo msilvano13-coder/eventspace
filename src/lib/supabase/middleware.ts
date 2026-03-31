@@ -178,7 +178,10 @@ export async function updateSession(request: NextRequest) {
       plan === "trial" &&
       (!trialEndsAt || new Date(trialEndsAt).getTime() < Date.now());
 
-    if (isPending || isExpired || isTrialOver) {
+    // Allow checkout return to /planner/settings with session_id so verify-session can fire
+    const isCheckoutReturn = pathname === "/planner/settings" && request.nextUrl.searchParams.has("session_id");
+
+    if ((isPending || isExpired || isTrialOver) && !isCheckoutReturn) {
       const url = request.nextUrl.clone();
       url.pathname = "/planner/upgrade";
       return NextResponse.redirect(url);
