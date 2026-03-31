@@ -57,41 +57,6 @@ const INV_STATUS_COLORS: Record<string, string> = {
   paid: "bg-emerald-50 text-emerald-600",
 };
 
-function WeddingWebsiteCard({ slug }: { slug: string }) {
-  const [copied, setCopied] = useState(false);
-  const url = typeof window !== "undefined" ? `${window.location.origin}/w/${slug}` : `/w/${slug}`;
-
-  function copyLink() {
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft">
-      <Globe size={22} className="text-rose-400 mb-2" />
-      <h3 className="font-heading font-semibold text-stone-800 text-sm">Wedding Website</h3>
-      <p className="text-xs text-stone-400 mt-1 mb-3">Share with your guests</p>
-      <div className="flex items-center gap-2">
-        <a
-          href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-1 text-xs text-rose-500 hover:text-rose-600 font-medium truncate"
-        >
-          {url.replace(/^https?:\/\//, "")}
-        </a>
-        <button
-          onClick={copyLink}
-          className="shrink-0 text-xs text-stone-500 hover:text-stone-700 px-2 py-1 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors"
-        >
-          {copied ? "Copied!" : "Copy"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
 export default function ClientPortalPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
@@ -215,9 +180,14 @@ export default function ClientPortalPage() {
               </p>
             </a>
           )}
-          {event.weddingPageEnabled && event.weddingSlug && (
-            <WeddingWebsiteCard slug={event.weddingSlug} />
-          )}
+          <Link
+            href={`/client/${event.id}/wedding`}
+            className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
+          >
+            <Globe size={22} className="text-rose-400 mb-2" />
+            <h3 className="font-heading font-semibold text-stone-800 group-hover:text-rose-500 text-sm">Wedding Website</h3>
+            <p className="text-xs text-stone-400 mt-1">{event.weddingPageEnabled ? "Published — Edit" : "Set up your page"}</p>
+          </Link>
         </div>
 
         {/* To Do List — client can toggle, add, edit, delete */}
