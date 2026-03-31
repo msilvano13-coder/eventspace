@@ -112,8 +112,7 @@ export async function updateSession(request: NextRequest) {
   if (
     user &&
     pathname.startsWith("/planner") &&
-    pathname !== "/planner/upgrade" &&
-    pathname !== "/planner/settings"
+    pathname !== "/planner/upgrade"
   ) {
     // Try to read cached profile from cookie to avoid DB hit on every request
     let plan: string | null = null;
