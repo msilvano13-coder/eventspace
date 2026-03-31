@@ -43,15 +43,24 @@ function darken(rgb: [number, number, number], amount: number): string {
   return `rgb(${r}, ${g}, ${b})`;
 }
 
+/** Measure perceived brightness (0-255) */
+function luminance(rgb: [number, number, number]): number {
+  return 0.299 * rgb[0] + 0.587 * rgb[1] + 0.114 * rgb[2];
+}
+
 /** Returns CSS custom properties derived from the first color in the palette */
 function getThemeVars(palette: string[]): React.CSSProperties & Record<string, string> {
   const accent = palette?.[0] || "#f43f5e"; // rose-500 fallback
   const rgb = hexToRgb(accent) ?? [244, 63, 94];
+  const lum = luminance(rgb);
+  // Light colors (pastels) need more darkening; saturated colors need less
+  const textDarken = lum > 180 ? 0.35 : lum > 120 ? 0.15 : 0.05;
+  const btnDarken = lum > 180 ? 0.2 : 0.05;
   return {
     "--w": accent,
     "--w-rgb": `${rgb[0]}, ${rgb[1]}, ${rgb[2]}`,
-    "--w-dark": darken(rgb, 0.4),   // darkened for text on white
-    "--w-btn": darken(rgb, 0.15),   // slightly darkened for buttons
+    "--w-dark": darken(rgb, textDarken),
+    "--w-btn": darken(rgb, btnDarken),
   } as React.CSSProperties & Record<string, string>;
 }
 
