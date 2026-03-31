@@ -69,47 +69,46 @@ function HeroSection({ data, heroUrl }: { data: WeddingPageData; heroUrl: string
   const days = daysUntil(data.date);
 
   return (
-    <section className="relative min-h-[85vh] flex items-center justify-center text-center px-4">
-      {/* Background image */}
-      {heroUrl && (
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url(${heroUrl})` }}
-        >
-          <div className="absolute inset-0 bg-black/40" />
-        </div>
-      )}
-      {!heroUrl && (
-        <div className="absolute inset-0 bg-gradient-to-b from-rose-50 via-white to-stone-50" />
-      )}
-
-      <div className="relative z-10 max-w-2xl">
-        <p className={`text-sm tracking-[0.3em] uppercase mb-6 ${heroUrl ? "text-white/80" : "text-rose-400"}`}>
+    <section className="bg-gradient-to-b from-rose-50 via-white to-stone-50 pt-16 pb-12 px-4 text-center">
+      <div className="max-w-2xl mx-auto mb-10">
+        <p className="text-sm tracking-[0.3em] uppercase mb-6 text-rose-400">
           We&apos;re getting married
         </p>
-        <h1 className={`font-heading text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight ${heroUrl ? "text-white" : "text-stone-900"}`}>
+        <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight text-stone-900">
           {data.headline || data.name}
         </h1>
         {data.date && (
-          <p className={`text-lg sm:text-xl mb-2 ${heroUrl ? "text-white/90" : "text-stone-600"}`}>
+          <p className="text-lg sm:text-xl mb-2 text-stone-600">
             {formatDate(data.date)}
           </p>
         )}
         {data.venue && (
-          <p className={`text-base sm:text-lg mb-8 ${heroUrl ? "text-white/80" : "text-stone-500"}`}>
+          <p className="text-base sm:text-lg mb-8 text-stone-500">
             {data.venue}
           </p>
         )}
         {days !== null && days > 0 && (
-          <div className={`inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium ${heroUrl ? "bg-white/20 backdrop-blur-sm text-white" : "bg-rose-50 text-rose-600"}`}>
+          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium bg-rose-50 text-rose-600">
             <Heart size={16} />
             {days} {days === 1 ? "day" : "days"} to go
           </div>
         )}
-        {/* Scroll indicator */}
-        <div className={`mt-12 animate-bounce ${heroUrl ? "text-white/60" : "text-stone-300"}`}>
-          <ChevronDown size={24} className="mx-auto" />
+      </div>
+
+      {/* Hero photo — centered, 2/3 width */}
+      {heroUrl && (
+        <div className="max-w-3xl mx-auto w-2/3">
+          <img
+            src={heroUrl}
+            alt={data.headline || data.name}
+            className="w-full rounded-2xl shadow-lg object-cover"
+          />
         </div>
+      )}
+
+      {/* Scroll indicator */}
+      <div className="mt-10 animate-bounce text-stone-300">
+        <ChevronDown size={24} className="mx-auto" />
       </div>
     </section>
   );

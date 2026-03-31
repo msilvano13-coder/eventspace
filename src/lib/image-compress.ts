@@ -126,7 +126,7 @@ export function compressImageToBlob(file: File): Promise<CompressedImageBlob> {
       img.onerror = () => reject(new Error("Failed to load image"));
       img.onload = async () => {
         try {
-          const full = await resizeToBlob(img, 1200, 0.7);
+          const full = await resizeToBlob(img, 1920, 0.85);
           const thumb = await resizeToBlob(img, 400, 0.6);
           resolve({ full, thumb });
         } catch (err) {
