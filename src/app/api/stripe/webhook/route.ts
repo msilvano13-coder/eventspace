@@ -45,6 +45,9 @@ export async function POST(request: Request) {
     console.warn(`Webhook idempotency insert failed (non-duplicate): ${claimError.code} ${claimError.message}. Processing anyway.`);
   }
 
+  // Diagnostic info for debugging (temporary)
+  const debug: Record<string, unknown> = { eventType: event.type };
+
   try {
     switch (event.type) {
       case "checkout.session.completed": {
@@ -53,11 +56,23 @@ export async function POST(request: Request) {
         const plan = session.metadata?.plan as "diy" | "professional";
         const customerId = session.customer as string;
 
-        if (!plan) break;
+        debug.sessionId = session.id;
+        debug.userId = userId;
+        debug.plan = plan;
+        debug.customerId = customerId;
+        debug.mode = session.mode;
+        debug.paymentStatus = session.payment_status;
+        debug.status = session.status;
+
+        if (!plan) {
+          debug.skippedReason = "no plan in metadata";
+          break;
+        }
 
         // For one-time payments (DIY), only grant access if payment is confirmed
         // "no_payment_required" covers 100%-off promo codes where Stripe skips payment.
         if (session.mode === "payment" && session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
+          debug.skippedReason = `payment_status=${session.payment_status}`;
           console.warn(`checkout.session.completed: payment_status=${session.payment_status} for session ${session.id}, deferring plan update`);
           break;
         }
@@ -73,23 +88,34 @@ export async function POST(request: Request) {
           updateData.stripe_subscription_id = session.subscription as string;
         }
 
+        debug.updateData = updateData;
+
         if (userId) {
           // Primary: match by user ID from metadata
-          const { error, count } = await supabaseAdmin
+          const { error, data, count } = await supabaseAdmin
             .from("profiles")
             .update(updateData)
-            .eq("id", userId);
+            .eq("id", userId)
+            .select("id, plan")
+            .single();
+          debug.updateError = error;
+          debug.updateResult = data;
+          debug.updateCount = count;
           if (error) console.error("checkout.session.completed update by userId failed:", error);
-          if (count === 0) console.warn(`checkout.session.completed: no profile matched userId=${userId}`);
         } else if (customerId) {
           // Fallback: match by stripe_customer_id
-          const { error, count } = await supabaseAdmin
+          const { error, data, count } = await supabaseAdmin
             .from("profiles")
             .update(updateData)
-            .eq("stripe_customer_id", customerId);
+            .eq("stripe_customer_id", customerId)
+            .select("id, plan")
+            .single();
+          debug.updateError = error;
+          debug.updateResult = data;
+          debug.updateCount = count;
           if (error) console.error("checkout.session.completed update by customerId failed:", error);
-          if (count === 0) console.warn(`checkout.session.completed: no profile matched customerId=${customerId}`);
         } else {
+          debug.skippedReason = "no userId or customerId";
           console.error("checkout.session.completed: no userId or customerId available, cannot update plan");
         }
 
@@ -220,5 +246,5 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json({ received: true });
+  return NextResponse.json({ received: true, debug });
 }

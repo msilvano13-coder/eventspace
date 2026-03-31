@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore, useCallback, useRef, useState, useEffect } from "react";
-import { store } from "@/lib/store";
+import { store, SUB_ENTITY_KEYS } from "@/lib/store";
 import { questionnaireStore } from "@/lib/questionnaire-store";
 import { plannerStore } from "@/lib/planner-store";
 import { inquiryStore } from "@/lib/inquiry-store";
@@ -95,6 +95,17 @@ export function useEvent(id: string): Event | undefined {
  * Accepts multiple keys to load several entities at once.
  */
 export function useEventSubEntities(eventId: string, keys: string[]): void {
+  // Protocol 5: validate keys at call site in development
+  if (process.env.NODE_ENV === "development") {
+    for (const key of keys) {
+      if (!SUB_ENTITY_KEYS.has(key)) {
+        throw new Error(
+          `[useEventSubEntities] Invalid key "${key}". Valid keys: ${Array.from(SUB_ENTITY_KEYS).join(", ")}`
+        );
+      }
+    }
+  }
+
   useEffect(() => {
     if (!eventId) return;
     for (const key of keys) {

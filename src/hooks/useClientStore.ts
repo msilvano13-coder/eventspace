@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { Event } from "@/lib/types";
+import { showErrorToast, devThrow } from "@/lib/error-toast";
 import {
   fetchClientEvent,
   clientUpdateGuests,
@@ -27,7 +28,8 @@ export function useClientEvent(shareToken: string) {
       const data = await fetchClientEvent(shareToken);
       setEvent(data);
     } catch (err) {
-      console.error("[useClientEvent] fetch failed:", err);
+      showErrorToast("Failed to load event. Please refresh the page.");
+      devThrow("useClientEvent fetch failed", err);
     } finally {
       setLoading(false);
     }
@@ -61,7 +63,8 @@ export function useClientActions(shareToken: string) {
       try {
         await Promise.all(updates);
       } catch (err) {
-        console.error("[useClientActions] update failed:", err);
+        showErrorToast("Failed to save changes. Please try again.");
+        devThrow("useClientActions update failed", err);
       }
     },
     [shareToken]

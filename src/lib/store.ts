@@ -1,6 +1,7 @@
 "use client";
 
 import { Event } from "./types";
+import { showErrorToast, devThrow } from "./error-toast";
 import {
   getUserId, fetchEvents, fetchEventCore,
   createEvent as dbCreateEvent,
@@ -20,7 +21,7 @@ type Listener = () => void;
 
 const EMPTY: Event[] = [];
 
-const SUB_ENTITY_KEYS = new Set<string>([
+export const SUB_ENTITY_KEYS = new Set<string>([
   "timeline", "schedule", "floorPlans", "vendors", "guests",
   "questionnaires", "invoices", "expenses", "budget", "contracts",
   "files", "moodBoard", "messages", "discoveredVendors",
@@ -118,7 +119,8 @@ class EventStore {
       this.accessOrder = new Map(rows.map((e: Event) => [e.id, true as const]));
       this._hasMore = hasMore;
     } catch (err) {
-      console.error("[EventStore] hydrate failed:", err);
+      showErrorToast("Failed to load events. Please refresh the page.");
+      devThrow("EventStore hydrate failed", err);
       this.events = new Map();
       this.accessOrder = new Map();
     }
@@ -143,7 +145,8 @@ class EventStore {
       this.rebuildCache();
       this.emit();
     } catch (err) {
-      console.error("[EventStore] loadMore failed:", err);
+      showErrorToast("Failed to load more events.");
+      devThrow("EventStore loadMore failed", err);
     }
   }
 
@@ -194,7 +197,10 @@ class EventStore {
             this.emit();
           }
         })
-        .catch((err) => console.error("[EventStore] core load failed:", err))
+        .catch((err) => {
+          showErrorToast("Failed to load event details.");
+          devThrow("EventStore core load failed", err);
+        })
         .finally(() => this.loadingCore.delete(id));
     }
     return evt;
@@ -205,6 +211,13 @@ class EventStore {
    * Call from tab pages: store.ensureSubEntity(eventId, "guests")
    */
   ensureSubEntity(eventId: string, key: string): void {
+    if (!SUB_ENTITY_KEYS.has(key)) {
+      const msg = `Invalid sub-entity key "${key}". Valid keys: ${Array.from(SUB_ENTITY_KEYS).join(", ")}`;
+      showErrorToast(msg);
+      devThrow(msg);
+      return;
+    }
+
     const loaded = this.loadedEntities.get(eventId);
     if (loaded?.has(key)) return;
 
@@ -255,7 +268,10 @@ class EventStore {
           retry(0);
         }
       })
-      .catch((err) => console.error(`[EventStore] load ${key} failed:`, err))
+      .catch((err) => {
+        showErrorToast(`Failed to load ${key}. Try refreshing.`);
+        devThrow(`EventStore load ${key} failed`, err);
+      })
       .finally(() => {
         const l = this.loadingEntities.get(eventId);
         if (l) l.delete(key);
@@ -316,7 +332,7 @@ class EventStore {
         })
       );
     } catch (err) {
-      console.error("[EventStore] update failed, rolling back:", err);
+      showErrorToast("Failed to save changes. Your edits have been reverted.");
       // Rollback: restore previous state
       this.events.set(id, existing);
       this.rebuildCache();
@@ -341,7 +357,7 @@ class EventStore {
     try {
       await dbDeleteEvent(id);
     } catch (err) {
-      console.error("[EventStore] delete failed, rolling back:", err);
+      showErrorToast("Failed to delete event. It has been restored.");
       // Rollback: restore the event so it reappears in the UI
       if (snapshot) {
         this.events.set(id, snapshot);
