@@ -139,15 +139,6 @@ export default function ClientPortalPage() {
           </div>
         </div>
 
-        {/* Color Palette */}
-        <ClientColorPalette event={event} onUpdate={(colors) => updateEvent(event.id, { colorPalette: colors })} />
-
-        {/* Day Timeline — editable */}
-        <ClientTimeline
-          event={event}
-          onUpdate={(schedule) => updateEvent(event.id, { schedule })}
-        />
-
         {/* Quick links row */}
         <div className="grid grid-cols-2 gap-3">
           {(event.floorPlanJSON || (event.floorPlans ?? []).some((fp) => fp.json)) && (
@@ -185,6 +176,15 @@ export default function ClientPortalPage() {
             <p className="text-xs text-stone-400 mt-1">{event.weddingPageEnabled ? "Published — Edit" : "Set up your page"}</p>
           </Link>
         </div>
+
+        {/* Color Palette */}
+        <ClientColorPalette event={event} onUpdate={(colors) => updateEvent(event.id, { colorPalette: colors })} />
+
+        {/* Day Timeline — editable */}
+        <ClientTimeline
+          event={event}
+          onUpdate={(schedule) => updateEvent(event.id, { schedule })}
+        />
 
         {/* To Do List — client can toggle, add, edit, delete */}
         <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
