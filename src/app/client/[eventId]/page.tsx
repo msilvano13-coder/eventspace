@@ -5,7 +5,7 @@ import { useEvent, useEventSubEntities, useStoreActions, useQuestionnaires, useP
 import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, ChevronRight, CheckCircle2, Receipt, Users, Wallet, Search, Phone, Globe, Download, Upload, UserCheck, PenTool, Plus, Trash2, Pencil, X, UtensilsCrossed, AlertTriangle, Image, DollarSign, Mail } from "lucide-react";
+import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, ChevronRight, CheckCircle2, Receipt, Users, Wallet, Search, Phone, Globe, Download, Upload, UserCheck, PenTool, Plus, Trash2, Pencil, X, UtensilsCrossed, AlertTriangle, Image, Mail } from "lucide-react";
 import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY, Vendor, VendorCategory, VendorPaymentItem, EventContract, ScheduleItem } from "@/lib/types";
 import { readPdfAsBase64, downloadBase64File, formatBytes } from "@/lib/pdf-utils";
 import MessageThread from "@/components/event/MessageThread";
