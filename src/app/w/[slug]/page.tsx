@@ -35,6 +35,14 @@ function hexToRgb(hex: string): [number, number, number] | null {
   return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
 }
 
+/** Darken a color by mixing toward black */
+function darken(rgb: [number, number, number], amount: number): string {
+  const r = Math.round(rgb[0] * (1 - amount));
+  const g = Math.round(rgb[1] * (1 - amount));
+  const b = Math.round(rgb[2] * (1 - amount));
+  return `rgb(${r}, ${g}, ${b})`;
+}
+
 /** Returns CSS custom properties derived from the first color in the palette */
 function getThemeVars(palette: string[]): React.CSSProperties & Record<string, string> {
   const accent = palette?.[0] || "#f43f5e"; // rose-500 fallback
@@ -42,14 +50,15 @@ function getThemeVars(palette: string[]): React.CSSProperties & Record<string, s
   return {
     "--w": accent,
     "--w-rgb": `${rgb[0]}, ${rgb[1]}, ${rgb[2]}`,
+    "--w-dark": darken(rgb, 0.4),   // darkened for text on white
+    "--w-btn": darken(rgb, 0.15),   // slightly darkened for buttons
   } as React.CSSProperties & Record<string, string>;
 }
 
-// Shorthand style helpers using the CSS variables
-const A = { color: "var(--w)" } as React.CSSProperties;                    // accent text
-const ABg = { backgroundColor: "var(--w)" } as React.CSSProperties;        // accent bg (buttons)
-const ABgLight = { backgroundColor: "rgba(var(--w-rgb), 0.08)" } as React.CSSProperties;  // light accent bg
-// ABorder available: { borderColor: "var(--w)" }
+// Style helpers — text uses darkened accent, backgrounds use the raw color
+const A = { color: "var(--w-dark)" } as React.CSSProperties;               // accent text (darkened for readability)
+const ABg = { backgroundColor: "var(--w-btn)", color: "white" } as React.CSSProperties;  // button bg
+const ABgLight = { backgroundColor: "rgba(var(--w-rgb), 0.10)" } as React.CSSProperties; // light accent bg
 
 // ── Helpers ──
 
@@ -112,7 +121,7 @@ function HeroSection({ data, heroUrl }: { data: WeddingPageData; heroUrl: string
           </p>
         )}
         {days !== null && days > 0 && (
-          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium" style={{ ...ABgLight, color: "var(--w)" }}>
+          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium" style={{ ...ABgLight, color: "var(--w-dark)" }}>
             <Heart size={16} />
             {days} {days === 1 ? "day" : "days"} to go
           </div>
