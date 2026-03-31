@@ -74,8 +74,11 @@ export async function POST(request: Request) {
     }
 
     const origin = new URL(request.url).origin;
+    console.log("[checkout] origin:", origin, "user:", user.id, "plan:", plan);
 
     if (plan === "diy") {
+      const successUrl = `${origin}/api/stripe/checkout-complete?session_id={CHECKOUT_SESSION_ID}`;
+      console.log("[checkout] DIY success_url:", successUrl);
       const session = await stripe.checkout.sessions.create({
         customer: customerId,
         mode: "payment",
@@ -86,7 +89,7 @@ export async function POST(request: Request) {
             quantity: 1,
           },
         ],
-        success_url: `${origin}/api/stripe/checkout-complete?session_id={CHECKOUT_SESSION_ID}`,
+        success_url: successUrl,
         cancel_url: `${origin}/planner/upgrade`,
         metadata: {
           supabase_user_id: user.id,

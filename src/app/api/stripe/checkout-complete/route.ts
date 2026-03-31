@@ -17,6 +17,8 @@ export async function GET(request: Request) {
   const origin = url.origin;
   const sessionId = url.searchParams.get("session_id");
 
+  console.log("[checkout-complete] HIT — sessionId:", sessionId, "origin:", origin);
+
   if (!sessionId) {
     console.error("checkout-complete: no session_id");
     return NextResponse.redirect(`${origin}/planner/upgrade`);
