@@ -62,6 +62,7 @@ export default function GuestsPage() {
   const [importErrors, setImportErrors] = useState<string[]>([]);
   const [importFileName, setImportFileName] = useState("");
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [rsvpLinkCopied, setRsvpLinkCopied] = useState(false);
   const [showRelationships, setShowRelationships] = useState(false);
   const [relationships, setRelationships] = useState<GuestRelationship[]>([]);
   const [relGuest1, setRelGuest1] = useState("");
@@ -391,6 +392,18 @@ export default function GuestsPage() {
           <p className="text-xs text-stone-400">Guest List</p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/rsvp/${event.shareToken}`;
+              navigator.clipboard.writeText(url);
+              setRsvpLinkCopied(true);
+              setTimeout(() => setRsvpLinkCopied(false), 2000);
+            }}
+            className="flex items-center gap-1.5 border border-rose-200 bg-rose-50 px-3 py-2 rounded-xl text-xs text-rose-600 hover:bg-rose-100 transition-colors"
+          >
+            {rsvpLinkCopied ? <Check size={13} /> : <Link2 size={13} />}
+            <span className="hidden sm:inline">{rsvpLinkCopied ? "Copied!" : "RSVP Link"}</span>
+          </button>
           <button
             onClick={() => setShowImport(true)}
             className="flex items-center gap-1.5 border border-stone-200 px-3 py-2 rounded-xl text-xs text-stone-500 hover:bg-stone-50 transition-colors"
