@@ -80,15 +80,17 @@ function SettingsContent() {
       : 0;
 
   const planLabel =
-    profile.plan === "trial"
-      ? "Trial"
-      : profile.plan === "diy"
-        ? "DIY"
-        : profile.plan === "professional"
-          ? "Professional"
-          : "Expired";
+    profile.plan === "pending"
+      ? "No Plan Selected"
+      : profile.plan === "trial"
+        ? "Trial"
+        : profile.plan === "diy"
+          ? "DIY"
+          : profile.plan === "professional"
+            ? "Professional"
+            : "Expired";
 
-  const showUpgrade = profile.plan === "trial" || profile.plan === "expired";
+  const showUpgrade = profile.plan === "pending" || profile.plan === "trial" || profile.plan === "expired";
   const showManageBilling =
     profile.plan === "diy" || profile.plan === "professional";
 
@@ -416,9 +418,11 @@ function SettingsContent() {
                         ? "bg-amber-100 text-amber-600"
                         : profile.plan === "trial"
                           ? "bg-blue-100 text-blue-600"
-                          : "bg-red-100 text-red-600"
+                          : profile.plan === "pending"
+                            ? "bg-stone-100 text-stone-600"
+                            : "bg-red-100 text-red-600"
                   }`}>
-                    {profile.plan === "professional" ? "Pro" : profile.plan === "diy" ? "DIY" : profile.plan === "trial" ? "Free Trial" : "Expired"}
+                    {profile.plan === "professional" ? "Pro" : profile.plan === "diy" ? "DIY" : profile.plan === "trial" ? "Free Trial" : profile.plan === "pending" ? "No Plan" : "Expired"}
                   </span>
                 </div>
               </div>

@@ -172,12 +172,13 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
+    const isPending = plan === "pending";
     const isExpired = plan === "expired";
     const isTrialOver =
       plan === "trial" &&
       (!trialEndsAt || new Date(trialEndsAt).getTime() < Date.now());
 
-    if (isExpired || isTrialOver) {
+    if (isPending || isExpired || isTrialOver) {
       const url = request.nextUrl.clone();
       url.pathname = "/planner/upgrade";
       return NextResponse.redirect(url);

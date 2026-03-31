@@ -14,7 +14,7 @@ const DEFAULT_PROFILE: PlannerProfile = {
   logoUrl: "",
   brandColor: "#e88b8b",
   tagline: "",
-  plan: "trial",
+  plan: "pending",
   trialEndsAt: null,
   stripeCustomerId: null,
   stripeSubscriptionId: null,

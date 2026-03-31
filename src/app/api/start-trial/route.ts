@@ -27,7 +27,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Profile not found" }, { status: 404 });
     }
 
-    if (profile.plan !== "trial") {
+    if (profile.plan !== "trial" && profile.plan !== "pending") {
       return NextResponse.json(
         { error: "You already have an active plan." },
         { status: 400 }
@@ -41,12 +41,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Start 30-day Professional trial
+    // Start 30-day Professional trial — set plan to 'trial' with trial_ends_at
     const trialEndsAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 
     const { error: updateErr } = await supabase
       .from("profiles")
-      .update({ trial_ends_at: trialEndsAt })
+      .update({ plan: "trial", trial_ends_at: trialEndsAt })
       .eq("id", user.id);
 
     if (updateErr) {

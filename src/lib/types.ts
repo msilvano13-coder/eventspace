@@ -2,7 +2,7 @@ import { v4 as uuid } from "uuid";
 
 // ── Planner Profile ──
 
-export type PlanType = "trial" | "diy" | "professional" | "expired";
+export type PlanType = "pending" | "trial" | "diy" | "professional" | "expired";
 
 export interface PlannerProfile {
   businessName: string;

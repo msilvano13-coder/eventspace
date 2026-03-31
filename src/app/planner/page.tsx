@@ -98,7 +98,7 @@ export default function PlannerDashboard() {
             <Plus size={16} />
             New Event
           </button>
-        ) : profile.plan === "trial" ? (
+        ) : profile.plan === "trial" || profile.plan === "pending" ? (
           <Link
             href="/planner/upgrade"
             className="flex items-center gap-2 bg-stone-200 text-stone-500 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"

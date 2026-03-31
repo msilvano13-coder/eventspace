@@ -66,8 +66,8 @@ function UpgradeContent() {
         )
       : 0;
 
-  // Fresh signup: plan is 'trial' but never started a trial (no trial_ends_at)
-  const isFreshSignup = profile.plan === "trial" && !profile.trialEndsAt;
+  // Fresh signup: plan is 'pending' (new) or 'trial' with no trial_ends_at (legacy)
+  const isFreshSignup = profile.plan === "pending" || (profile.plan === "trial" && !profile.trialEndsAt);
 
   const isExpired =
     profile.plan === "expired" ||

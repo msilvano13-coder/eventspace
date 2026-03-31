@@ -13,6 +13,7 @@ export const PRO_ONLY_ROUTES = new Set([
 
 // Max active events per plan
 export const MAX_EVENTS: Record<PlanType, number> = {
+  pending: 0,
   trial: 3,
   diy: 1,
   professional: 999,
