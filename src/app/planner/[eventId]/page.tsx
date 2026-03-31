@@ -506,14 +506,6 @@ export default function EventDetailPage() {
           <p className="text-xs text-stone-400 mt-1">{(event.moodBoard ?? []).length} images</p>
         </Link>
         <Link
-          href={`/planner/${event.id}/vendors`}
-          className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
-        >
-          <Store size={22} className="text-orange-400 mb-2" />
-          <h3 className="font-heading font-semibold text-stone-800 group-hover:text-orange-500 text-sm">Vendors</h3>
-          <p className="text-xs text-stone-400 mt-1">{(event.vendors ?? []).length} vendors</p>
-        </Link>
-        <Link
           href={`/planner/${event.id}/wedding`}
           className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
         >
@@ -1217,7 +1209,7 @@ export default function EventDetailPage() {
               Archive Event
             </button>
           )}
-          <p className="text-center text-[11px] text-stone-300 uppercase tracking-widest font-medium mt-4 mb-2">Danger Zone</p>
+          <p className="text-center text-[11px] text-stone-300 uppercase tracking-widest font-medium mt-2 mb-1">Danger Zone</p>
           <button
             onClick={() => setShowDeleteConfirm(true)}
             className="flex items-center gap-1.5 text-xs text-stone-400 hover:text-red-500 hover:bg-red-50 px-3 py-2 rounded-lg transition-colors"
