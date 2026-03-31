@@ -34,29 +34,19 @@ import type { PlanType } from "@/lib/types";
 // Helper: get current authenticated user id
 // ────────────────────────────────────────────────────────────────────────────
 
-let _cachedUserId: string | null = null;
-let _cachedUserAt = 0;
-const USER_ID_TTL = 30_000; // 30 seconds
-
 export async function getUserId(): Promise<string> {
-  if (_cachedUserId && Date.now() - _cachedUserAt < USER_ID_TTL) {
-    return _cachedUserId;
-  }
   const supabase = createClient();
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser();
   if (error || !user) throw new Error("Not authenticated");
-  _cachedUserId = user.id;
-  _cachedUserAt = Date.now();
   return user.id;
 }
 
-/** Clear the cached user ID (call on logout) */
+/** @deprecated No-op, cache has been removed for safety */
 export function clearUserIdCache(): void {
-  _cachedUserId = null;
-  _cachedUserAt = 0;
+  // Intentionally empty — kept for backwards compatibility with any call sites
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -299,8 +289,8 @@ function lightingZoneFromRow(r: any): LightingZone {
 
 // ── TimelineItem ──
 
-function timelineItemToRow(t: TimelineItem, eventId: string) {
-  return {
+function timelineItemToRow(t: TimelineItem, eventId: string, userId?: string) {
+  const row: Record<string, unknown> = {
     id: t.id,
     event_id: eventId,
     title: t.title,
@@ -308,6 +298,8 @@ function timelineItemToRow(t: TimelineItem, eventId: string) {
     completed: t.completed,
     sort_order: t.order,
   };
+  if (userId) row.user_id = userId;
+  return row;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -524,8 +516,8 @@ function invoiceLineItemFromRow(r: any): InvoiceLineItem {
 
 // ── Expense ──
 
-function expenseToRow(e: Expense, eventId: string) {
-  return {
+function expenseToRow(e: Expense, eventId: string, userId?: string) {
+  const row: Record<string, unknown> = {
     id: e.id,
     event_id: eventId,
     description: e.description,
@@ -534,6 +526,8 @@ function expenseToRow(e: Expense, eventId: string) {
     date: e.date,
     notes: e.notes,
   };
+  if (userId) row.user_id = userId;
+  return row;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -550,14 +544,16 @@ function expenseFromRow(r: any): Expense {
 
 // ── BudgetItem ──
 
-function budgetItemToRow(b: BudgetItem, eventId: string) {
-  return {
+function budgetItemToRow(b: BudgetItem, eventId: string, userId?: string) {
+  const row: Record<string, unknown> = {
     id: b.id,
     event_id: eventId,
     category: b.category,
     allocated: b.allocated,
     notes: b.notes,
   };
+  if (userId) row.user_id = userId;
+  return row;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -572,8 +568,8 @@ function budgetItemFromRow(r: any): BudgetItem {
 
 // ── EventContract ──
 
-function eventContractToRow(c: EventContract, eventId: string) {
-  return {
+function eventContractToRow(c: EventContract, eventId: string, userId?: string) {
+  const base: Record<string, unknown> = {
     id: c.id,
     event_id: eventId,
     template_id: c.templateId ?? null,
@@ -603,6 +599,8 @@ function eventContractToRow(c: EventContract, eventId: string) {
     client_disclosure_accepted_at: c.clientDisclosureAcceptedAt ?? null,
     client_disclosure_ip: c.clientDisclosureIp ?? null,
   };
+  if (userId) base.user_id = userId;
+  return base;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -640,8 +638,8 @@ function eventContractFromRow(r: any): EventContract {
 
 // ── SharedFile ──
 
-function sharedFileToRow(f: SharedFile, eventId: string) {
-  return {
+function sharedFileToRow(f: SharedFile, eventId: string, userId?: string) {
+  const row: Record<string, unknown> = {
     id: f.id,
     event_id: eventId,
     name: f.name,
@@ -650,6 +648,8 @@ function sharedFileToRow(f: SharedFile, eventId: string) {
     storage_path: f.storagePath ?? null,
     uploaded_at: f.uploadedAt,
   };
+  if (userId) row.user_id = userId;
+  return row;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -666,8 +666,8 @@ function sharedFileFromRow(r: any): SharedFile {
 
 // ── MoodBoardImage ──
 
-function moodBoardImageToRow(img: MoodBoardImage, eventId: string) {
-  return {
+function moodBoardImageToRow(img: MoodBoardImage, eventId: string, userId?: string) {
+  const row: Record<string, unknown> = {
     id: img.id,
     event_id: eventId,
     url: img.url,
@@ -677,6 +677,8 @@ function moodBoardImageToRow(img: MoodBoardImage, eventId: string) {
     storage_path: img.storagePath ?? null,
     storage_thumb: img.storageThumb ?? null,
   };
+  if (userId) row.user_id = userId;
+  return row;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -694,8 +696,8 @@ function moodBoardImageFromRow(r: any): MoodBoardImage {
 
 // ── Message ──
 
-function messageToRow(m: Message, eventId: string) {
-  return {
+function messageToRow(m: Message, eventId: string, userId?: string) {
+  const row: Record<string, unknown> = {
     id: m.id,
     event_id: eventId,
     sender: m.sender,
@@ -703,6 +705,8 @@ function messageToRow(m: Message, eventId: string) {
     text: m.text,
     created_at: m.createdAt,
   };
+  if (userId) row.user_id = userId;
+  return row;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -718,8 +722,8 @@ function messageFromRow(r: any): Message {
 
 // ── DiscoveredVendor ──
 
-function discoveredVendorToRow(dv: DiscoveredVendor, eventId: string) {
-  return {
+function discoveredVendorToRow(dv: DiscoveredVendor, eventId: string, userId?: string) {
+  const row: Record<string, unknown> = {
     id: dv.id,
     event_id: eventId,
     name: dv.name,
@@ -733,6 +737,8 @@ function discoveredVendorToRow(dv: DiscoveredVendor, eventId: string) {
     google_maps_url: dv.googleMapsUrl,
     shared_at: dv.sharedAt,
   };
+  if (userId) row.user_id = userId;
+  return row;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1019,7 +1025,10 @@ export async function fetchEvents(
   const rows = data ?? [];
   const hasMore = rows.length > limit;
   const trimmed = hasMore ? rows.slice(0, limit) : rows;
-  return { data: trimmed.map((r) => eventFromRow(r)), hasMore };
+  // Use eventCoreFromRow — select("*") has no sub-entity joins, so eventFromRow
+  // would silently produce empty arrays for all sub-entities. The store's lazy-loading
+  // (ensureSubEntity) fills these in on demand.
+  return { data: trimmed.map((r) => eventCoreFromRow(r)), hasMore };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -1429,52 +1438,18 @@ export async function replaceVendors(
   const supabase = createClient();
   const userId = await getUserId();
 
-  if (vendors.length > 0) {
-    // 1. Upsert vendor rows
-    const { error: upsertError } = await supabase
-      .from("vendors")
-      .upsert(vendors.map((v) => vendorToRow(v, eventId, userId)), { onConflict: "id" });
-    if (upsertError)
-      throw new Error(`replaceVendors (upsert): ${upsertError.message}`);
+  const allPayments = vendors.flatMap((v) =>
+    v.payments.map((p) => vendorPaymentToRow(p, v.id))
+  );
 
-    // 2. Delete removed vendors (payments cascade)
-    const vendorIds = vendors.map((v) => v.id);
-    const { error: delError } = await supabase
-      .from("vendors")
-      .delete()
-      .eq("event_id", eventId)
-      .not("id", "in", `(${vendorIds.join(",")})`);
-    if (delError)
-      throw new Error(`replaceVendors (delete removed): ${delError.message}`);
+  const { error } = await supabase.rpc("atomic_replace_vendors", {
+    p_event_id: eventId,
+    p_user_id: userId,
+    p_vendors: vendors.map((v) => vendorToRow(v, eventId, userId)),
+    p_payments: allPayments,
+  });
 
-    // 3. Batch delete all payments for current vendors, then re-insert
-    const { error: delPayError } = await supabase
-      .from("vendor_payments")
-      .delete()
-      .in("vendor_id", vendorIds);
-    if (delPayError)
-      throw new Error(`replaceVendors (delete payments): ${delPayError.message}`);
-
-    // 4. Re-insert all payments
-    const allPayments = vendors.flatMap((v) =>
-      v.payments.map((p) => vendorPaymentToRow(p, v.id))
-    );
-    if (allPayments.length > 0) {
-      const { error: payError } = await supabase
-        .from("vendor_payments")
-        .insert(allPayments);
-      if (payError)
-        throw new Error(`replaceVendors (insert payments): ${payError.message}`);
-    }
-  } else {
-    // Delete all vendors (payments cascade)
-    const { error: delError } = await supabase
-      .from("vendors")
-      .delete()
-      .eq("event_id", eventId);
-    if (delError)
-      throw new Error(`replaceVendors (delete all): ${delError.message}`);
-  }
+  if (error) throw new Error(`replaceVendors: ${error.message}`);
 }
 
 export async function replaceTimeline(
@@ -1482,11 +1457,12 @@ export async function replaceTimeline(
   items: TimelineItem[]
 ): Promise<void> {
   const supabase = createClient();
+  const userId = await getUserId();
 
   if (items.length > 0) {
     const { error: upsertError } = await supabase
       .from("timeline_items")
-      .upsert(items.map((t) => timelineItemToRow(t, eventId)), { onConflict: "id" });
+      .upsert(items.map((t) => timelineItemToRow(t, eventId, userId)), { onConflict: "id" });
     if (upsertError)
       throw new Error(`replaceTimeline (upsert): ${upsertError.message}`);
 
@@ -1612,11 +1588,12 @@ export async function replaceExpenses(
   expenses: Expense[]
 ): Promise<void> {
   const supabase = createClient();
+  const userId = await getUserId();
 
   if (expenses.length > 0) {
     const { error: upsertError } = await supabase
       .from("expenses")
-      .upsert(expenses.map((e) => expenseToRow(e, eventId)), { onConflict: "id" });
+      .upsert(expenses.map((e) => expenseToRow(e, eventId, userId)), { onConflict: "id" });
     if (upsertError)
       throw new Error(`replaceExpenses (upsert): ${upsertError.message}`);
 
@@ -1643,11 +1620,12 @@ export async function replaceBudget(
   items: BudgetItem[]
 ): Promise<void> {
   const supabase = createClient();
+  const userId = await getUserId();
 
   if (items.length > 0) {
     const { error: upsertError } = await supabase
       .from("budget_items")
-      .upsert(items.map((b) => budgetItemToRow(b, eventId)), { onConflict: "id" });
+      .upsert(items.map((b) => budgetItemToRow(b, eventId, userId)), { onConflict: "id" });
     if (upsertError)
       throw new Error(`replaceBudget (upsert): ${upsertError.message}`);
 
@@ -1676,52 +1654,18 @@ export async function replaceInvoices(
   const supabase = createClient();
   const userId = await getUserId();
 
-  if (invoices.length > 0) {
-    // 1. Upsert invoice rows
-    const { error: upsertError } = await supabase
-      .from("invoices")
-      .upsert(invoices.map((inv) => invoiceToRow(inv, eventId, userId)), { onConflict: "id" });
-    if (upsertError)
-      throw new Error(`replaceInvoices (upsert): ${upsertError.message}`);
+  const allLineItems = invoices.flatMap((inv) =>
+    inv.lineItems.map((li) => invoiceLineItemToRow(li, inv.id))
+  );
 
-    // 2. Delete removed invoices (line_items cascade)
-    const invoiceIds = invoices.map((inv) => inv.id);
-    const { error: delError } = await supabase
-      .from("invoices")
-      .delete()
-      .eq("event_id", eventId)
-      .not("id", "in", `(${invoiceIds.join(",")})`);
-    if (delError)
-      throw new Error(`replaceInvoices (delete removed): ${delError.message}`);
+  const { error } = await supabase.rpc("atomic_replace_invoices", {
+    p_event_id: eventId,
+    p_user_id: userId,
+    p_invoices: invoices.map((inv) => invoiceToRow(inv, eventId, userId)),
+    p_line_items: allLineItems,
+  });
 
-    // 3. Batch delete all line items for current invoices, then re-insert
-    const { error: delLiError } = await supabase
-      .from("invoice_line_items")
-      .delete()
-      .in("invoice_id", invoiceIds);
-    if (delLiError)
-      throw new Error(`replaceInvoices (delete line items): ${delLiError.message}`);
-
-    // 4. Re-insert all line items
-    const allLineItems = invoices.flatMap((inv) =>
-      inv.lineItems.map((li) => invoiceLineItemToRow(li, inv.id))
-    );
-    if (allLineItems.length > 0) {
-      const { error: liError } = await supabase
-        .from("invoice_line_items")
-        .insert(allLineItems);
-      if (liError)
-        throw new Error(`replaceInvoices (insert line items): ${liError.message}`);
-    }
-  } else {
-    // Delete all invoices (line_items cascade)
-    const { error: delError } = await supabase
-      .from("invoices")
-      .delete()
-      .eq("event_id", eventId);
-    if (delError)
-      throw new Error(`replaceInvoices (delete all): ${delError.message}`);
-  }
+  if (error) throw new Error(`replaceInvoices: ${error.message}`);
 }
 
 export async function replaceContracts(
@@ -1729,11 +1673,12 @@ export async function replaceContracts(
   contracts: EventContract[]
 ): Promise<void> {
   const supabase = createClient();
+  const userId = await getUserId();
 
   if (contracts.length > 0) {
     const { error: upsertError } = await supabase
       .from("event_contracts")
-      .upsert(contracts.map((c) => eventContractToRow(c, eventId)), { onConflict: "id" });
+      .upsert(contracts.map((c) => eventContractToRow(c, eventId, userId)), { onConflict: "id" });
     if (upsertError)
       throw new Error(`replaceContracts (upsert): ${upsertError.message}`);
 
@@ -1760,11 +1705,12 @@ export async function replaceFiles(
   files: SharedFile[]
 ): Promise<void> {
   const supabase = createClient();
+  const userId = await getUserId();
 
   if (files.length > 0) {
     const { error: upsertError } = await supabase
       .from("shared_files")
-      .upsert(files.map((f) => sharedFileToRow(f, eventId)), { onConflict: "id" });
+      .upsert(files.map((f) => sharedFileToRow(f, eventId, userId)), { onConflict: "id" });
     if (upsertError)
       throw new Error(`replaceFiles (upsert): ${upsertError.message}`);
 
@@ -1791,11 +1737,12 @@ export async function replaceMoodBoard(
   images: MoodBoardImage[]
 ): Promise<void> {
   const supabase = createClient();
+  const userId = await getUserId();
 
   if (images.length > 0) {
     const { error: upsertError } = await supabase
       .from("mood_board_images")
-      .upsert(images.map((img) => moodBoardImageToRow(img, eventId)), { onConflict: "id" });
+      .upsert(images.map((img) => moodBoardImageToRow(img, eventId, userId)), { onConflict: "id" });
     if (upsertError)
       throw new Error(`replaceMoodBoard (upsert): ${upsertError.message}`);
 
@@ -1822,11 +1769,12 @@ export async function replaceMessages(
   messages: Message[]
 ): Promise<void> {
   const supabase = createClient();
+  const userId = await getUserId();
 
   if (messages.length > 0) {
     const { error: upsertError } = await supabase
       .from("messages")
-      .upsert(messages.map((m) => messageToRow(m, eventId)), { onConflict: "id" });
+      .upsert(messages.map((m) => messageToRow(m, eventId, userId)), { onConflict: "id" });
     if (upsertError)
       throw new Error(`replaceMessages (upsert): ${upsertError.message}`);
 
@@ -1853,11 +1801,12 @@ export async function replaceDiscoveredVendors(
   vendors: DiscoveredVendor[]
 ): Promise<void> {
   const supabase = createClient();
+  const userId = await getUserId();
 
   if (vendors.length > 0) {
     const { error: upsertError } = await supabase
       .from("discovered_vendors")
-      .upsert(vendors.map((dv) => discoveredVendorToRow(dv, eventId)), { onConflict: "id" });
+      .upsert(vendors.map((dv) => discoveredVendorToRow(dv, eventId, userId)), { onConflict: "id" });
     if (upsertError)
       throw new Error(`replaceDiscoveredVendors (upsert): ${upsertError.message}`);
 

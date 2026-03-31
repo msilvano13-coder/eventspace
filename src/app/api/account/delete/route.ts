@@ -52,32 +52,34 @@ export async function POST(request: Request) {
       }
     }
 
-    // 3. Delete all storage files for this user
+    // 3. Delete all storage files for this user (recursively)
     const userId = user.id;
+
+    const deleteStorageRecursive = async (bucket: string, prefix: string) => {
+      const { data: items } = await supabaseAdmin.storage.from(bucket).list(prefix, { limit: 1000 });
+      if (!items || items.length === 0) return;
+
+      // Separate files from folders (folders have null metadata or id is null)
+      const files = items.filter(item => item.id !== null);
+      const folders = items.filter(item => item.id === null);
+
+      // Delete files in this directory
+      if (files.length > 0) {
+        await supabaseAdmin.storage.from(bucket).remove(
+          files.map(f => `${prefix}/${f.name}`)
+        );
+      }
+
+      // Recurse into subdirectories
+      for (const folder of folders) {
+        await deleteStorageRecursive(bucket, `${prefix}/${folder.name}`);
+      }
+    }
+
     try {
-      // List and delete all files in event-files bucket under this user
-      const { data: eventFiles } = await supabaseAdmin.storage.from("event-files").list(userId, { limit: 1000 });
-      if (eventFiles && eventFiles.length > 0) {
-        await supabaseAdmin.storage.from("event-files").remove(
-          eventFiles.map(f => `${userId}/${f.name}`)
-        );
-      }
-
-      // Delete brand assets (logo)
-      const { data: brandFiles } = await supabaseAdmin.storage.from("brand-assets").list(userId, { limit: 10 });
-      if (brandFiles && brandFiles.length > 0) {
-        await supabaseAdmin.storage.from("brand-assets").remove(
-          brandFiles.map(f => `${userId}/${f.name}`)
-        );
-      }
-
-      // Delete contract templates
-      const { data: templateFiles } = await supabaseAdmin.storage.from("contract-templates").list(userId, { limit: 100 });
-      if (templateFiles && templateFiles.length > 0) {
-        await supabaseAdmin.storage.from("contract-templates").remove(
-          templateFiles.map(f => `${userId}/${f.name}`)
-        );
-      }
+      await deleteStorageRecursive("event-files", userId);
+      await deleteStorageRecursive("brand-assets", userId);
+      await deleteStorageRecursive("contract-templates", userId);
     } catch (err) {
       console.error("Storage cleanup during account deletion failed:", err);
       // Continue with deletion even if storage cleanup fails
@@ -137,8 +139,9 @@ export async function POST(request: Request) {
       if (error) console.warn(`[delete-account] Skipping ${table}:`, error.message);
     }
 
-    // 5. Delete webhook events
-    await supabaseAdmin.from("stripe_webhook_events").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+    // 5. Skip stripe_webhook_events — these are global dedup records shared across
+    // all users. Deleting them would break idempotency for other users' webhooks.
+    // They are small and serve as an audit trail; no cleanup needed.
 
     // 6. Delete the profile
     const { error: profileErr } = await supabaseAdmin.from("profiles").delete().eq("id", user.id);

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 // ── In-memory rate limiter (per IP, sliding window) ──
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -321,6 +322,13 @@ async function fetchFromGooglePlaces(
 }
 
 export async function GET(request: NextRequest) {
+  // Authentication — prevent anonymous users from burning Google Places API quota
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   // Rate limiting
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
   if (isRateLimited(ip)) {

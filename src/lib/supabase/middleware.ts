@@ -12,9 +12,16 @@ interface CachedProfile {
 }
 
 // ── HMAC cookie signing (Edge-compatible via Web Crypto API) ──
-const COOKIE_SECRET = process.env.COOKIE_SECRET || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const COOKIE_SECRET = process.env.COOKIE_SECRET;
+if (!COOKIE_SECRET) {
+  console.error(
+    "[SECURITY] COOKIE_SECRET env var is not set. Profile cache cookies will be disabled. " +
+    "Set a strong random secret in production to enable middleware caching."
+  );
+}
 
-async function getHmacKey(): Promise<CryptoKey> {
+async function getHmacKey(): Promise<CryptoKey | null> {
+  if (!COOKIE_SECRET) return null;
   const enc = new TextEncoder();
   return crypto.subtle.importKey(
     "raw",
@@ -31,18 +38,20 @@ function bufToHex(buf: ArrayBuffer): string {
     .join("");
 }
 
-async function signCookie(payload: string): Promise<string> {
+async function signCookie(payload: string): Promise<string | null> {
   const key = await getHmacKey();
+  if (!key) return null;
   const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
   return `${payload}.${bufToHex(sig)}`;
 }
 
 async function verifyCookie(signed: string): Promise<string | null> {
+  const key = await getHmacKey();
+  if (!key) return null;
   const lastDot = signed.lastIndexOf(".");
   if (lastDot === -1) return null;
   const payload = signed.slice(0, lastDot);
   const sig = signed.slice(lastDot + 1);
-  const key = await getHmacKey();
   const expected = bufToHex(
     await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload))
   );
@@ -145,20 +154,22 @@ export async function updateSession(request: NextRequest) {
       plan = profile.plan;
       trialEndsAt = profile.trial_ends_at;
 
-      // Cache profile in a short-lived HMAC-signed cookie
+      // Cache profile in a short-lived HMAC-signed cookie (only if COOKIE_SECRET is set)
       const cacheValue: CachedProfile = {
         plan: profile.plan,
         trialEndsAt: profile.trial_ends_at,
         ts: Date.now(),
       };
       const signedValue = await signCookie(JSON.stringify(cacheValue));
-      supabaseResponse.cookies.set(PROFILE_CACHE_COOKIE, signedValue, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "strict",
-        maxAge: PROFILE_CACHE_MAX_AGE,
-        path: "/",
-      });
+      if (signedValue) {
+        supabaseResponse.cookies.set(PROFILE_CACHE_COOKIE, signedValue, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === "production",
+          sameSite: "strict",
+          maxAge: PROFILE_CACHE_MAX_AGE,
+          path: "/",
+        });
+      }
     }
 
     const isExpired = plan === "expired";

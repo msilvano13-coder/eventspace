@@ -588,10 +588,10 @@ function RegistrySection({ registryLinks }: { registryLinks: WeddingPageData["re
 
 function GallerySection({
   gallery,
-  shareToken,
+  slug,
 }: {
   gallery: WeddingPageData["gallery"];
-  shareToken: string;
+  slug: string;
 }) {
   const [urls, setUrls] = useState<Record<string, string>>({});
 
@@ -599,10 +599,10 @@ function GallerySection({
     if (!gallery || gallery.length === 0) return;
     gallery.forEach(async (img) => {
       if (!img.storagePath) return;
-      const url = await getWeddingImageUrl(shareToken, img.storagePath);
+      const url = await getWeddingImageUrl(slug, img.storagePath);
       if (url) setUrls((prev) => ({ ...prev, [img.id]: url }));
     });
-  }, [gallery, shareToken]);
+  }, [gallery, slug]);
 
   if (!gallery || gallery.length === 0) return null;
 
@@ -668,8 +668,8 @@ export default function WeddingPage() {
 
   // Load hero image
   useEffect(() => {
-    if (!data?.heroStoragePath || !data.shareToken) return;
-    getWeddingImageUrl(data.shareToken, data.heroStoragePath).then(setHeroUrl);
+    if (!data?.heroStoragePath || !data.slug) return;
+    getWeddingImageUrl(data.slug, data.heroStoragePath).then(setHeroUrl);
   }, [data]);
 
   const renderSection = useCallback(
@@ -693,7 +693,7 @@ export default function WeddingPage() {
         case "registry":
           return <RegistrySection key="registry" registryLinks={data.registryLinks} />;
         case "gallery":
-          return <GallerySection key="gallery" gallery={data.gallery} shareToken={data.shareToken} />;
+          return <GallerySection key="gallery" gallery={data.gallery} slug={data.slug} />;
         default:
           return null;
       }

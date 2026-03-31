@@ -7,8 +7,7 @@ export interface WeddingPageData {
   name: string;
   date: string;
   venue: string;
-  shareToken: string;
-  userId: string;
+  slug: string;
   headline: string;
   story: string;
   heroStoragePath: string;
@@ -82,8 +81,7 @@ export async function fetchWeddingPage(slug: string): Promise<WeddingPageData | 
     name: data.name,
     date: data.date || "",
     venue: data.venue || "",
-    shareToken: data.shareToken || "",
-    userId: data.userId || "",
+    slug: slug,
     headline: data.headline || "",
     story: data.story || "",
     heroStoragePath: data.heroStoragePath || "",
@@ -151,16 +149,15 @@ export async function weddingRsvpSubmit(
 // ── Get signed URL for hero image / gallery ──
 
 export async function getWeddingImageUrl(
-  shareToken: string,
+  slug: string,
   storagePath: string
 ): Promise<string | null> {
   try {
-    const res = await fetch("/api/storage/signed-url", {
+    const res = await fetch("/api/storage/wedding-image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        shareToken,
-        bucket: "event-files",
+        slug,
         path: storagePath,
       }),
     });

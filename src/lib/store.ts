@@ -64,7 +64,8 @@ const MAX_CACHED_EVENTS = 100;
 
 class EventStore {
   private events: Map<string, Event> = new Map();
-  private accessOrder: string[] = []; // LRU tracking: most recently accessed at end
+  // O(1) LRU tracking using a Map (insertion order = access order, re-insert to touch)
+  private accessOrder: Map<string, true> = new Map();
   private listeners: Set<Listener> = new Set();
   private hydrated = false;
   private hydrating = false;
@@ -86,17 +87,17 @@ class EventStore {
     return this._hasMore;
   }
 
-  /** Move id to end of access order (most recent) */
+  /** Move id to end of access order (most recent) — O(1) via Map re-insert */
   private touchLRU(id: string): void {
-    const idx = this.accessOrder.indexOf(id);
-    if (idx !== -1) this.accessOrder.splice(idx, 1);
-    this.accessOrder.push(id);
+    this.accessOrder.delete(id);
+    this.accessOrder.set(id, true);
   }
 
   /** Evict least recently used events if over max */
   private evictLRU(): void {
-    while (this.events.size > MAX_CACHED_EVENTS && this.accessOrder.length > 0) {
-      const evictId = this.accessOrder.shift()!;
+    while (this.events.size > MAX_CACHED_EVENTS && this.accessOrder.size > 0) {
+      const evictId = this.accessOrder.keys().next().value!;
+      this.accessOrder.delete(evictId);
       this.events.delete(evictId);
       this.loadedEntities.delete(evictId);
       this.loadingEntities.delete(evictId);
@@ -114,12 +115,12 @@ class EventStore {
     try {
       const { data: rows, hasMore } = await fetchEvents();
       this.events = new Map(rows.map((e: Event) => [e.id, e]));
-      this.accessOrder = rows.map((e: Event) => e.id);
+      this.accessOrder = new Map(rows.map((e: Event) => [e.id, true as const]));
       this._hasMore = hasMore;
     } catch (err) {
       console.error("[EventStore] hydrate failed:", err);
       this.events = new Map();
-      this.accessOrder = [];
+      this.accessOrder = new Map();
     }
     this.hydrated = true;
     this.hydrating = false;
@@ -315,23 +316,40 @@ class EventStore {
         })
       );
     } catch (err) {
-      console.error("[EventStore] update failed:", err);
+      console.error("[EventStore] update failed, rolling back:", err);
+      // Rollback: restore previous state
+      this.events.set(id, existing);
+      this.rebuildCache();
+      this.emit();
+      throw err; // Re-throw so the UI can show an error toast
     }
   }
 
   async delete(id: string): Promise<void> {
+    // Snapshot for rollback
+    const snapshot = this.events.get(id);
+
+    // Optimistic delete
     this.events.delete(id);
     this.loadedEntities.delete(id);
     this.loadingEntities.delete(id);
     this.coreLoaded.delete(id);
-    const idx = this.accessOrder.indexOf(id);
-    if (idx !== -1) this.accessOrder.splice(idx, 1);
+    this.accessOrder.delete(id);
     this.rebuildCache();
     this.emit();
+
     try {
       await dbDeleteEvent(id);
     } catch (err) {
-      console.error("[EventStore] delete failed:", err);
+      console.error("[EventStore] delete failed, rolling back:", err);
+      // Rollback: restore the event so it reappears in the UI
+      if (snapshot) {
+        this.events.set(id, snapshot);
+        this.touchLRU(id);
+        this.rebuildCache();
+        this.emit();
+      }
+      throw err; // Re-throw so the UI can show an error toast
     }
   }
 

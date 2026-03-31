@@ -71,14 +71,13 @@ BEGIN
   FROM mood_board_images m
   WHERE m.event_id = v_event_id;
 
-  -- Build result
+  -- Build result (excludes share_token and user_id — these are sensitive and
+  -- must never be exposed on the public wedding page)
   SELECT jsonb_build_object(
     'id', e.id,
     'name', e.name,
     'date', e.date,
     'venue', e.venue,
-    'shareToken', e.share_token,
-    'userId', e.user_id,
     'headline', e.wedding_headline,
     'story', e.wedding_story,
     'heroStoragePath', e.wedding_hero_storage_path,

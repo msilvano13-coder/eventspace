@@ -5,8 +5,8 @@ import { useEvent, useEventSubEntities, useStoreActions, useQuestionnaires, useP
 import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
 import { useState, useRef, useEffect } from "react";
-import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, CheckCircle2, Receipt, Users, Wallet, Search, Phone, Globe, Download, Upload, UserCheck, PenTool, Plus, Trash2, Pencil, X, UtensilsCrossed, AlertTriangle, Image } from "lucide-react";
-import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY, Vendor, VendorCategory, EventContract, ScheduleItem } from "@/lib/types";
+import { Calendar, MapPin, FileText, CheckSquare, Check, Circle, Clock, Layout, ClipboardList, ChevronDown, ChevronUp, ChevronRight, CheckCircle2, Receipt, Users, Wallet, Search, Phone, Globe, Download, Upload, UserCheck, PenTool, Plus, Trash2, Pencil, X, UtensilsCrossed, AlertTriangle, Image, DollarSign, Mail } from "lucide-react";
+import { Question, Invoice, Event, Guest, RsvpStatus, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY, Vendor, VendorCategory, VendorPaymentItem, EventContract, ScheduleItem } from "@/lib/types";
 import { readPdfAsBase64, downloadBase64File, formatBytes } from "@/lib/pdf-utils";
 import MessageThread from "@/components/event/MessageThread";
 import SignaturePad from "@/components/ui/SignaturePad";
@@ -69,6 +69,14 @@ export default function ClientPortalPage() {
   const [newTodoTitle, setNewTodoTitle] = useState("");
   const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
   const [editingTodoTitle, setEditingTodoTitle] = useState("");
+  // Vendor editing state
+  const [expandedVendorId, setExpandedVendorId] = useState<string | null>(null);
+  const [editingVendorId, setEditingVendorId] = useState<string | null>(null);
+  const [vendorForm, setVendorForm] = useState<Omit<Vendor, "id">>({
+    name: "", category: "other", contact: "", phone: "", email: "", notes: "", mealChoice: "", contractTotal: 0, payments: [],
+  });
+  const [addingPaymentForVendor, setAddingPaymentForVendor] = useState<string | null>(null);
+  const [vendorPaymentForm, setVendorPaymentForm] = useState({ description: "", amount: "", dueDate: "" });
 
   if (loading) return <EventLoader />;
 
@@ -416,53 +424,236 @@ export default function ClientPortalPage() {
               <h2 className="font-heading font-semibold text-stone-800">Your Vendors</h2>
               <span className="text-xs text-stone-400 ml-1">({(event.vendors ?? []).length})</span>
             </div>
-            <div className="divide-y divide-stone-100">
-              {(event.vendors ?? []).map((vendor) => (
-                <div key={vendor.id} className="px-5 py-4">
-                  <div className="flex items-start justify-between mb-1">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <h3 className="text-sm font-semibold text-stone-800">{vendor.name}</h3>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-rose-50 text-rose-500 capitalize shrink-0">
-                          {vendor.category}
-                        </span>
-                      </div>
-                      {vendor.contact && vendor.contact !== vendor.name && (
-                        <p className="text-xs text-stone-500">Contact: {vendor.contact}</p>
-                      )}
+            {/* Vendor edit form */}
+            {editingVendorId && (() => {
+              const editVendor = (event.vendors ?? []).find((v) => v.id === editingVendorId);
+              if (!editVendor) return null;
+              return (
+                <div className="px-5 py-4 bg-rose-50/30 border-b border-stone-100">
+                  <h3 className="text-xs font-semibold text-stone-600 mb-3">Edit Vendor</h3>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="col-span-2 sm:col-span-1">
+                      <label className="block text-xs font-medium text-stone-500 mb-1">Vendor Name *</label>
+                      <input autoFocus value={vendorForm.name} onChange={(e) => setVendorForm({ ...vendorForm, name: e.target.value })} className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none" />
                     </div>
+                    <div className="col-span-2 sm:col-span-1">
+                      <label className="block text-xs font-medium text-stone-500 mb-1">Category</label>
+                      <select value={vendorForm.category} onChange={(e) => setVendorForm({ ...vendorForm, category: e.target.value as VendorCategory })} className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white capitalize">
+                        {(["catering", "photography", "videography", "music", "flowers", "cake", "venue", "hair & makeup", "transport", "officiant", "other"] as VendorCategory[]).map((c) => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
+                      </select>
+                    </div>
+                    <div><label className="block text-xs font-medium text-stone-500 mb-1">Contact</label><input value={vendorForm.contact} onChange={(e) => setVendorForm({ ...vendorForm, contact: e.target.value })} className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none" /></div>
+                    <div><label className="block text-xs font-medium text-stone-500 mb-1">Phone</label><input value={vendorForm.phone} onChange={(e) => setVendorForm({ ...vendorForm, phone: e.target.value })} className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none" /></div>
+                    <div className="col-span-2"><label className="block text-xs font-medium text-stone-500 mb-1">Email</label><input type="email" value={vendorForm.email} onChange={(e) => setVendorForm({ ...vendorForm, email: e.target.value })} className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none" /></div>
+                    <div><label className="block text-xs font-medium text-stone-500 mb-1">Contract Total ($)</label><input type="number" min="0" step="0.01" value={vendorForm.contractTotal || ""} onChange={(e) => setVendorForm({ ...vendorForm, contractTotal: parseFloat(e.target.value) || 0 })} className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none" /></div>
+                    <div><label className="block text-xs font-medium text-stone-500 mb-1">Meal Choice</label><input value={vendorForm.mealChoice} onChange={(e) => setVendorForm({ ...vendorForm, mealChoice: e.target.value })} placeholder="e.g. Chicken, Vegetarian..." className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none" /></div>
+                    <div className="col-span-2"><label className="block text-xs font-medium text-stone-500 mb-1">Notes</label><input value={vendorForm.notes} onChange={(e) => setVendorForm({ ...vendorForm, notes: e.target.value })} placeholder="Package details..." className="w-full border border-stone-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none" /></div>
+                  </div>
+                  <div className="flex gap-2 justify-end mt-4">
                     <button
                       onClick={() => {
-                        if (!confirm(`Remove ${vendor.name} from your vendors?`)) return;
-                        updateEvent(event.id, {
-                          vendors: (event.vendors ?? []).filter((v) => v.id !== vendor.id),
-                        });
+                        if (!vendorForm.name.trim()) return;
+                        const updated = (event.vendors ?? []).map((v) => v.id === editingVendorId ? { ...v, ...vendorForm } : v);
+                        updateEvent(event.id, { vendors: updated });
+                        setEditingVendorId(null);
                       }}
-                      className="text-stone-300 hover:text-red-500 transition-colors p-1 -mr-1 shrink-0"
-                      title="Remove vendor"
+                      disabled={!vendorForm.name.trim()}
+                      className="text-xs font-medium bg-rose-400 text-white px-4 py-2 rounded-xl hover:bg-rose-500 disabled:opacity-50 transition-colors"
                     >
-                      <Trash2 size={14} />
+                      Save
                     </button>
+                    <button onClick={() => setEditingVendorId(null)} className="text-xs text-stone-400 hover:text-stone-600 px-3 py-2 rounded-xl hover:bg-stone-100 transition-colors">Cancel</button>
                   </div>
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2">
-                    {vendor.phone && (
-                      <a href={`tel:${vendor.phone}`} className="flex items-center gap-1.5 text-xs text-stone-500 hover:text-rose-500 transition-colors">
-                        <Phone size={11} className="text-stone-400 shrink-0" />
-                        {vendor.phone}
-                      </a>
-                    )}
-                    {vendor.email && (
-                      <a href={`mailto:${vendor.email}`} className="flex items-center gap-1.5 text-xs text-stone-500 hover:text-rose-500 transition-colors">
-                        <span className="text-stone-400 shrink-0 text-[10px]">✉</span>
-                        {vendor.email}
-                      </a>
-                    )}
-                  </div>
-                  {vendor.notes && (
-                    <p className="text-xs text-stone-400 mt-1.5 italic">{vendor.notes}</p>
-                  )}
                 </div>
-              ))}
+              );
+            })()}
+            <div className="divide-y divide-stone-100">
+              {(event.vendors ?? []).map((vendor) => {
+                if (editingVendorId === vendor.id) return null;
+                const vendorPaid = (vendor.payments ?? []).filter((p) => p.paid).reduce((s, p) => s + p.amount, 0);
+                const isExpanded = expandedVendorId === vendor.id;
+                return (
+                  <div key={vendor.id} className="overflow-hidden">
+                    <div
+                      className="group flex items-start gap-3 px-5 py-3.5 hover:bg-stone-50/50 transition-colors cursor-pointer"
+                      onClick={() => setExpandedVendorId(isExpanded ? null : vendor.id)}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <ChevronRight size={12} className={`text-stone-400 transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+                          <h3 className="text-sm font-semibold text-stone-800">{vendor.name}</h3>
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-medium bg-rose-50 text-rose-500 capitalize shrink-0">
+                            {vendor.category}
+                          </span>
+                          {vendor.contractTotal > 0 && (
+                            <span className="text-[10px] text-stone-400 ml-auto">
+                              {fmtCurrency(vendorPaid)} / {fmtCurrency(vendor.contractTotal)}
+                              {vendorPaid < vendor.contractTotal
+                                ? <span className="text-amber-600 font-semibold ml-1.5">{fmtCurrency(vendor.contractTotal - vendorPaid)} due</span>
+                                : <span className="text-emerald-600 font-semibold ml-1.5">Paid</span>}
+                            </span>
+                          )}
+                        </div>
+                        {vendor.contractTotal > 0 && (
+                          <div className="h-1 bg-stone-100 rounded-full overflow-hidden mt-1.5 ml-5">
+                            <div
+                              className={`h-full rounded-full transition-all ${vendorPaid >= vendor.contractTotal ? "bg-emerald-400" : "bg-violet-400"}`}
+                              style={{ width: `${Math.min((vendorPaid / vendor.contractTotal) * 100, 100)}%` }}
+                            />
+                          </div>
+                        )}
+                        <div className="flex flex-wrap gap-x-4 gap-y-0.5 mt-1.5 ml-5">
+                          {vendor.contact && vendor.contact !== vendor.name && (
+                            <span className="flex items-center gap-1 text-xs text-stone-400">{vendor.contact}</span>
+                          )}
+                          {vendor.phone && (
+                            <a href={`tel:${vendor.phone}`} className="flex items-center gap-1 text-xs text-stone-400 hover:text-rose-500 transition-colors">
+                              <Phone size={11} />{vendor.phone}
+                            </a>
+                          )}
+                          {vendor.email && (
+                            <a href={`mailto:${vendor.email}`} className="flex items-center gap-1 text-xs text-stone-400 hover:text-rose-500 transition-colors">
+                              <Mail size={11} />{vendor.email}
+                            </a>
+                          )}
+                        </div>
+                        {vendor.notes && <p className="text-xs text-stone-400 mt-1 ml-5 italic">{vendor.notes}</p>}
+                        {vendor.mealChoice && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 mt-1.5 ml-5">
+                            <UtensilsCrossed size={9} /> {vendor.mealChoice}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setVendorForm({
+                              name: vendor.name, category: vendor.category, contact: vendor.contact,
+                              phone: vendor.phone, email: vendor.email, notes: vendor.notes,
+                              mealChoice: vendor.mealChoice ?? "", contractTotal: vendor.contractTotal ?? 0,
+                              payments: vendor.payments ?? [],
+                            });
+                            setEditingVendorId(vendor.id);
+                          }}
+                          className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"
+                          title="Edit vendor"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!confirm(`Remove ${vendor.name} from your vendors?`)) return;
+                            updateEvent(event.id, {
+                              vendors: (event.vendors ?? []).filter((v) => v.id !== vendor.id),
+                            });
+                          }}
+                          className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Remove vendor"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Expanded: Payment Schedule */}
+                    {isExpanded && (
+                      <div className="bg-stone-50/70 px-5 py-3 border-t border-stone-100">
+                        <div className="ml-5 space-y-2">
+                          <p className="text-[10px] uppercase tracking-widest text-stone-400 font-medium">Payment Schedule</p>
+                          {(vendor.payments ?? []).length === 0 && addingPaymentForVendor !== vendor.id && (
+                            <p className="text-xs text-stone-400 italic">No payments scheduled yet.</p>
+                          )}
+                          {(vendor.payments ?? []).map((payment) => (
+                            <div key={payment.id} className="flex items-center gap-3 group/pay">
+                              <button
+                                onClick={() => {
+                                  const updated = (event.vendors ?? []).map((v) => {
+                                    if (v.id !== vendor.id) return v;
+                                    return { ...v, payments: (v.payments ?? []).map((p) =>
+                                      p.id === payment.id ? { ...p, paid: !p.paid, paidDate: !p.paid ? new Date().toISOString().split("T")[0] : null } : p
+                                    )};
+                                  });
+                                  updateEvent(event.id, { vendors: updated });
+                                }}
+                                className={`flex-shrink-0 w-4 h-4 rounded border transition-colors ${payment.paid ? "bg-emerald-400 border-emerald-400 text-white" : "border-stone-300 hover:border-rose-400"}`}
+                              >
+                                {payment.paid && <Check size={10} className="mx-auto" />}
+                              </button>
+                              <div className="flex-1 min-w-0">
+                                <span className={`text-xs ${payment.paid ? "text-stone-400 line-through" : "text-stone-700"}`}>{payment.description}</span>
+                                {payment.dueDate && (
+                                  <span className={`text-[10px] ml-2 ${payment.paid ? "text-stone-300" : new Date(payment.dueDate) < new Date() && !payment.paid ? "text-red-500 font-semibold" : "text-stone-400"}`}>
+                                    {payment.paid ? `Paid ${payment.paidDate}` : `Due ${payment.dueDate}`}
+                                  </span>
+                                )}
+                              </div>
+                              <span className={`text-xs font-medium ${payment.paid ? "text-emerald-600" : "text-stone-600"}`}>{fmtCurrency(payment.amount)}</span>
+                              <button
+                                onClick={() => {
+                                  const updated = (event.vendors ?? []).map((v) => {
+                                    if (v.id !== vendor.id) return v;
+                                    return { ...v, payments: (v.payments ?? []).filter((p) => p.id !== payment.id) };
+                                  });
+                                  updateEvent(event.id, { vendors: updated });
+                                }}
+                                className="opacity-0 group-hover/pay:opacity-100 text-stone-300 hover:text-red-400 transition-all"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))}
+                          {/* Add payment form */}
+                          {addingPaymentForVendor === vendor.id ? (
+                            <div className="flex flex-wrap items-end gap-2 pt-1">
+                              <div>
+                                <label className="block text-[10px] text-stone-400 mb-0.5">Description</label>
+                                <input autoFocus value={vendorPaymentForm.description} onChange={(e) => setVendorPaymentForm({ ...vendorPaymentForm, description: e.target.value })} className="border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs w-36 focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none" />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] text-stone-400 mb-0.5">Amount ($)</label>
+                                <input type="number" min="0" step="0.01" value={vendorPaymentForm.amount} onChange={(e) => setVendorPaymentForm({ ...vendorPaymentForm, amount: e.target.value })} className="border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs w-24 focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none" />
+                              </div>
+                              <div>
+                                <label className="block text-[10px] text-stone-400 mb-0.5">Due Date</label>
+                                <input type="date" value={vendorPaymentForm.dueDate} onChange={(e) => setVendorPaymentForm({ ...vendorPaymentForm, dueDate: e.target.value })} className="border border-stone-200 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none" />
+                              </div>
+                              <button
+                                onClick={() => {
+                                  const amount = parseFloat(vendorPaymentForm.amount);
+                                  if (!vendorPaymentForm.description.trim() || isNaN(amount) || amount <= 0) return;
+                                  const newPayment: VendorPaymentItem = {
+                                    id: crypto.randomUUID(), description: vendorPaymentForm.description.trim(),
+                                    amount, dueDate: vendorPaymentForm.dueDate, paid: false, paidDate: null,
+                                  };
+                                  const updated = (event.vendors ?? []).map((v) =>
+                                    v.id === vendor.id ? { ...v, payments: [...(v.payments ?? []), newPayment] } : v
+                                  );
+                                  updateEvent(event.id, { vendors: updated });
+                                  setVendorPaymentForm({ description: "", amount: "", dueDate: "" });
+                                  setAddingPaymentForVendor(null);
+                                }}
+                                className="text-xs font-medium bg-rose-400 text-white px-3 py-1.5 rounded-lg hover:bg-rose-500 transition-colors"
+                              >
+                                Add
+                              </button>
+                              <button onClick={() => setAddingPaymentForVendor(null)} className="text-xs text-stone-400 hover:text-stone-600 px-2 py-1.5">Cancel</button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => { setAddingPaymentForVendor(vendor.id); setVendorPaymentForm({ description: "", amount: "", dueDate: "" }); }}
+                              className="flex items-center gap-1 text-[11px] text-rose-400 hover:text-rose-500 font-medium mt-1 transition-colors"
+                            >
+                              <Plus size={11} /> Add Payment
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
