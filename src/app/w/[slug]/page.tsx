@@ -27,6 +27,30 @@ import {
   type RsvpGuest,
 } from "@/lib/supabase/wedding";
 
+// ── Theme ──
+
+function hexToRgb(hex: string): [number, number, number] | null {
+  const m = hex.replace("#", "").match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+  if (!m) return null;
+  return [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)];
+}
+
+/** Returns CSS custom properties derived from the first color in the palette */
+function getThemeVars(palette: string[]): React.CSSProperties & Record<string, string> {
+  const accent = palette?.[0] || "#f43f5e"; // rose-500 fallback
+  const rgb = hexToRgb(accent) ?? [244, 63, 94];
+  return {
+    "--w": accent,
+    "--w-rgb": `${rgb[0]}, ${rgb[1]}, ${rgb[2]}`,
+  } as React.CSSProperties & Record<string, string>;
+}
+
+// Shorthand style helpers using the CSS variables
+const A = { color: "var(--w)" } as React.CSSProperties;                    // accent text
+const ABg = { backgroundColor: "var(--w)" } as React.CSSProperties;        // accent bg (buttons)
+const ABgLight = { backgroundColor: "rgba(var(--w-rgb), 0.08)" } as React.CSSProperties;  // light accent bg
+// ABorder available: { borderColor: "var(--w)" }
+
 // ── Helpers ──
 
 function formatDate(dateStr: string) {
@@ -69,9 +93,9 @@ function HeroSection({ data, heroUrl }: { data: WeddingPageData; heroUrl: string
   const days = daysUntil(data.date);
 
   return (
-    <section className="bg-gradient-to-b from-rose-50 via-white to-stone-50 pt-16 pb-12 px-4 text-center">
+    <section className="pt-16 pb-12 px-4 text-center" style={{ background: "linear-gradient(to bottom, rgba(var(--w-rgb), 0.05), white, rgb(250 250 249))" }}>
       <div className="max-w-2xl mx-auto mb-10">
-        <p className="text-sm tracking-[0.3em] uppercase mb-6 text-rose-400">
+        <p className="text-sm tracking-[0.3em] uppercase mb-6" style={A}>
           We&apos;re getting married
         </p>
         <h1 className="font-heading text-4xl sm:text-5xl md:text-6xl font-bold mb-6 leading-tight text-stone-900">
@@ -88,7 +112,7 @@ function HeroSection({ data, heroUrl }: { data: WeddingPageData; heroUrl: string
           </p>
         )}
         {days !== null && days > 0 && (
-          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium bg-rose-50 text-rose-600">
+          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium" style={{ ...ABgLight, color: "var(--w)" }}>
             <Heart size={16} />
             {days} {days === 1 ? "day" : "days"} to go
           </div>
@@ -119,7 +143,7 @@ function StorySection({ story }: { story: string }) {
   return (
     <section id="story" className="py-20 px-4 bg-white">
       <div className="max-w-2xl mx-auto text-center">
-        <Heart size={20} className="mx-auto text-rose-400 mb-4" />
+        <Heart size={20} className="mx-auto mb-4" style={A} />
         <h2 className="font-heading text-2xl sm:text-3xl font-bold text-stone-900 mb-8">
           Our Story
         </h2>
@@ -137,19 +161,19 @@ function ScheduleSection({ schedule }: { schedule: WeddingPageData["schedule"] }
     <section id="schedule" className="py-20 px-4 bg-stone-50">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-12">
-          <Clock size={20} className="mx-auto text-rose-400 mb-4" />
+          <Clock size={20} className="mx-auto mb-4" style={A} />
           <h2 className="font-heading text-2xl sm:text-3xl font-bold text-stone-900">
             Schedule
           </h2>
         </div>
         <div className="relative">
           {/* Timeline line */}
-          <div className="absolute left-6 top-0 bottom-0 w-px bg-rose-200 hidden sm:block" />
+          <div className="absolute left-6 top-0 bottom-0 w-px hidden sm:block" style={{ backgroundColor: "rgba(var(--w-rgb), 0.25)" }} />
           <div className="space-y-6">
             {schedule.map((item, i) => (
               <div key={i} className="flex gap-4 sm:gap-6">
                 <div className="hidden sm:flex flex-col items-center">
-                  <div className="w-3 h-3 rounded-full bg-rose-400 ring-4 ring-rose-100 z-10" />
+                  <div className="w-3 h-3 rounded-full z-10" style={{ backgroundColor: "var(--w)", boxShadow: "0 0 0 4px rgba(var(--w-rgb), 0.12)" }} />
                 </div>
                 <div className="flex-1 bg-white rounded-xl border border-stone-200 p-5 shadow-sm">
                   <div className="flex items-start justify-between gap-3">
@@ -160,7 +184,7 @@ function ScheduleSection({ schedule }: { schedule: WeddingPageData["schedule"] }
                       )}
                     </div>
                     {item.time && (
-                      <span className="text-sm font-medium text-rose-500 whitespace-nowrap">
+                      <span className="text-sm font-medium whitespace-nowrap" style={A}>
                         {formatTime(item.time)}
                       </span>
                     )}
@@ -183,7 +207,7 @@ function VenueSection({ venue, venueDetails }: { venue: string; venueDetails: We
     <section id="venue" className="py-20 px-4 bg-white">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-12">
-          <MapPin size={20} className="mx-auto text-rose-400 mb-4" />
+          <MapPin size={20} className="mx-auto mb-4" style={A} />
           <h2 className="font-heading text-2xl sm:text-3xl font-bold text-stone-900">
             Venue
           </h2>
@@ -209,7 +233,8 @@ function VenueSection({ venue, venueDetails }: { venue: string; venueDetails: We
               href={venueDetails.mapUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-rose-500 hover:text-rose-600 font-medium"
+              className="inline-flex items-center gap-2 text-sm font-medium"
+              style={A}
             >
               <MapPin size={14} />
               View on Google Maps
@@ -288,7 +313,7 @@ function RsvpSection({ slug }: { slug: string }) {
     <section id="rsvp" className="py-20 px-4 bg-stone-50">
       <div className="max-w-md mx-auto">
         <div className="text-center mb-8">
-          <CalendarDays size={20} className="mx-auto text-rose-400 mb-4" />
+          <CalendarDays size={20} className="mx-auto mb-4" style={A} />
           <h2 className="font-heading text-2xl sm:text-3xl font-bold text-stone-900">
             RSVP
           </h2>
@@ -309,7 +334,7 @@ function RsvpSection({ slug }: { slug: string }) {
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. Jane Smith"
                     required
-                    className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none pr-10"
+                    className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-stone-300 focus:border-stone-400 outline-none pr-10"
                   />
                   <Search size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-300" />
                 </div>
@@ -322,7 +347,7 @@ function RsvpSection({ slug }: { slug: string }) {
                         type="button"
                         key={m.id}
                         onClick={() => selectGuest(m)}
-                        className="w-full text-left border border-stone-200 rounded-xl px-4 py-3 hover:border-rose-300 hover:bg-rose-50/50 transition-colors"
+                        className="w-full text-left border border-stone-200 rounded-xl px-4 py-3 hover:border-stone-300 transition-colors"
                       >
                         <span className="text-sm font-medium text-stone-800">{m.name}</span>
                         {m.email && (
@@ -337,7 +362,8 @@ function RsvpSection({ slug }: { slug: string }) {
                 <button
                   type="submit"
                   disabled={searching || !name.trim()}
-                  className="w-full bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white font-medium py-2.5 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                  className="w-full disabled:opacity-50 text-white font-medium py-2.5 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                  style={ABg}
                 >
                   {searching ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
                   Find My RSVP
@@ -390,7 +416,7 @@ function RsvpSection({ slug }: { slug: string }) {
                         value={mealChoice}
                         onChange={(e) => setMealChoice(e.target.value)}
                         placeholder="e.g. Chicken, Fish, Vegetarian"
-                        className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none"
+                        className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-stone-300 focus:border-stone-400 outline-none"
                       />
                     </div>
                     <div>
@@ -400,7 +426,7 @@ function RsvpSection({ slug }: { slug: string }) {
                         value={dietaryNotes}
                         onChange={(e) => setDietaryNotes(e.target.value)}
                         placeholder="e.g. Gluten-free, nut allergy"
-                        className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none"
+                        className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-stone-300 focus:border-stone-400 outline-none"
                       />
                     </div>
                     {guest.plusOne && (
@@ -411,7 +437,7 @@ function RsvpSection({ slug }: { slug: string }) {
                           value={plusOneName}
                           onChange={(e) => setPlusOneName(e.target.value)}
                           placeholder="Guest name"
-                          className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none"
+                          className="w-full border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-stone-300 focus:border-stone-400 outline-none"
                         />
                       </div>
                     )}
@@ -423,7 +449,8 @@ function RsvpSection({ slug }: { slug: string }) {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="w-full bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white font-medium py-2.5 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                  className="w-full disabled:opacity-50 text-white font-medium py-2.5 rounded-xl transition-colors text-sm flex items-center justify-center gap-2"
+                  style={ABg}
                 >
                   {submitting && <Loader2 size={16} className="animate-spin" />}
                   Submit RSVP
@@ -444,7 +471,7 @@ function RsvpSection({ slug }: { slug: string }) {
             <div className="text-center py-4">
               {rsvp === "accepted" ? (
                 <>
-                  <PartyPopper size={36} className="mx-auto text-rose-400 mb-4" />
+                  <PartyPopper size={36} className="mx-auto mb-4" style={A} />
                   <h3 className="font-heading text-lg font-semibold text-stone-800 mb-2">
                     We can&apos;t wait to see you!
                   </h3>
@@ -466,7 +493,8 @@ function RsvpSection({ slug }: { slug: string }) {
               )}
               <button
                 onClick={() => { setPhase("search"); setGuest(null); setName(""); setMatches([]); }}
-                className="mt-6 text-xs text-rose-500 hover:text-rose-600 font-medium"
+                className="mt-6 text-xs font-medium"
+                style={A}
               >
                 RSVP for another guest
               </button>
@@ -486,7 +514,7 @@ function FaqSection({ faq }: { faq: WeddingPageData["faq"] }) {
     <section id="faq" className="py-20 px-4 bg-white">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-12">
-          <HelpCircle size={20} className="mx-auto text-rose-400 mb-4" />
+          <HelpCircle size={20} className="mx-auto mb-4" style={A} />
           <h2 className="font-heading text-2xl sm:text-3xl font-bold text-stone-900">
             Questions & Answers
           </h2>
@@ -526,7 +554,7 @@ function TravelSection({ travelInfo }: { travelInfo: WeddingPageData["travelInfo
     <section id="travel" className="py-20 px-4 bg-stone-50">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-12">
-          <Plane size={20} className="mx-auto text-rose-400 mb-4" />
+          <Plane size={20} className="mx-auto mb-4" style={A} />
           <h2 className="font-heading text-2xl sm:text-3xl font-bold text-stone-900">
             Travel & Accommodations
           </h2>
@@ -541,7 +569,8 @@ function TravelSection({ travelInfo }: { travelInfo: WeddingPageData["travelInfo
                   href={item.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-rose-500 hover:text-rose-600 font-medium mt-3"
+                  className="inline-flex items-center gap-1.5 text-xs font-medium mt-3"
+                  style={A}
                 >
                   More info <ExternalLink size={11} />
                 </a>
@@ -560,7 +589,7 @@ function RegistrySection({ registryLinks }: { registryLinks: WeddingPageData["re
     <section id="registry" className="py-20 px-4 bg-white">
       <div className="max-w-2xl mx-auto">
         <div className="text-center mb-12">
-          <Gift size={20} className="mx-auto text-rose-400 mb-4" />
+          <Gift size={20} className="mx-auto mb-4" style={A} />
           <h2 className="font-heading text-2xl sm:text-3xl font-bold text-stone-900">
             Registry
           </h2>
@@ -572,10 +601,10 @@ function RegistrySection({ registryLinks }: { registryLinks: WeddingPageData["re
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-between bg-stone-50 hover:bg-rose-50 rounded-xl border border-stone-200 hover:border-rose-200 p-5 transition-colors group"
+              className="flex items-center justify-between bg-stone-50 rounded-xl border border-stone-200 p-5 transition-colors group hover:opacity-80"
             >
-              <span className="font-medium text-stone-800 group-hover:text-rose-700">{link.name}</span>
-              <ExternalLink size={16} className="text-stone-300 group-hover:text-rose-400" />
+              <span className="font-medium text-stone-800">{link.name}</span>
+              <ExternalLink size={16} className="text-stone-300" style={A} />
             </a>
           ))}
         </div>
@@ -648,7 +677,7 @@ export default function WeddingPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center">
-        <Loader2 className="animate-spin text-rose-400" size={28} />
+        <Loader2 className="animate-spin" size={28} style={A} />
       </div>
     );
   }
@@ -669,8 +698,10 @@ export default function WeddingPage() {
     (s) => s !== "hero" && SECTION_RENDERERS[s]
   );
 
+  const themeVars = getThemeVars(data.colorPalette);
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-white" style={themeVars}>
       {/* Sticky navigation */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-stone-100">
         <div className="max-w-4xl mx-auto px-4 flex items-center justify-between h-12">
@@ -682,7 +713,8 @@ export default function WeddingPage() {
               <a
                 key={s}
                 href={`#${s}`}
-                className="text-xs text-stone-500 hover:text-rose-500 px-2.5 py-1.5 rounded-lg hover:bg-rose-50 transition-colors whitespace-nowrap capitalize"
+                className="text-xs text-stone-500 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap capitalize hover:opacity-75"
+                style={{ ["--tw-hover-color" as string]: "var(--w)" }}
               >
                 {s === "faq" ? "Q&A" : s}
               </a>

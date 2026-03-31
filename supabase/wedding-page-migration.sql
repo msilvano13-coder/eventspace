@@ -74,7 +74,8 @@ BEGIN
     'faq', e.wedding_faq,
     'registryLinks', e.wedding_registry_links,
     'sectionsOrder', e.wedding_sections_order,
-    'schedule', v_schedule
+    'schedule', v_schedule,
+    'colorPalette', COALESCE(e.color_palette, '[]'::jsonb)
   ) INTO v_result
   FROM events e
   WHERE e.id = v_event_id;

@@ -17,6 +17,7 @@ export interface WeddingPageData {
   registryLinks: RegistryLink[];
   sectionsOrder: string[];
   schedule: ScheduleEntry[];
+  colorPalette: string[];
 }
 
 export interface VenueDetails {
@@ -84,6 +85,7 @@ export async function fetchWeddingPage(slug: string): Promise<WeddingPageData | 
     registryLinks: data.registryLinks || [],
     sectionsOrder: data.sectionsOrder || ["hero", "story", "schedule", "venue", "rsvp", "faq", "travel", "registry"],
     schedule: data.schedule || [],
+    colorPalette: data.colorPalette || [],
   };
 }
 
