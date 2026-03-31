@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@supabase/supabase-js";
-import { createClient as createAuthClient } from "@/lib/supabase/server";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,8 +9,8 @@ const supabaseAdmin = createClient(
 
 /**
  * GET /api/stripe/checkout-complete?session_id=...
- * Server-side redirect after Stripe checkout. Verifies payment and updates
- * the plan in the DB before the user sees any page — no client-side dependency.
+ * Server-side redirect after Stripe checkout. Uses the Stripe session metadata
+ * (supabase_user_id, plan) to update the DB — no auth cookies required.
  */
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -19,40 +18,31 @@ export async function GET(request: Request) {
   const sessionId = url.searchParams.get("session_id");
 
   if (!sessionId) {
+    console.error("checkout-complete: no session_id");
     return NextResponse.redirect(`${origin}/planner/upgrade`);
   }
 
   try {
-    // Get the current user
-    const supabase = createAuthClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.redirect(`${origin}/sign-in`);
-    }
-
-    // Retrieve the Stripe session
+    // Retrieve the Stripe session — this is the source of truth
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
-    // Verify this session belongs to the current user
-    if (session.metadata?.supabase_user_id !== user.id) {
-      console.error("checkout-complete: session user mismatch", {
-        sessionUser: session.metadata?.supabase_user_id,
-        currentUser: user.id,
+    const userId = session.metadata?.supabase_user_id;
+    const plan = session.metadata?.plan as "diy" | "professional" | undefined;
+
+    if (!userId || !plan) {
+      console.error("checkout-complete: missing metadata", {
+        userId,
+        plan,
+        sessionId,
       });
       return NextResponse.redirect(`${origin}/planner/upgrade`);
     }
 
     if (session.status !== "complete") {
-      console.warn("checkout-complete: session not complete", { status: session.status });
-      return NextResponse.redirect(`${origin}/planner/upgrade`);
-    }
-
-    const plan = session.metadata?.plan as "diy" | "professional";
-    if (!plan) {
-      console.error("checkout-complete: no plan in session metadata");
+      console.warn("checkout-complete: session not complete", {
+        status: session.status,
+        sessionId,
+      });
       return NextResponse.redirect(`${origin}/planner/upgrade`);
     }
 
@@ -62,10 +52,14 @@ export async function GET(request: Request) {
       session.payment_status !== "paid" &&
       session.payment_status !== "no_payment_required"
     ) {
-      console.warn("checkout-complete: payment not yet confirmed", {
+      console.warn("checkout-complete: payment pending", {
         payment_status: session.payment_status,
+        sessionId,
       });
-      return NextResponse.redirect(`${origin}/planner/upgrade`);
+      // Redirect to settings with session_id so client-side can poll
+      return NextResponse.redirect(
+        `${origin}/planner/settings?session_id=${sessionId}&plan=${plan}`
+      );
     }
 
     // Build update data
@@ -80,18 +74,22 @@ export async function GET(request: Request) {
       updateData.stripe_subscription_id = session.subscription as string;
     }
 
-    // Update the profile
+    // Update the profile using admin client (no auth needed)
     const { error } = await supabaseAdmin
       .from("profiles")
       .update(updateData)
-      .eq("id", user.id);
+      .eq("id", userId);
 
     if (error) {
-      console.error("checkout-complete: profile update failed", error);
+      console.error("checkout-complete: profile update failed", {
+        error,
+        userId,
+        plan,
+      });
       return NextResponse.redirect(`${origin}/planner/upgrade`);
     }
 
-    console.log(`checkout-complete: updated ${user.id} to plan=${plan}`);
+    console.log(`checkout-complete: SUCCESS — updated ${userId} to plan=${plan}`);
 
     // Clear the middleware profile cache cookie and redirect to dashboard
     const response = NextResponse.redirect(`${origin}/planner`);
@@ -104,7 +102,7 @@ export async function GET(request: Request) {
     });
     return response;
   } catch (err) {
-    console.error("checkout-complete error:", err);
+    console.error("checkout-complete: unexpected error", err);
     return NextResponse.redirect(`${origin}/planner/upgrade`);
   }
 }
