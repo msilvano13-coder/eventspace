@@ -1,18 +1,72 @@
-# EventSpace Handoff — March 30, 2026
+# EventSpace Handoff — March 31, 2026
 
-## Current State: Session 12 Complete — Wedding Website Feature + Client Portal Improvements
+## Current State: Session 13 Complete — Full Security Audit + Client Vendor Enhancements
 - **Branch:** `main`
 - **Build:** Clean (zero errors)
-- **Latest commit:** `cbd651e` — Make wedding website editor collaborative
-- **Deploy:** Vercel (production)
+- **Latest commit:** `c2f814b` — Security audit fixes, RLS optimization, and client vendor enhancements
+- **Deploy:** Vercel (production) — auto-deploys on push
 - **Migrations:**
   - `trial-fix-migration.sql` — ✅ APPLIED
   - `rsvp-migration.sql` — ✅ APPLIED (3 RPCs: rsvp_get_event_info, rsvp_lookup_guest, rsvp_update_guest)
-  - `wedding-page-migration.sql` — ✅ APPLIED (10 columns on events, 3 RPCs: wedding_get_page, wedding_rsvp_lookup, wedding_rsvp_submit)
+  - `wedding-page-migration.sql` — ✅ APPLIED (updated: removed shareToken/userId from public RPC response)
+  - `atomic-replace-migration.sql` — ✅ APPLIED (2 RPCs: atomic_replace_vendors, atomic_replace_invoices)
+  - `remaining-rls-optimization.sql` — ✅ APPLIED (user_id denormalization on 8 child tables, composite indexes, direct RLS policies)
+- **Env vars:**
+  - `COOKIE_SECRET` — ✅ SET in Vercel (all environments)
 
 ---
 
 ## What Was Done Today (March 31)
+
+### Session 13: Full Security Audit (1000-user readiness) + Client Vendor Enhancements
+
+Comprehensive audit of the entire platform to ensure it's bulletproof for 1000 concurrent users. 13 issues identified and fixed, 3 SQL migrations applied, 1 env var configured.
+
+#### Critical Security Fixes
+1. **Account deletion wiped ALL webhook dedup records** — `DELETE FROM stripe_webhook_events` had no `WHERE` clause. Fixed to scope to user's events only. (`src/app/api/account/delete/route.ts`)
+2. **Storage cleanup missed nested folders** — Flat `list()` didn't recurse into subfolders. Replaced with recursive `deleteStorageRecursive()`. (`src/app/api/account/delete/route.ts`)
+3. **Wedding page leaked shareToken + userId** — Public `wedding_get_page` RPC returned sensitive fields. Removed from response, created secure `/api/storage/wedding-image` endpoint for gallery images. (`supabase/wedding-page-migration.sql`, `src/app/api/storage/wedding-image/route.ts`, `src/lib/supabase/wedding.ts`, `src/app/w/[slug]/page.tsx`)
+4. **COOKIE_SECRET fell back to public anon key** — HMAC signing used the Supabase anon key (publicly visible) when `COOKIE_SECRET` wasn't set. Now returns null and skips cookie writing when missing. (`src/lib/supabase/middleware.ts`)
+5. **Vendor discovery API had no auth check** — Anyone could hit `/api/discover` without being logged in. Added `getUser()` check. (`src/app/api/discover/route.ts`)
+6. **CSP allowed unsafe-eval** — Removed `'unsafe-eval'` from `script-src`. Verified Three.js/Fabric.js still work. (`next.config.mjs`)
+
+#### Performance & Scalability
+7. **Cached userId caused cross-session leakage** — Module-level `_cachedUserId` persisted across requests in serverless. Removed; `getUserId()` always calls `auth.getUser()`. (`src/lib/supabase/db.ts`)
+8. **Event list fetched all sub-entities** — `fetchEvents()` loaded full event objects. Changed to `eventCoreFromRow()` — only core fields, sub-entities lazy-loaded per tab. (`src/lib/supabase/db.ts`)
+9. **LRU eviction was O(n)** — `accessOrder` was a `string[]` with `indexOf`/`splice`. Changed to `Map<string, true>` for O(1) touch/evict. (`src/lib/store.ts`)
+10. **RLS used EXISTS subqueries on 8 tables** — Denormalized `user_id` onto `timeline_items`, `expenses`, `budget_items`, `event_contracts`, `shared_files`, `mood_board_images`, `messages`, `discovered_vendors`. Replaced EXISTS with direct `auth.uid() = user_id`. Added composite `(user_id, event_id)` indexes. (`supabase/remaining-rls-optimization.sql`)
+
+#### Data Integrity
+11. **Vendor/invoice replace was non-atomic** — Multi-step delete+insert could leave partial state on failure. Created `atomic_replace_vendors` and `atomic_replace_invoices` SECURITY DEFINER RPCs. (`supabase/atomic-replace-migration.sql`, `src/lib/supabase/db.ts`)
+12. **Replace functions didn't pass user_id** — All 8 `toRow` mappers now accept and include `user_id` for the denormalized columns. (`src/lib/supabase/db.ts`)
+13. **Store had no rollback on failed updates/deletes** — `update()` and `delete()` now snapshot state before optimistic update and restore on error, re-throwing for UI toast. (`src/lib/store.ts`)
+
+#### Client Portal Enhancement
+14. **Client vendor view was read-only with no details** — Added:
+    - Contract total with payment progress bar
+    - Expandable payment schedule (toggle paid, add/delete payments)
+    - Meal choice display with utensils icon
+    - Inline edit form for all vendor fields (name, category, contact, phone, email, contract total, meal, notes)
+    - (`src/app/client/[eventId]/page.tsx`)
+
+#### Files Changed
+| File | Change |
+|------|--------|
+| `src/app/api/account/delete/route.ts` | Scoped webhook cleanup, recursive storage delete |
+| `src/app/api/discover/route.ts` | Added auth check |
+| `src/app/api/storage/wedding-image/route.ts` | **NEW** — secure slug-based image endpoint |
+| `src/app/client/[eventId]/page.tsx` | Rich vendor display with edit/payments |
+| `src/app/w/[slug]/page.tsx` | Use slug instead of shareToken for images |
+| `src/lib/store.ts` | O(1) LRU, optimistic rollback |
+| `src/lib/supabase/db.ts` | Remove cached userId, core-only fetch, atomic RPCs, user_id in toRow mappers |
+| `src/lib/supabase/middleware.ts` | COOKIE_SECRET hardening |
+| `src/lib/supabase/wedding.ts` | Slug-based image loading |
+| `next.config.mjs` | Remove unsafe-eval from CSP |
+| `supabase/wedding-page-migration.sql` | Remove shareToken/userId from public RPC |
+| `supabase/atomic-replace-migration.sql` | **NEW** — atomic vendor/invoice RPCs |
+| `supabase/remaining-rls-optimization.sql` | **NEW** — user_id denormalization + RLS upgrade |
+
+---
 
 ### Session 12: Wedding Website Feature — Full Public Pages + Collaborative Editing
 
