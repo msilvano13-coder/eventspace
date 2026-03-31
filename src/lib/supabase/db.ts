@@ -79,6 +79,17 @@ function eventToRow(
     color_palette: e.colorPalette,
     archived_at: e.archivedAt ?? null,
     user_id: userId,
+    // Wedding website fields
+    wedding_page_enabled: e.weddingPageEnabled ?? false,
+    wedding_slug: e.weddingSlug || null,
+    wedding_headline: e.weddingHeadline ?? '',
+    wedding_story: e.weddingStory ?? '',
+    wedding_hero_storage_path: e.weddingHeroStoragePath ?? '',
+    wedding_venue_details: e.weddingVenueDetails ?? {},
+    wedding_travel_info: e.weddingTravelInfo ?? [],
+    wedding_faq: e.weddingFaq ?? [],
+    wedding_registry_links: e.weddingRegistryLinks ?? [],
+    wedding_sections_order: e.weddingSectionsOrder ?? ['hero','story','schedule','venue','rsvp','faq','travel','registry','gallery'],
   };
 }
 
@@ -94,6 +105,17 @@ function eventFieldsToRow(fields: Partial<Event>): Record<string, unknown> {
     row.color_palette = fields.colorPalette;
   if (fields.archivedAt !== undefined) row.archived_at = fields.archivedAt;
   if (fields.updatedAt !== undefined) row.updated_at = fields.updatedAt;
+  // Wedding website fields
+  if (fields.weddingPageEnabled !== undefined) row.wedding_page_enabled = fields.weddingPageEnabled;
+  if (fields.weddingSlug !== undefined) row.wedding_slug = fields.weddingSlug || null;
+  if (fields.weddingHeadline !== undefined) row.wedding_headline = fields.weddingHeadline;
+  if (fields.weddingStory !== undefined) row.wedding_story = fields.weddingStory;
+  if (fields.weddingHeroStoragePath !== undefined) row.wedding_hero_storage_path = fields.weddingHeroStoragePath;
+  if (fields.weddingVenueDetails !== undefined) row.wedding_venue_details = fields.weddingVenueDetails;
+  if (fields.weddingTravelInfo !== undefined) row.wedding_travel_info = fields.weddingTravelInfo;
+  if (fields.weddingFaq !== undefined) row.wedding_faq = fields.weddingFaq;
+  if (fields.weddingRegistryLinks !== undefined) row.wedding_registry_links = fields.weddingRegistryLinks;
+  if (fields.weddingSectionsOrder !== undefined) row.wedding_sections_order = fields.weddingSectionsOrder;
   return row;
 }
 
@@ -117,6 +139,17 @@ function eventCoreFields(r: any) {
     shareToken: r.share_token ?? '',
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    // Wedding website fields
+    weddingPageEnabled: r.wedding_page_enabled ?? false,
+    weddingSlug: r.wedding_slug ?? null,
+    weddingHeadline: r.wedding_headline ?? '',
+    weddingStory: r.wedding_story ?? '',
+    weddingHeroStoragePath: r.wedding_hero_storage_path ?? '',
+    weddingVenueDetails: r.wedding_venue_details ?? {},
+    weddingTravelInfo: r.wedding_travel_info ?? [],
+    weddingFaq: r.wedding_faq ?? [],
+    weddingRegistryLinks: r.wedding_registry_links ?? [],
+    weddingSectionsOrder: r.wedding_sections_order ?? ['hero','story','schedule','venue','rsvp','faq','travel','registry','gallery'],
   };
 }
 
@@ -2223,6 +2256,17 @@ function clientEventFromRow(r: any): Event {
     shareToken: r.share_token ?? '',
     createdAt: r.created_at,
     updatedAt: r.updated_at,
+    // Wedding website fields
+    weddingPageEnabled: r.wedding_page_enabled ?? false,
+    weddingSlug: r.wedding_slug ?? null,
+    weddingHeadline: r.wedding_headline ?? '',
+    weddingStory: r.wedding_story ?? '',
+    weddingHeroStoragePath: r.wedding_hero_storage_path ?? '',
+    weddingVenueDetails: r.wedding_venue_details ?? {},
+    weddingTravelInfo: r.wedding_travel_info ?? [],
+    weddingFaq: r.wedding_faq ?? [],
+    weddingRegistryLinks: r.wedding_registry_links ?? [],
+    weddingSectionsOrder: r.wedding_sections_order ?? ['hero','story','schedule','venue','rsvp','faq','travel','registry','gallery'],
     floorPlans: (r.floor_plans ?? []).map((fp: any) => ({
       id: fp.id,
       name: fp.name,

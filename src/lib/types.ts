@@ -82,6 +82,43 @@ export interface Event {
   shareToken: string;
   createdAt: string;
   updatedAt: string;
+  // Wedding website fields
+  weddingPageEnabled: boolean;
+  weddingSlug: string | null;
+  weddingHeadline: string;
+  weddingStory: string;
+  weddingHeroStoragePath: string;
+  weddingVenueDetails: WeddingVenueDetails;
+  weddingTravelInfo: WeddingTravelItem[];
+  weddingFaq: WeddingFaqItem[];
+  weddingRegistryLinks: WeddingRegistryLink[];
+  weddingSectionsOrder: string[];
+}
+
+export interface WeddingVenueDetails {
+  address?: string;
+  mapUrl?: string;
+  parkingNotes?: string;
+  description?: string;
+}
+
+export interface WeddingTravelItem {
+  id: string;
+  title: string;
+  description: string;
+  url?: string;
+}
+
+export interface WeddingFaqItem {
+  id: string;
+  question: string;
+  answer: string;
+}
+
+export interface WeddingRegistryLink {
+  id: string;
+  name: string;
+  url: string;
 }
 
 export interface ScheduleItem {

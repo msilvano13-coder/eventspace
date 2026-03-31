@@ -35,6 +35,7 @@ import {
   Image,
   Archive,
   RotateCcw,
+  Globe,
 } from "lucide-react";
 import { TimelineItem, QuestionnaireAssignment, Expense, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
 import MessageThread from "@/components/event/MessageThread";
@@ -511,6 +512,14 @@ export default function EventDetailPage() {
           <Store size={22} className="text-orange-400 mb-2" />
           <h3 className="font-heading font-semibold text-stone-800 group-hover:text-orange-500 text-sm">Vendors</h3>
           <p className="text-xs text-stone-400 mt-1">{(event.vendors ?? []).length} vendors</p>
+        </Link>
+        <Link
+          href={`/planner/${event.id}/wedding`}
+          className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
+        >
+          <Globe size={22} className="text-rose-400 mb-2" />
+          <h3 className="font-heading font-semibold text-stone-800 group-hover:text-rose-500 text-sm">Wedding Website</h3>
+          <p className="text-xs text-stone-400 mt-1">{event.weddingPageEnabled ? "Published" : "Not published"}</p>
         </Link>
         {!isDiy && (
           <Link

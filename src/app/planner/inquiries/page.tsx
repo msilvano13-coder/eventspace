@@ -83,6 +83,16 @@ export default function InquiriesPage() {
       messages: [],
       archivedAt: null,
       shareToken: '',
+      weddingPageEnabled: false,
+      weddingSlug: null,
+      weddingHeadline: '',
+      weddingStory: '',
+      weddingHeroStoragePath: '',
+      weddingVenueDetails: {},
+      weddingTravelInfo: [],
+      weddingFaq: [],
+      weddingRegistryLinks: [],
+      weddingSectionsOrder: ['hero','story','schedule','venue','rsvp','faq','travel','registry','gallery'],
     });
     deleteInquiry(inq.id);
     setConfirmBookId(null);
