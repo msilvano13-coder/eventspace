@@ -12,6 +12,7 @@ import {
 type Listener = () => void;
 
 const EMPTY: Questionnaire[] = [];
+const MAX_QUESTIONNAIRES = 500;
 
 class QuestionnaireStore {
   private items: Map<string, Questionnaire> = new Map();
@@ -34,7 +35,7 @@ class QuestionnaireStore {
     }
     try {
       const rows = await fetchQuestionnaires();
-      this.items = new Map(rows.map((q: Questionnaire) => [q.id, q]));
+      this.items = new Map(rows.slice(0, MAX_QUESTIONNAIRES).map((q: Questionnaire) => [q.id, q]));
     } catch (err) {
       console.error("[QuestionnaireStore] hydrate failed:", err);
       this.items = new Map();
@@ -67,6 +68,10 @@ class QuestionnaireStore {
   async create(data: Omit<Questionnaire, "id" | "createdAt" | "updatedAt">): Promise<Questionnaire> {
     const userId = await getUserId();
     const q = await dbCreateQuestionnaire(data, userId);
+    if (this.items.size >= MAX_QUESTIONNAIRES) {
+      const oldest = this.items.keys().next().value;
+      if (oldest !== undefined) this.items.delete(oldest);
+    }
     this.items.set(q.id, q);
     this.rebuildCache();
     this.emit();

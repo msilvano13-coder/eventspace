@@ -11,6 +11,8 @@ import {
 
 type Listener = () => void;
 
+const MAX_INQUIRIES = 1000;
+
 class InquiryStore {
   private items: Inquiry[] = [];
   private listeners = new Set<Listener>();
@@ -30,7 +32,8 @@ class InquiryStore {
       return;
     }
     try {
-      this.items = await fetchInquiries();
+      const rows = await fetchInquiries();
+      this.items = rows.slice(0, MAX_INQUIRIES);
     } catch (err) {
       console.error("[InquiryStore] hydrate failed:", err);
       this.items = [];
@@ -52,7 +55,7 @@ class InquiryStore {
   async create(data: Omit<Inquiry, "id" | "createdAt" | "updatedAt">): Promise<Inquiry> {
     const userId = await getUserId();
     const inquiry = await dbCreateInquiry(data, userId);
-    this.items = [inquiry, ...this.items];
+    this.items = [inquiry, ...this.items].slice(0, MAX_INQUIRIES);
     this.emit();
     return inquiry;
   }

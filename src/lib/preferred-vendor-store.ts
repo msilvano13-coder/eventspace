@@ -12,6 +12,7 @@ import {
 type Listener = () => void;
 
 const EMPTY: PreferredVendor[] = [];
+const MAX_PREFERRED_VENDORS = 500;
 
 class PreferredVendorStore {
   private vendors: PreferredVendor[] = [];
@@ -32,7 +33,8 @@ class PreferredVendorStore {
       return;
     }
     try {
-      this.vendors = await fetchPreferredVendors();
+      const rows = await fetchPreferredVendors();
+      this.vendors = rows.slice(0, MAX_PREFERRED_VENDORS);
     } catch (err) {
       console.error("[PreferredVendorStore] hydrate failed:", err);
       this.vendors = [];
@@ -52,7 +54,7 @@ class PreferredVendorStore {
   };
 
   async add(vendor: PreferredVendor): Promise<void> {
-    this.vendors = [...this.vendors, vendor];
+    this.vendors = [...this.vendors, vendor].slice(0, MAX_PREFERRED_VENDORS);
     this.emit();
     try {
       const userId = await getUserId();

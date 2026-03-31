@@ -12,6 +12,7 @@ import {
 type Listener = () => void;
 
 const EMPTY: ContractTemplate[] = [];
+const MAX_TEMPLATES = 200;
 
 class ContractTemplateStore {
   private templates: ContractTemplate[] = [];
@@ -32,7 +33,8 @@ class ContractTemplateStore {
       return;
     }
     try {
-      this.templates = await fetchContractTemplates();
+      const rows = await fetchContractTemplates();
+      this.templates = rows.slice(0, MAX_TEMPLATES);
     } catch (err) {
       console.error("[ContractTemplateStore] hydrate failed:", err);
       this.templates = [];
@@ -52,7 +54,7 @@ class ContractTemplateStore {
   };
 
   async add(template: ContractTemplate): Promise<void> {
-    this.templates = [...this.templates, template];
+    this.templates = [...this.templates, template].slice(0, MAX_TEMPLATES);
     this.emit();
     try {
       const userId = await getUserId();

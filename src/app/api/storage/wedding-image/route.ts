@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   try {
     // Rate limiting
     const clientIp = getClientIp(request);
-    if (isRateLimited(clientIp, { name: "wedding-image", max: 60, windowMs: 60_000 })) {
+    if (await isRateLimited(clientIp, { name: "wedding-image", max: 60, windowMs: 60_000 })) {
       return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 

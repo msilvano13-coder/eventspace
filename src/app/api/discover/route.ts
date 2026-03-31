@@ -1,45 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-
-// ── In-memory rate limiter (per IP, sliding window) ──
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute
-const RATE_LIMIT_MAX = 20; // 20 requests per minute per IP
-const MAX_RATE_LIMIT_ENTRIES = 10_000;
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const entry = rateLimitMap.get(ip);
-  if (!entry || now > entry.resetAt) {
-    // If map is at capacity, flush expired entries first
-    if (rateLimitMap.size >= MAX_RATE_LIMIT_ENTRIES) {
-      rateLimitMap.forEach((e, k) => { if (now > e.resetAt) rateLimitMap.delete(k); });
-      // If still over cap after flush, reject to prevent memory exhaustion
-      if (rateLimitMap.size >= MAX_RATE_LIMIT_ENTRIES) return true;
-    }
-    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW });
-    return false;
-  }
-  entry.count++;
-  return entry.count > RATE_LIMIT_MAX;
-}
-
-// Periodically clean stale entries to prevent memory leak (every 1 min)
-if (typeof globalThis !== "undefined") {
-  const cleanup = () => {
-    const now = Date.now();
-    rateLimitMap.forEach((entry, ip) => {
-      if (now > entry.resetAt) rateLimitMap.delete(ip);
-    });
-    // Also evict expired cache entries
-    cache.forEach((entry, key) => {
-      if (now - entry.ts > SEVEN_DAYS) cache.delete(key);
-    });
-  };
-  setInterval(cleanup, 30 * 1000).unref?.();
-}
+import { isRateLimited, getClientIp } from "@/lib/api-security";
 
 // ── In-memory cache with 7-day TTL and LRU eviction (max 500 entries) ──
+// Cache is fine per-instance (stale cache just means a re-fetch, not a security issue)
 const cache = new Map<string, { data: DiscoverVendor[]; ts: number }>();
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 const MAX_CACHE_ENTRIES = 500;
@@ -329,9 +293,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // Rate limiting
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
-  if (isRateLimited(ip)) {
+  // Rate limiting (Supabase-backed, shared across all serverless instances)
+  const ip = getClientIp(request);
+  if (await isRateLimited(ip, { name: "discover", max: 20, windowMs: 60_000 })) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },
       { status: 429, headers: { "Retry-After": "60" } }
@@ -383,12 +347,16 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Store in cache (evict oldest if full)
+  // Store in cache (evict oldest if full, clean expired entries)
+  const now = Date.now();
   if (cache.size >= MAX_CACHE_ENTRIES) {
-    const oldestKey = cache.keys().next().value;
-    if (oldestKey !== undefined) cache.delete(oldestKey);
+    cache.forEach((entry, key) => { if (now - entry.ts > SEVEN_DAYS) cache.delete(key); });
+    if (cache.size >= MAX_CACHE_ENTRIES) {
+      const oldestKey = cache.keys().next().value;
+      if (oldestKey !== undefined) cache.delete(oldestKey);
+    }
   }
-  cache.set(cacheKey, { data: vendors, ts: Date.now() });
+  cache.set(cacheKey, { data: vendors, ts: now });
 
   return NextResponse.json({ vendors, demo: isDemo });
 }
