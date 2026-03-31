@@ -57,6 +57,41 @@ const INV_STATUS_COLORS: Record<string, string> = {
   paid: "bg-emerald-50 text-emerald-600",
 };
 
+function WeddingWebsiteCard({ slug }: { slug: string }) {
+  const [copied, setCopied] = useState(false);
+  const url = typeof window !== "undefined" ? `${window.location.origin}/w/${slug}` : `/w/${slug}`;
+
+  function copyLink() {
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <div className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft">
+      <Globe size={22} className="text-rose-400 mb-2" />
+      <h3 className="font-heading font-semibold text-stone-800 text-sm">Wedding Website</h3>
+      <p className="text-xs text-stone-400 mt-1 mb-3">Share with your guests</p>
+      <div className="flex items-center gap-2">
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex-1 text-xs text-rose-500 hover:text-rose-600 font-medium truncate"
+        >
+          {url.replace(/^https?:\/\//, "")}
+        </a>
+        <button
+          onClick={copyLink}
+          className="shrink-0 text-xs text-stone-500 hover:text-stone-700 px-2 py-1 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors"
+        >
+          {copied ? "Copied!" : "Copy"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function ClientPortalPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const event = useEvent(eventId);
@@ -179,6 +214,9 @@ export default function ClientPortalPage() {
                 {(event.invoices ?? []).filter((inv) => inv.status !== "draft").length} invoice{(event.invoices ?? []).filter((inv) => inv.status !== "draft").length !== 1 ? "s" : ""}
               </p>
             </a>
+          )}
+          {event.weddingPageEnabled && event.weddingSlug && (
+            <WeddingWebsiteCard slug={event.weddingSlug} />
           )}
         </div>
 
@@ -1523,6 +1561,7 @@ function ClientContractCard({
 
 function ClientGuestRSVP({ event, onUpdate }: { event: Event; onUpdate: (guests: Guest[]) => void }) {
   const guests = event.guests ?? [];
+  const [collapsed, setCollapsed] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [rsvpVal, setRsvpVal] = useState<RsvpStatus>("pending");
@@ -1850,34 +1889,43 @@ function ClientGuestRSVP({ event, onUpdate }: { event: Event; onUpdate: (guests:
 
   return (
     <div className="bg-white rounded-2xl border border-stone-200 shadow-soft overflow-hidden">
-      <div className="px-5 pt-5 pb-4 border-b border-stone-100">
+      <button
+        onClick={() => setCollapsed(!collapsed)}
+        className="w-full px-5 pt-5 pb-4 border-b border-stone-100 text-left hover:bg-stone-50/50 transition-colors"
+      >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users size={15} className="text-amber-400" />
             <h2 className="font-heading font-semibold text-stone-800">Guest List & RSVP</h2>
+            <span className="text-xs text-stone-400">({guests.length})</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-stone-400">
-            <span><span className="font-semibold text-emerald-600">{accepted}</span> <span className="hidden sm:inline">accepted</span><span className="sm:hidden">✓</span></span>
-            <span><span className="font-semibold text-amber-600">{pending}</span> <span className="hidden sm:inline">pending</span><span className="sm:hidden">…</span></span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs text-stone-400">
+              <span><span className="font-semibold text-emerald-600">{accepted}</span> <span className="hidden sm:inline">accepted</span><span className="sm:hidden">✓</span></span>
+              <span><span className="font-semibold text-amber-600">{pending}</span> <span className="hidden sm:inline">pending</span><span className="sm:hidden">…</span></span>
+            </div>
+            <ChevronDown size={16} className={`text-stone-400 transition-transform ${!collapsed ? "rotate-180" : ""}`} />
           </div>
         </div>
-        {!adding && editingId === null && (
-          <div className="flex items-center gap-2 mt-3">
-            <button onClick={() => setShowImport(true)} className="flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-stone-700 px-3 py-1.5 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors" title="Import CSV">
-              <Upload size={13} /> Import
+      </button>
+
+      {!collapsed && <>
+      {!adding && editingId === null && (
+        <div className="flex items-center gap-2 px-5 pt-3 pb-2">
+          <button onClick={() => setShowImport(true)} className="flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-stone-700 px-3 py-1.5 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors" title="Import CSV">
+            <Upload size={13} /> Import
+          </button>
+          {guests.length > 0 && (
+            <button onClick={exportCSV} className="flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-stone-700 px-3 py-1.5 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors" title="Export CSV">
+              <Download size={13} /> Export
             </button>
-            {guests.length > 0 && (
-              <button onClick={exportCSV} className="flex items-center gap-1.5 text-xs font-medium text-stone-500 hover:text-stone-700 px-3 py-1.5 rounded-lg border border-stone-200 hover:bg-stone-50 transition-colors" title="Export CSV">
-                <Download size={13} /> Export
-              </button>
-            )}
-            <div className="flex-1" />
-            <button onClick={startAdd} className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600 transition-colors">
-              <Plus size={14} /> Add Guest
-            </button>
-          </div>
-        )}
-      </div>
+          )}
+          <div className="flex-1" />
+          <button onClick={startAdd} className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600 transition-colors">
+            <Plus size={14} /> Add Guest
+          </button>
+        </div>
+      )}
 
       {adding && (
         <div className="px-5 py-4 border-b border-stone-100 bg-rose-50/30">
@@ -2005,6 +2053,8 @@ function ClientGuestRSVP({ event, onUpdate }: { event: Event; onUpdate: (guests:
           ))}
         </div>
       )}
+
+      </>}
 
       {/* CSV Import Modal */}
       {showImport && (
