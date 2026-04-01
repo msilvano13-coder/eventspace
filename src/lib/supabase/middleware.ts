@@ -8,6 +8,7 @@ const PROFILE_CACHE_MAX_AGE = 15 * 60; // 15 minutes in seconds
 interface CachedProfile {
   plan: string;
   trialEndsAt: string | null;
+  hasTeamAccess: boolean;
   ts: number;
 }
 
@@ -137,6 +138,8 @@ export async function updateSession(request: NextRequest) {
       }
     }
 
+    let hasTeamAccess = false;
+
     if (needsFetch) {
       const { data: profile } = await supabase
         .from("profiles")
@@ -153,10 +156,19 @@ export async function updateSession(request: NextRequest) {
       plan = profile.plan;
       trialEndsAt = profile.trial_ends_at;
 
+      // Check if user is an active team member anywhere
+      const { count } = await supabase
+        .from("team_members")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "active");
+      hasTeamAccess = (count ?? 0) > 0;
+
       // Cache profile in a short-lived HMAC-signed cookie (only if COOKIE_SECRET is set)
       const cacheValue: CachedProfile = {
         plan: profile.plan,
         trialEndsAt: profile.trial_ends_at,
+        hasTeamAccess,
         ts: Date.now(),
       };
       const signedValue = await signCookie(JSON.stringify(cacheValue));
@@ -169,6 +181,15 @@ export async function updateSession(request: NextRequest) {
           path: "/",
         });
       }
+    } else {
+      // Restore hasTeamAccess from cache
+      try {
+        const verified = await verifyCookie(cachedRaw!);
+        if (verified) {
+          const cached: CachedProfile = JSON.parse(verified);
+          hasTeamAccess = cached.hasTeamAccess ?? false;
+        }
+      } catch { /* already parsed above, fallback to false */ }
     }
 
     const isPending = plan === "pending";
@@ -180,14 +201,14 @@ export async function updateSession(request: NextRequest) {
     // Allow checkout return to /planner/settings with session_id so verify-session can fire
     const isCheckoutReturn = pathname === "/planner/settings" && request.nextUrl.searchParams.has("session_id");
 
-    if ((isPending || isExpired || isTrialOver) && !isCheckoutReturn) {
+    if ((isPending || isExpired || isTrialOver) && !isCheckoutReturn && !hasTeamAccess) {
       const url = request.nextUrl.clone();
       url.pathname = "/planner/upgrade";
       return NextResponse.redirect(url);
     }
 
-    // Block DIY users from Pro-only routes
-    if (plan === "diy" && PRO_ONLY_ROUTES.has(pathname)) {
+    // Block DIY users from Pro-only routes (unless they have team access)
+    if (plan === "diy" && PRO_ONLY_ROUTES.has(pathname) && !hasTeamAccess) {
       const url = request.nextUrl.clone();
       url.pathname = "/planner";
       return NextResponse.redirect(url);

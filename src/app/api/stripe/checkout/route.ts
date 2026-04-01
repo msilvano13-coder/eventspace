@@ -18,10 +18,11 @@ export async function POST(request: Request) {
     }
 
     const { plan } = (await request.json()) as {
-      plan: "diy" | "professional";
+      plan: "diy" | "professional" | "teams_5" | "teams_10";
     };
 
-    if (plan !== "diy" && plan !== "professional") {
+    const VALID_PLANS = ["diy", "professional", "teams_5", "teams_10"] as const;
+    if (!VALID_PLANS.includes(plan as (typeof VALID_PLANS)[number])) {
       return NextResponse.json({ error: "Invalid plan" }, { status: 400 });
     }
 
@@ -32,18 +33,18 @@ export async function POST(request: Request) {
       .eq("id", user.id)
       .single();
 
-    // Prevent duplicate purchases
-    if (profile?.plan === plan) {
+    // Prevent duplicate purchases (solo pro only — team upgrades handled separately)
+    if (profile?.plan === plan && plan === "diy") {
       return NextResponse.json(
-        { error: `You already have the ${plan === "diy" ? "DIY" : "Professional"} plan.` },
+        { error: "You already have the DIY plan." },
         { status: 400 }
       );
     }
 
-    // DIY is standalone — cannot upgrade to Professional
-    if (profile?.plan === "diy" && plan === "professional") {
+    // DIY is standalone — cannot upgrade
+    if (profile?.plan === "diy") {
       return NextResponse.json(
-        { error: "DIY plans cannot be upgraded to Professional." },
+        { error: "DIY plans cannot be upgraded." },
         { status: 400 }
       );
     }
@@ -105,14 +106,27 @@ export async function POST(request: Request) {
       return NextResponse.json({ url: session.url });
     }
 
-    // Professional — subscription, no Stripe trial (app trial covers first 30 days)
+    // Subscription plans: professional, teams_5, teams_10
+    const priceMap: Record<string, string> = {
+      professional: process.env.STRIPE_PRICE_PROFESSIONAL!,
+      teams_5: process.env.STRIPE_PRICE_TEAMS_5!,
+      teams_10: process.env.STRIPE_PRICE_TEAMS_10!,
+    };
+
+    const priceId = priceMap[plan];
+    if (!priceId) {
+      return NextResponse.json({ error: "Price not configured" }, { status: 500 });
+    }
+
+    const isTeamPlan = plan === "teams_5" || plan === "teams_10";
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: "subscription",
       allow_promotion_codes: true,
       line_items: [
         {
-          price: process.env.STRIPE_PRICE_PROFESSIONAL!,
+          price: priceId,
           quantity: 1,
         },
       ],
@@ -121,6 +135,7 @@ export async function POST(request: Request) {
       metadata: {
         supabase_user_id: user.id,
         plan: "professional",
+        ...(isTeamPlan ? { team_plan: plan } : {}),
       },
     });
 

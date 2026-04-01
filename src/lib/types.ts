@@ -1,5 +1,53 @@
 import { v4 as uuid } from "uuid";
 
+// ── Teams ──
+
+export type TeamPlan = "teams_5" | "teams_10";
+export type TeamMemberStatus = "pending" | "active" | "removed";
+export type TeamRole = "coordinator" | "assistant" | "viewer";
+
+export interface Team {
+  id: string;
+  ownerId: string;
+  name: string;
+  plan: TeamPlan;
+  maxMembers: number;
+  stripeSubscriptionId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeamMember {
+  id: string;
+  teamId: string;
+  email: string;
+  userId: string | null;
+  role: TeamRole;
+  status: TeamMemberStatus;
+  inviteToken: string | null;
+  invitedAt: string;
+  acceptedAt: string | null;
+}
+
+export interface TeamEventAssignment {
+  id: string;
+  teamId: string;
+  eventId: string;
+  memberId: string;
+  assignedAt: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  metadata: Record<string, unknown>;
+  read: boolean;
+  createdAt: string;
+}
+
 // ── Planner Profile ──
 
 export type PlanType = "pending" | "trial" | "diy" | "professional" | "expired";

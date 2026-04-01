@@ -41,6 +41,7 @@ import { TimelineItem, QuestionnaireAssignment, Expense, Message, BudgetItem, BU
 import MessageThread from "@/components/event/MessageThread";
 import { exportEventPDF } from "@/lib/export-pdf";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import TeamAssignment from "@/components/events/TeamAssignment";
 
 const STATUS_OPTIONS = ["planning", "confirmed", "completed"] as const;
 
@@ -449,6 +450,7 @@ export default function EventDetailPage() {
                 <span className="hidden sm:inline">Client Link</span>
               </button>
             )}
+            {!isDiy && <TeamAssignment eventId={event.id} />}
           </div>
         </div>
       )}

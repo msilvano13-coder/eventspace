@@ -5,6 +5,7 @@ import { plannerStore } from "@/lib/planner-store";
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Camera, Save, X, CreditCard, ExternalLink, CheckCircle2, Loader2, Mail, Shield, Calendar, AlertTriangle, Trash2, ShieldOff } from "lucide-react";
+import TeamManagement from "@/components/settings/TeamManagement";
 import { trackTrialActivated } from "@/lib/analytics";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -380,6 +381,9 @@ function SettingsContent() {
           </div>
         </div>
 
+        {/* Team Management — only for Professional plan owners */}
+        {profile.plan === "professional" && <TeamManagement />}
+
         {/* Account & Billing */}
         <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft">
           <h2 className="font-heading font-semibold text-stone-800 mb-4 flex items-center gap-2">
@@ -485,6 +489,15 @@ function SettingsContent() {
                     </>
                   )}
                 </button>
+              )}
+              {profile.plan === "professional" && (
+                <Link
+                  href="/planner/upgrade"
+                  className="flex items-center gap-2 bg-rose-400 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-rose-500 transition-colors"
+                >
+                  Upgrade to Teams
+                  <ExternalLink size={12} />
+                </Link>
               )}
             </div>
 

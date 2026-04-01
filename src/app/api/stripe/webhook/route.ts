@@ -54,6 +54,7 @@ export async function POST(request: Request) {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.supabase_user_id;
         const plan = session.metadata?.plan as "diy" | "professional";
+        const teamPlan = session.metadata?.team_plan as "teams_5" | "teams_10" | undefined;
         const customerId = session.customer as string;
 
         debug.sessionId = session.id;
@@ -117,6 +118,29 @@ export async function POST(request: Request) {
         } else {
           debug.skippedReason = "no userId or customerId";
           console.error("checkout.session.completed: no userId or customerId available, cannot update plan");
+        }
+
+        // Create or update team row for team plans
+        if (teamPlan && userId) {
+          const maxMembers = teamPlan === "teams_10" ? 10 : 5;
+          const subscriptionId = session.subscription as string;
+          const { error: teamError } = await supabaseAdmin
+            .from("teams")
+            .upsert(
+              {
+                owner_id: userId,
+                plan: teamPlan,
+                max_members: maxMembers,
+                stripe_subscription_id: subscriptionId,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "owner_id" }
+            );
+          if (teamError) {
+            console.error("checkout.session.completed team upsert failed:", teamError);
+          }
+          debug.teamPlan = teamPlan;
+          debug.teamUpsertError = teamError;
         }
 
         break;
@@ -226,6 +250,13 @@ export async function POST(request: Request) {
 
         if (!customerId) break;
 
+        // Find the user by stripe_customer_id to handle team cleanup
+        const { data: expiredProfile } = await supabaseAdmin
+          .from("profiles")
+          .select("id")
+          .eq("stripe_customer_id", customerId)
+          .single();
+
         const { error } = await supabaseAdmin
           .from("profiles")
           .update({
@@ -234,6 +265,28 @@ export async function POST(request: Request) {
           })
           .eq("stripe_customer_id", customerId);
         if (error) console.error("customer.subscription.deleted update failed:", error);
+
+        // Deactivate team and set all members to removed
+        if (expiredProfile?.id) {
+          const { data: team } = await supabaseAdmin
+            .from("teams")
+            .select("id")
+            .eq("owner_id", expiredProfile.id)
+            .single();
+
+          if (team) {
+            await supabaseAdmin
+              .from("team_members")
+              .update({ status: "removed" })
+              .eq("team_id", team.id)
+              .neq("status", "removed");
+
+            await supabaseAdmin
+              .from("teams")
+              .delete()
+              .eq("id", team.id);
+          }
+        }
 
         break;
       }

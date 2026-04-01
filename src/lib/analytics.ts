@@ -16,7 +16,7 @@ export function trackTrialActivated(plan: string) {
   posthog.capture("trial_activated", { plan });
 }
 
-export function trackPlanPurchased(plan: "diy" | "professional", amount: number) {
+export function trackPlanPurchased(plan: "diy" | "professional" | "teams_5" | "teams_10", amount: number) {
   posthog.capture("plan_purchased", { plan, amount });
 }
 

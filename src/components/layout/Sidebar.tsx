@@ -9,6 +9,8 @@ import { createClient } from "@/lib/supabase/client";
 import { clearUserIdCache } from "@/lib/supabase/db";
 import { usePlannerProfile } from "@/hooks/useStore";
 import { isProFeature } from "@/lib/plan-features";
+import TeamSwitcher from "@/components/layout/TeamSwitcher";
+import NotificationBell from "@/components/layout/NotificationBell";
 
 const navItems = [
   { href: "/planner", label: "Dashboard", icon: LayoutDashboard },
@@ -53,7 +55,7 @@ export default function Sidebar() {
     <>
       {/* Desktop sidebar */}
       <aside className="hidden md:flex md:flex-col w-60 bg-white border-r border-stone-200 min-h-screen">
-        <div className="p-5 border-b border-stone-100">
+        <div className="p-5 border-b border-stone-100 space-y-2">
           <Link href="/planner" className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-rose-400 rounded-lg flex items-center justify-center font-heading font-bold text-white text-sm">
               E
@@ -62,6 +64,7 @@ export default function Sidebar() {
               EventSpace
             </span>
           </Link>
+          <TeamSwitcher />
         </div>
         <nav className="flex-1 p-3 space-y-1">
           {navItems.map((item) => {
@@ -85,17 +88,20 @@ export default function Sidebar() {
           })}
         </nav>
         <div className="p-3 border-t border-stone-100">
-          <Link
-            href="/planner/settings"
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
-              pathname === "/planner/settings"
-                ? "bg-rose-50 text-rose-600 font-medium"
-                : "text-stone-500 hover:text-stone-800 hover:bg-stone-100"
-            }`}
-          >
-            <Settings size={18} />
-            Settings
-          </Link>
+          <div className="flex items-center justify-between px-3 py-1 mb-1">
+            <Link
+              href="/planner/settings"
+              className={`flex items-center gap-3 py-1.5 rounded-xl text-sm transition-colors ${
+                pathname === "/planner/settings"
+                  ? "text-rose-600 font-medium"
+                  : "text-stone-500 hover:text-stone-800"
+              }`}
+            >
+              <Settings size={18} />
+              Settings
+            </Link>
+            <NotificationBell />
+          </div>
           <button
             onClick={handleSignOut}
             className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors text-stone-400 hover:text-red-600 hover:bg-red-50 w-full"

@@ -27,3 +27,8 @@ export function isProFeature(route: string): boolean {
 export function canCreateEvent(plan: PlanType, activeEventCount: number): boolean {
   return activeEventCount < MAX_EVENTS[plan];
 }
+
+/** Returns true if user has pro-level access (own plan or team membership). */
+export function hasProAccess(plan: PlanType, hasTeamAccess: boolean): boolean {
+  return plan === "professional" || plan === "trial" || hasTeamAccess;
+}

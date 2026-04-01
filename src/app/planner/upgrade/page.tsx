@@ -32,6 +32,13 @@ const PRO_FEATURES = [
   "Priority support",
 ];
 
+const TEAM_EXTRAS = [
+  "Everything in Professional",
+  "Assign team members to events",
+  "Team activity notifications",
+  "Team member dashboard",
+];
+
 export default function UpgradePage() {
   return (
     <Suspense>
@@ -45,7 +52,7 @@ function UpgradeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const highlightDiy = searchParams.get("plan") === "diy";
-  const [loadingPlan, setLoadingPlan] = useState<"diy" | "professional" | null>(
+  const [loadingPlan, setLoadingPlan] = useState<"diy" | "professional" | "teams_5" | "teams_10" | null>(
     null
   );
 
@@ -137,6 +144,28 @@ function UpgradeContent() {
     }
   }
 
+  async function handleSubscribeTeam(teamPlan: "teams_5" | "teams_10") {
+    setLoadingPlan(teamPlan);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: teamPlan }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        trackPlanPurchased(teamPlan, teamPlan === "teams_5" ? 50 : 100);
+        window.location.href = data.url;
+      } else {
+        alert(data.error || "Something went wrong");
+        setLoadingPlan(null);
+      }
+    } catch {
+      alert("Something went wrong. Please try again.");
+      setLoadingPlan(null);
+    }
+  }
+
   return (
     <div className="px-4 py-6 sm:px-6 md:px-8 max-w-4xl mx-auto">
       <div className="text-center mb-10">
@@ -165,7 +194,7 @@ function UpgradeContent() {
         )}
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
         {/* DIY */}
         <div className={`rounded-2xl p-8 flex flex-col ${highlightDiy ? "bg-white border-2 border-rose-500 shadow-lg relative" : "bg-stone-50 border border-stone-200 shadow-soft"}`}>
           <h3 className="font-heading text-xl font-semibold text-stone-900">
@@ -252,6 +281,96 @@ function UpgradeContent() {
           </p>
           <ul className="space-y-3 text-sm text-stone-600">
             {PRO_FEATURES.map((item) => (
+              <li key={item} className="flex items-start gap-2">
+                <Check
+                  size={16}
+                  className="shrink-0 text-emerald-500 mt-0.5"
+                />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Pro Teams 5 */}
+        <div className="rounded-2xl p-8 bg-stone-50 border border-stone-200 shadow-soft flex flex-col">
+          <h3 className="font-heading text-xl font-semibold text-stone-900">
+            Pro Teams
+          </h3>
+          <p className="mt-1 text-sm text-stone-500">
+            For small planning teams
+          </p>
+          <p className="mt-6">
+            <span className="font-heading text-4xl font-bold text-stone-900">
+              $50
+            </span>
+            <span className="text-stone-400 text-sm"> / month</span>
+          </p>
+          <p className="text-xs text-stone-400 mt-1">Up to 5 team members</p>
+          <button
+            onClick={() => handleSubscribeTeam("teams_5")}
+            disabled={loadingPlan !== null}
+            className="mt-6 flex items-center justify-center gap-2 font-medium px-6 py-2.5 rounded-xl transition-colors text-sm disabled:opacity-50 text-stone-700 bg-white hover:bg-stone-100 border border-stone-200"
+          >
+            {loadingPlan === "teams_5" ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Redirecting...
+              </>
+            ) : (
+              "Subscribe — $50/mo"
+            )}
+          </button>
+          <p className="mt-5 mb-4 text-xs text-stone-400 font-medium uppercase tracking-wider">
+            Professional, plus
+          </p>
+          <ul className="space-y-3 text-sm text-stone-600">
+            {TEAM_EXTRAS.map((item) => (
+              <li key={item} className="flex items-start gap-2">
+                <Check
+                  size={16}
+                  className="shrink-0 text-emerald-500 mt-0.5"
+                />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Pro Teams 10 */}
+        <div className="rounded-2xl p-8 bg-stone-50 border border-stone-200 shadow-soft flex flex-col">
+          <h3 className="font-heading text-xl font-semibold text-stone-900">
+            Pro Teams+
+          </h3>
+          <p className="mt-1 text-sm text-stone-500">
+            For larger planning firms
+          </p>
+          <p className="mt-6">
+            <span className="font-heading text-4xl font-bold text-stone-900">
+              $100
+            </span>
+            <span className="text-stone-400 text-sm"> / month</span>
+          </p>
+          <p className="text-xs text-stone-400 mt-1">Up to 10 team members</p>
+          <button
+            onClick={() => handleSubscribeTeam("teams_10")}
+            disabled={loadingPlan !== null}
+            className="mt-6 flex items-center justify-center gap-2 font-medium px-6 py-2.5 rounded-xl transition-colors text-sm disabled:opacity-50 text-stone-700 bg-white hover:bg-stone-100 border border-stone-200"
+          >
+            {loadingPlan === "teams_10" ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Redirecting...
+              </>
+            ) : (
+              "Subscribe — $100/mo"
+            )}
+          </button>
+          <p className="mt-5 mb-4 text-xs text-stone-400 font-medium uppercase tracking-wider">
+            Professional, plus
+          </p>
+          <ul className="space-y-3 text-sm text-stone-600">
+            {TEAM_EXTRAS.map((item) => (
               <li key={item} className="flex items-start gap-2">
                 <Check
                   size={16}
