@@ -37,15 +37,17 @@ function SettingsContent() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [teamMemberships, setTeamMemberships] = useState<{ teams: { name: string } }[]>([]);
+  const [ownedTeam, setOwnedTeam] = useState<{ plan: string; max_members: number } | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }: { data: { user: { email?: string } | null } }) => {
       if (data.user?.email) setAccountEmail(data.user.email);
     });
-    // Fetch team memberships for this user
+    // Fetch team data for this user
     fetch("/api/teams").then(r => r.json()).then(data => {
       if (data.memberships) setTeamMemberships(data.memberships);
+      if (data.team) setOwnedTeam(data.team);
     }).catch(() => {});
   }, []);
 
@@ -87,6 +89,9 @@ function SettingsContent() {
 
   const isTeamMember = teamMemberships.length > 0;
 
+  const isTeamOwner = !!ownedTeam;
+  const teamPlanLabel = ownedTeam?.plan === "teams_10" ? "Pro Teams+" : "Pro Teams";
+
   const planLabel =
     profile.plan === "pending" && isTeamMember
       ? "Team Member"
@@ -96,9 +101,11 @@ function SettingsContent() {
           ? "Trial"
           : profile.plan === "diy"
             ? "DIY"
-            : profile.plan === "professional"
-              ? "Professional"
-              : "Expired";
+            : profile.plan === "professional" && isTeamOwner
+              ? teamPlanLabel
+              : profile.plan === "professional"
+                ? "Professional"
+                : "Expired";
 
   const showUpgrade = !isTeamMember && (profile.plan === "pending" || profile.plan === "trial" || profile.plan === "expired");
   const showManageBilling =
@@ -402,7 +409,7 @@ function SettingsContent() {
                               ? "bg-stone-100 text-stone-600"
                               : "bg-red-100 text-red-600"
                   }`}>
-                    {profile.plan === "professional" ? "Pro" : profile.plan === "diy" ? "DIY" : profile.plan === "trial" ? "Free Trial" : profile.plan === "pending" && isTeamMember ? "Team" : profile.plan === "pending" ? "No Plan" : "Expired"}
+                    {profile.plan === "professional" && isTeamOwner ? "Teams" : profile.plan === "professional" ? "Pro" : profile.plan === "diy" ? "DIY" : profile.plan === "trial" ? "Free Trial" : profile.plan === "pending" && isTeamMember ? "Team" : profile.plan === "pending" ? "No Plan" : "Expired"}
                   </span>
                 </div>
               </div>
@@ -479,7 +486,7 @@ function SettingsContent() {
                   )}
                 </button>
               )}
-              {profile.plan === "professional" && (
+              {profile.plan === "professional" && !isTeamOwner && (
                 <Link
                   href="/planner/upgrade"
                   className="flex items-center gap-2 bg-rose-400 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-rose-500 transition-colors"
