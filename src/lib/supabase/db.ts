@@ -57,6 +57,18 @@ export function clearUserIdCache(): void {
   userIdPromise = null;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getTeamMemberId(supabase: any, teamId: string, userId: string): Promise<string> {
+  const { data } = await supabase
+    .from("team_members")
+    .select("id")
+    .eq("team_id", teamId)
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .single();
+  return data?.id ?? "";
+}
+
 // ════════════════════════════════════════════════════════════════════════════
 // ROW ↔ MODEL MAPPERS
 // ════════════════════════════════════════════════════════════════════════════
@@ -1022,13 +1034,48 @@ export async function fetchEvents(
   const supabase = createClient();
   const userId = await getUserId();
 
-  // Fetch one extra row to detect if more exist
-  const { data, error } = await supabase
-    .from("events")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit);
+  // Check if user is in a team context (viewing a team's events)
+  let teamContext: { teamId: string; ownerId: string } | null = null;
+  if (typeof document !== "undefined") {
+    const match = document.cookie.match(/(?:^|; )es_team_context=([^;]*)/);
+    if (match) {
+      try {
+        teamContext = JSON.parse(decodeURIComponent(match[1]));
+      } catch { /* ignore */ }
+    }
+  }
+
+  let data, error;
+  if (teamContext) {
+    // Team member: fetch events they're assigned to via team_event_assignments
+    const { data: assignments, error: aErr } = await supabase
+      .from("team_event_assignments")
+      .select("event_id")
+      .eq("team_id", teamContext.teamId)
+      .eq("member_id", await getTeamMemberId(supabase, teamContext.teamId, userId));
+
+    if (aErr) throw new Error(`fetchEvents (team assignments): ${aErr.message}`);
+    const eventIds = (assignments ?? []).map((a: { event_id: string }) => a.event_id);
+
+    if (eventIds.length === 0) {
+      return { data: [], hasMore: false };
+    }
+
+    ({ data, error } = await supabase
+      .from("events")
+      .select("*")
+      .in("id", eventIds)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit));
+  } else {
+    // Owner: fetch own events
+    ({ data, error } = await supabase
+      .from("events")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .range(offset, offset + limit));
+  }
 
   if (error) throw new Error(`fetchEvents: ${error.message}`);
 

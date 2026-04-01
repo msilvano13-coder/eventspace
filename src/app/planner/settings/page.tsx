@@ -4,7 +4,7 @@ import { usePlannerProfile, usePlannerProfileActions } from "@/hooks/useStore";
 import { plannerStore } from "@/lib/planner-store";
 import { useState, useRef, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Camera, Save, X, CreditCard, ExternalLink, CheckCircle2, Loader2, Mail, Shield, Calendar, AlertTriangle, Trash2, ShieldOff } from "lucide-react";
+import { Camera, Save, X, CreditCard, ExternalLink, CheckCircle2, Loader2, Mail, Shield, Calendar, AlertTriangle, Trash2, ShieldOff, Users } from "lucide-react";
 import TeamManagement from "@/components/settings/TeamManagement";
 import { trackTrialActivated } from "@/lib/analytics";
 import Link from "next/link";
@@ -36,12 +36,17 @@ function SettingsContent() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [teamMemberships, setTeamMemberships] = useState<{ teams: { name: string } }[]>([]);
 
   useEffect(() => {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data }: { data: { user: { email?: string } | null } }) => {
       if (data.user?.email) setAccountEmail(data.user.email);
     });
+    // Fetch team memberships for this user
+    fetch("/api/teams").then(r => r.json()).then(data => {
+      if (data.memberships) setTeamMemberships(data.memberships);
+    }).catch(() => {});
   }, []);
 
   // After Stripe checkout redirect, verify the session server-side to update plan immediately
@@ -80,18 +85,22 @@ function SettingsContent() {
         )
       : 0;
 
-  const planLabel =
-    profile.plan === "pending"
-      ? "No Plan Selected"
-      : profile.plan === "trial"
-        ? "Trial"
-        : profile.plan === "diy"
-          ? "DIY"
-          : profile.plan === "professional"
-            ? "Professional"
-            : "Expired";
+  const isTeamMember = teamMemberships.length > 0;
 
-  const showUpgrade = profile.plan === "pending" || profile.plan === "trial" || profile.plan === "expired";
+  const planLabel =
+    profile.plan === "pending" && isTeamMember
+      ? "Team Member"
+      : profile.plan === "pending"
+        ? "No Plan Selected"
+        : profile.plan === "trial"
+          ? "Trial"
+          : profile.plan === "diy"
+            ? "DIY"
+            : profile.plan === "professional"
+              ? "Professional"
+              : "Expired";
+
+  const showUpgrade = !isTeamMember && (profile.plan === "pending" || profile.plan === "trial" || profile.plan === "expired");
   const showManageBilling =
     profile.plan === "diy" || profile.plan === "professional";
 
@@ -387,15 +396,30 @@ function SettingsContent() {
                         ? "bg-amber-100 text-amber-600"
                         : profile.plan === "trial"
                           ? "bg-blue-100 text-blue-600"
-                          : profile.plan === "pending"
-                            ? "bg-stone-100 text-stone-600"
-                            : "bg-red-100 text-red-600"
+                          : profile.plan === "pending" && isTeamMember
+                            ? "bg-emerald-100 text-emerald-600"
+                            : profile.plan === "pending"
+                              ? "bg-stone-100 text-stone-600"
+                              : "bg-red-100 text-red-600"
                   }`}>
-                    {profile.plan === "professional" ? "Pro" : profile.plan === "diy" ? "DIY" : profile.plan === "trial" ? "Free Trial" : profile.plan === "pending" ? "No Plan" : "Expired"}
+                    {profile.plan === "professional" ? "Pro" : profile.plan === "diy" ? "DIY" : profile.plan === "trial" ? "Free Trial" : profile.plan === "pending" && isTeamMember ? "Team" : profile.plan === "pending" ? "No Plan" : "Expired"}
                   </span>
                 </div>
               </div>
             </div>
+
+            {/* Team Membership Info */}
+            {isTeamMember && (
+              <div className="flex items-start gap-3 p-3 bg-emerald-50 rounded-xl">
+                <Users size={16} className="text-emerald-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-medium text-stone-500">Team Membership</p>
+                  <p className="text-sm text-stone-800">
+                    Member of <span className="font-semibold">{teamMemberships.map(m => m.teams?.name || "Unnamed Team").join(", ")}</span>
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Trial / Expiry Info */}
             {profile.plan === "trial" && (
