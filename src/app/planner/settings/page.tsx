@@ -38,7 +38,7 @@ function SettingsContent() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(({ data }: { data: { user: { email?: string } | null } }) => {
       if (data.user?.email) setAccountEmail(data.user.email);
     });
   }, []);

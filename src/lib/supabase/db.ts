@@ -1038,7 +1038,8 @@ export async function fetchEvents(
   // Use eventCoreFromRow — select("*") has no sub-entity joins, so eventFromRow
   // would silently produce empty arrays for all sub-entities. The store's lazy-loading
   // (ensureSubEntity) fills these in on demand.
-  return { data: trimmed.map((r) => eventCoreFromRow(r)), hasMore };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return { data: trimmed.map((r: any) => eventCoreFromRow(r)), hasMore };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
