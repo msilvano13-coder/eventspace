@@ -136,6 +136,14 @@ export default function FloorPlanPage() {
     updateEvent(eventId, { floorPlans: updatedPlans });
   }
 
+  function handleGuestDrop(guestId: string, tableId: string) {
+    const guests = event?.guests ?? [];
+    const updated = guests.map((g) =>
+      g.id === guestId ? { ...g, tableAssignment: tableId } : g
+    );
+    updateEvent(eventId, { guests: updated });
+  }
+
   function handleExportPDF() {
     const dataURL = getCanvasDataURLRef.current?.();
     if (!dataURL || !activePlan || !event) return;
@@ -346,6 +354,7 @@ export default function FloorPlanPage() {
                 selectedZoneId={selectedZoneId}
                 onSelectZone={setSelectedZoneId}
                 onCanvasReady={(getDataURL) => { getCanvasDataURLRef.current = getDataURL; }}
+                onGuestDrop={handleGuestDrop}
               />
             )
           )}

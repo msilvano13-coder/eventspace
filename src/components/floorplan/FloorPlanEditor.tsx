@@ -47,6 +47,8 @@ interface Props {
   onSelectZone?: (id: string | null) => void;
   readOnly?: boolean; // client portal: makes lighting non-interactive
   onCanvasReady?: (getDataURL: () => string | null) => void;
+  // Seating drag-and-drop — called when a guest is dropped onto a table on the canvas
+  onGuestDrop?: (guestId: string, tableId: string) => void;
 }
 
 interface SelectedInfo {
@@ -180,6 +182,7 @@ export default function FloorPlanEditor({
   onSelectZone,
   readOnly = false,
   onCanvasReady,
+  onGuestDrop,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1076,6 +1079,48 @@ export default function FloorPlanEditor({
     e.preventDefault();
     const canvas = fabricRef.current;
     if (!canvas) return;
+
+    // Guest drop from seating panel — find table under cursor
+    const guestId = e.dataTransfer.getData("application/x-guest-id");
+    if (guestId && onGuestDrop) {
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      const dropX = (e.clientX - rect.left) / zoom;
+      const dropY = (e.clientY - rect.top) / zoom;
+
+      // Walk canvas objects to find the table (or table-set group) under the drop point
+      const allObjects = canvas.getObjects();
+      let foundTableId: string | null = null;
+
+      for (let i = allObjects.length - 1; i >= 0; i--) {
+        const obj = allObjects[i];
+        if (!obj.data) continue;
+        // Skip non-furniture (grid, room walls, lighting)
+        if (obj.data.isGrid || obj.data.isRoom) continue;
+
+        // Check if drop point is within this object's bounding box
+        if (!obj.containsPoint({ x: dropX, y: dropY } as any)) continue;
+
+        // Table-set groups
+        if (obj.data.isTableSet && obj.data.tableId) {
+          foundTableId = obj.data.tableId;
+          break;
+        }
+
+        // Individual table objects
+        if (obj.data.furnitureId && obj.data.tableId) {
+          foundTableId = obj.data.tableId;
+          break;
+        }
+      }
+
+      if (foundTableId) {
+        onGuestDrop(guestId, foundTableId);
+      }
+      return;
+    }
+
+    // Furniture drop from palette
     const furnitureId = e.dataTransfer.getData("furnitureId");
     if (!furnitureId) return;
     const item = getFurnitureById(furnitureId);

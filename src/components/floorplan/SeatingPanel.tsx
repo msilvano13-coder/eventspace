@@ -1,20 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Guest, GuestRelationship } from "@/lib/types";
-import { Users, UserPlus, X, ChevronDown, ChevronUp, Sparkles, Star, RotateCcw } from "lucide-react";
-import { FURNITURE_CATALOG } from "@/lib/constants";
-import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
+import { Users, UserPlus, X, ChevronDown, ChevronUp, Sparkles, Star, RotateCcw, GripVertical } from "lucide-react";
+import { extractTables, isSweetheartTable, TableInfo } from "@/lib/table-utils";
 import { autoSeat, TableSlot } from "@/lib/seating-algorithm";
-
-interface TableInfo {
-  /** Stable unique ID persisted on canvas object — used as seating key */
-  tableId: string;
-  /** Human-readable display name */
-  label: string;
-  furnitureId: string;
-  maxSeats: number;
-}
 
 interface Props {
   floorPlanJSON: string | null;
@@ -23,107 +13,14 @@ interface Props {
   relationships?: GuestRelationship[];
 }
 
-/** Parse floor plan JSON to extract table objects with stable unique IDs.
- *  Recurses into nested Fabric.js Groups to find table sub-objects within table sets.
- *  For table-set groups (isTableSet), uses the group's tableId and counts chairs for maxSeats.
- */
-function extractTables(json: string | null): TableInfo[] {
-  if (!json) return [];
-  try {
-    const canvas = unwrapCanvasJSON(json);
-    const objects = (canvas as Record<string, unknown>).objects as any[] || [];
-    const tables: TableInfo[] = [];
-    let fallbackIdx = 0;
-
-    const processObject = (obj: any) => {
-      const data = obj.data;
-      if (!data || data.isGrid || data.isRoom) return;
-
-      // Table-set groups (e.g., Round 60" + 8 Chairs) — count chairs for accurate maxSeats
-      if (data.isTableSet && data.tableId) {
-        const chairCount = countChairs(obj);
-        const catalogItem = FURNITURE_CATALOG.find((f) => f.id === data.furnitureId);
-        tables.push({
-          tableId: data.tableId,
-          label: data.label || catalogItem?.name || "Table",
-          furnitureId: data.furnitureId,
-          maxSeats: chairCount > 0 ? chairCount : (catalogItem?.maxSeats ?? 0),
-        });
-        return; // Don't recurse further — the group is the table unit
-      }
-
-      // Individual table objects (not in a group)
-      if (data.furnitureId) {
-        const catalogItem = FURNITURE_CATALOG.find((f) => f.id === data.furnitureId);
-        if (catalogItem && catalogItem.category === "table") {
-          const posKey = `${Math.round(obj.left ?? 0)}_${Math.round(obj.top ?? 0)}`;
-          const tableId = data.tableId || `__legacy_${data.furnitureId}_${posKey}_${fallbackIdx++}`;
-          tables.push({
-            tableId,
-            label: data.label || catalogItem.name,
-            furnitureId: data.furnitureId,
-            maxSeats: catalogItem.maxSeats ?? 0,
-          });
-          return;
-        }
-      }
-
-      // Recurse into nested groups (e.g., ungrouped sub-groups)
-      if (obj.objects && Array.isArray(obj.objects)) {
-        for (const child of obj.objects) {
-          processObject(child);
-        }
-      }
-    };
-
-    for (const obj of objects) {
-      processObject(obj);
-    }
-
-    // Ensure unique display labels — append #N for duplicates
-    const labelCounts = new Map<string, number>();
-    for (const t of tables) {
-      labelCounts.set(t.label, (labelCounts.get(t.label) ?? 0) + 1);
-    }
-    const labelIdx = new Map<string, number>();
-    for (const t of tables) {
-      if ((labelCounts.get(t.label) ?? 0) > 1) {
-        const idx = (labelIdx.get(t.label) ?? 0) + 1;
-        labelIdx.set(t.label, idx);
-        t.label = `${t.label} #${idx}`;
-      }
-    }
-    return tables;
-  } catch (err) {
-    console.error("[SeatingPanel] extractTables failed:", err);
-    return [];
-  }
-}
-
-/** Count chairs inside a table-set group (recursively) */
-function countChairs(obj: any): number {
-  let count = 0;
-  if (obj.objects && Array.isArray(obj.objects)) {
-    for (const child of obj.objects) {
-      if (child.data?.furnitureId === "chair") {
-        count++;
-      } else if (child.objects) {
-        count += countChairs(child);
-      }
-    }
-  }
-  return count;
-}
-
-function isSweetheartTable(t: TableInfo): boolean {
-  return t.furnitureId.includes("sweetheart") || t.label.toLowerCase().includes("sweetheart");
-}
-
 export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, relationships: relsProp }: Props) {
   const tables = extractTables(floorPlanJSON);
   const [expandedTable, setExpandedTable] = useState<string | null>(null);
   const [showAutoSeatConfirm, setShowAutoSeatConfirm] = useState(false);
   const [lastAutoResult, setLastAutoResult] = useState<{ seated: number; unassigned: number } | null>(null);
+  const [dragOverTableId, setDragOverTableId] = useState<string | null>(null);
+  const [draggingGuestId, setDraggingGuestId] = useState<string | null>(null);
+  const dragCounterRef = useRef<Map<string, number>>(new Map());
 
   const acceptedGuests = guests.filter((g) => g.rsvp === "accepted");
   const unassigned = acceptedGuests.filter(
@@ -157,17 +54,15 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
     const seatableTables: TableSlot[] = tables
       .filter((t) => t.maxSeats > 0 && !isSweetheartTable(t))
       .map((t) => {
-        // Subtract already-occupied seats so algorithm knows remaining capacity
         const occupied = headCount(t.tableId);
         return { label: t.tableId, maxSeats: Math.max(0, t.maxSeats - occupied) };
       })
-      .filter((t) => t.maxSeats > 0); // Only tables with remaining capacity
+      .filter((t) => t.maxSeats > 0);
 
     if (seatableTables.length === 0) return;
 
     const relationships: GuestRelationship[] = relsProp ?? [];
 
-    // Only pass unassigned guests to the algorithm
     const unassignedGuests = guests.filter((g) => {
       if (g.rsvp !== "accepted") return false;
       return !g.tableAssignment || !tables.some((t) => t.tableId === g.tableAssignment);
@@ -175,7 +70,6 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
 
     const result = autoSeat(unassignedGuests, seatableTables, relationships);
 
-    // Apply assignments — algorithm returns tableId values (passed as label to TableSlot)
     const updated = guests.map((g) => {
       const tableId = result.assignments.get(g.id);
       return tableId ? { ...g, tableAssignment: tableId } : g;
@@ -196,6 +90,97 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
   function headCount(tableId: string) {
     const seated = guestsAtTable(tableId);
     return seated.reduce((sum, g) => sum + 1 + (g.plusOne ? 1 : 0), 0);
+  }
+
+  // ── Drag-and-drop handlers ──
+
+  function handleDragStart(e: React.DragEvent, guestId: string) {
+    e.dataTransfer.setData("text/plain", guestId);
+    e.dataTransfer.setData("application/x-guest-id", guestId);
+    e.dataTransfer.effectAllowed = "move";
+    setDraggingGuestId(guestId);
+  }
+
+  function handleDragEnd() {
+    setDraggingGuestId(null);
+    setDragOverTableId(null);
+    dragCounterRef.current.clear();
+  }
+
+  function handleTableDragEnter(e: React.DragEvent, tableId: string) {
+    e.preventDefault();
+    const counter = (dragCounterRef.current.get(tableId) ?? 0) + 1;
+    dragCounterRef.current.set(tableId, counter);
+    setDragOverTableId(tableId);
+  }
+
+  function handleTableDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }
+
+  function handleTableDragLeave(e: React.DragEvent, tableId: string) {
+    e.preventDefault();
+    const counter = (dragCounterRef.current.get(tableId) ?? 0) - 1;
+    dragCounterRef.current.set(tableId, counter);
+    if (counter <= 0) {
+      dragCounterRef.current.delete(tableId);
+      if (dragOverTableId === tableId) setDragOverTableId(null);
+    }
+  }
+
+  function handleTableDrop(e: React.DragEvent, tableId: string) {
+    e.preventDefault();
+    const guestId = e.dataTransfer.getData("text/plain");
+    if (!guestId) return;
+
+    const table = tables.find((t) => t.tableId === tableId);
+    if (!table) return;
+
+    const guest = guests.find((g) => g.id === guestId);
+    if (!guest) return;
+
+    // Check capacity
+    const count = headCount(tableId);
+    const guestSeats = 1 + (guest.plusOne ? 1 : 0);
+    if (table.maxSeats > 0 && count + guestSeats > table.maxSeats) return;
+    if (isSweetheartTable(table)) return;
+
+    assignGuest(guestId, tableId);
+    setDragOverTableId(null);
+    setDraggingGuestId(null);
+    dragCounterRef.current.clear();
+
+    // Auto-expand the table so the user sees the assignment
+    setExpandedTable(tableId);
+  }
+
+  function canDropOnTable(table: TableInfo): boolean {
+    if (!draggingGuestId) return false;
+    if (isSweetheartTable(table)) return false;
+    const guest = guests.find((g) => g.id === draggingGuestId);
+    if (!guest) return false;
+    const count = headCount(table.tableId);
+    const guestSeats = 1 + (guest.plusOne ? 1 : 0);
+    return table.maxSeats === 0 || count + guestSeats <= table.maxSeats;
+  }
+
+  // ── Unassigned drop zone (drag assigned guest back to unassign) ──
+
+  function handleUnassignDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }
+
+  function handleUnassignDrop(e: React.DragEvent) {
+    e.preventDefault();
+    const guestId = e.dataTransfer.getData("text/plain");
+    if (guestId) {
+      unassignGuest(guestId);
+    }
+    setDragOverTableId(null);
+    setDraggingGuestId(null);
+    dragCounterRef.current.clear();
   }
 
   if (tables.length === 0) {
@@ -295,6 +280,13 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
             ))}
           </div>
         )}
+
+        {/* Drag hint */}
+        {unassigned.length > 0 && (
+          <p className="text-[9px] text-stone-300 mt-2 italic">
+            Drag guests onto tables to assign seats
+          </p>
+        )}
       </div>
 
       {/* Tables */}
@@ -304,9 +296,26 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
           const count = headCount(table.tableId);
           const isExpanded = expandedTable === table.tableId;
           const isSweetheart = isSweetheartTable(table);
+          const isDragOver = dragOverTableId === table.tableId;
+          const droppable = canDropOnTable(table);
 
           return (
-            <div key={table.tableId}>
+            <div
+              key={table.tableId}
+              onDragEnter={(e) => handleTableDragEnter(e, table.tableId)}
+              onDragOver={handleTableDragOver}
+              onDragLeave={(e) => handleTableDragLeave(e, table.tableId)}
+              onDrop={(e) => handleTableDrop(e, table.tableId)}
+              className={`transition-colors ${
+                draggingGuestId
+                  ? droppable
+                    ? isDragOver
+                      ? "bg-rose-50 ring-1 ring-inset ring-rose-300"
+                      : "bg-rose-50/30"
+                    : "opacity-40"
+                  : ""
+              }`}
+            >
               <button
                 onClick={() => setExpandedTable(isExpanded ? null : table.tableId)}
                 className="w-full px-3 py-2.5 flex items-center justify-between hover:bg-stone-50 transition-colors"
@@ -334,13 +343,19 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
 
               {isExpanded && (
                 <div className="px-3 pb-3 space-y-1.5">
-                  {/* Seated guests */}
+                  {/* Seated guests (also draggable to move between tables) */}
                   {seated.map((guest) => (
                     <div
                       key={guest.id}
-                      className="flex items-center justify-between bg-emerald-50 rounded-lg px-2.5 py-1.5"
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, guest.id)}
+                      onDragEnd={handleDragEnd}
+                      className={`flex items-center justify-between bg-emerald-50 rounded-lg px-2.5 py-1.5 cursor-grab active:cursor-grabbing ${
+                        draggingGuestId === guest.id ? "opacity-40" : ""
+                      }`}
                     >
                       <div className="min-w-0 flex items-center gap-1">
+                        <GripVertical size={9} className="text-stone-300 flex-shrink-0" />
                         {guest.vip && <Star size={9} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
                         <span className="text-xs text-stone-700 truncate block">{guest.name}</span>
                         {guest.group && (
@@ -362,7 +377,7 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
                     </div>
                   ))}
 
-                  {/* Assign from unassigned pool */}
+                  {/* Assign from unassigned pool (click fallback) */}
                   {unassigned.length > 0 && (
                     <div className="pt-1">
                       {isSweetheart ? (
@@ -418,9 +433,17 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
         })}
       </div>
 
-      {/* Unassigned section */}
+      {/* Unassigned section — draggable guests + drop zone to unassign */}
       {unassigned.length > 0 && (
-        <div className="border-t border-stone-200 px-3 py-3">
+        <div
+          className={`border-t border-stone-200 px-3 py-3 transition-colors ${
+            draggingGuestId && !unassigned.some((g) => g.id === draggingGuestId)
+              ? "bg-amber-50/50 ring-1 ring-inset ring-amber-200"
+              : ""
+          }`}
+          onDragOver={handleUnassignDragOver}
+          onDrop={handleUnassignDrop}
+        >
           <p className="text-[10px] font-semibold text-stone-400 uppercase tracking-widest mb-2">
             Unassigned ({unassigned.length})
           </p>
@@ -428,8 +451,14 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
             {unassigned.map((guest) => (
               <div
                 key={guest.id}
-                className="flex items-center gap-1.5 bg-amber-50 rounded-lg px-2.5 py-1.5"
+                draggable
+                onDragStart={(e) => handleDragStart(e, guest.id)}
+                onDragEnd={handleDragEnd}
+                className={`flex items-center gap-1.5 bg-amber-50 rounded-lg px-2.5 py-1.5 cursor-grab active:cursor-grabbing select-none ${
+                  draggingGuestId === guest.id ? "opacity-40" : ""
+                }`}
               >
+                <GripVertical size={9} className="text-stone-300 flex-shrink-0" />
                 {guest.vip && <Star size={8} className="text-amber-400 fill-amber-400 flex-shrink-0" />}
                 <span className="text-xs text-stone-600 truncate">{guest.name}</span>
                 {guest.group && (
@@ -441,6 +470,19 @@ export default function SeatingPanel({ floorPlanJSON, guests, onUpdateGuests, re
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Drop zone when all guests are assigned but user wants to unassign by dragging back */}
+      {unassigned.length === 0 && draggingGuestId && (
+        <div
+          className="border-t border-stone-200 px-3 py-4 bg-amber-50/50 ring-1 ring-inset ring-amber-200 transition-colors"
+          onDragOver={handleUnassignDragOver}
+          onDrop={handleUnassignDrop}
+        >
+          <p className="text-[10px] text-amber-500 text-center italic">
+            Drop here to unassign
+          </p>
         </div>
       )}
     </div>
