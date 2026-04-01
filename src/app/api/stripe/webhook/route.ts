@@ -124,11 +124,21 @@ export async function POST(request: Request) {
         if (teamPlan && userId) {
           const maxMembers = teamPlan === "teams_10" ? 10 : 5;
           const subscriptionId = session.subscription as string;
+
+          // Fetch owner's business name to default as team name
+          const { data: ownerProfile } = await supabaseAdmin
+            .from("profiles")
+            .select("business_name, planner_name")
+            .eq("id", userId)
+            .single();
+          const defaultTeamName = ownerProfile?.business_name || ownerProfile?.planner_name || "";
+
           const { error: teamError } = await supabaseAdmin
             .from("teams")
             .upsert(
               {
                 owner_id: userId,
+                name: defaultTeamName,
                 plan: teamPlan,
                 max_members: maxMembers,
                 stripe_subscription_id: subscriptionId,

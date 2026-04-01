@@ -59,3 +59,30 @@ export async function GET() {
 
   return NextResponse.json({ team, members, memberships: memberships ?? [] });
 }
+
+export async function PATCH(request: Request) {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { name } = (await request.json()) as { name?: string };
+  if (typeof name !== "string") {
+    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  }
+
+  const { error } = await supabase
+    .from("teams")
+    .update({ name: name.trim(), updated_at: new Date().toISOString() })
+    .eq("owner_id", user.id);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true });
+}

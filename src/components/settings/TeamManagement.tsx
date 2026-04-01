@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Users, Mail, X, Loader2, Clock, UserCheck } from "lucide-react";
+import { Users, Mail, X, Loader2, Clock, UserCheck, Pencil, Check } from "lucide-react";
 import { showErrorToast } from "@/lib/error-toast";
 
 interface TeamMember {
@@ -36,6 +36,9 @@ export default function TeamManagement() {
   const [removing, setRemoving] = useState<string | null>(null);
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [editingName, setEditingName] = useState(false);
+  const [teamName, setTeamName] = useState("");
+  const [savingName, setSavingName] = useState(false);
 
   async function fetchTeam() {
     try {
@@ -43,6 +46,7 @@ export default function TeamManagement() {
       const data = await res.json();
       setTeam(data.team);
       setMembers(data.members ?? []);
+      if (data.team) setTeamName(data.team.name || "");
     } catch {
       showErrorToast("Failed to load team data");
     } finally {
@@ -104,6 +108,28 @@ export default function TeamManagement() {
     }
   }
 
+  async function handleSaveName() {
+    setSavingName(true);
+    try {
+      const res = await fetch("/api/teams", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: teamName }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setTeam((prev) => prev ? { ...prev, name: teamName.trim() } : prev);
+        setEditingName(false);
+      } else {
+        showErrorToast(data.error || "Failed to update team name");
+      }
+    } catch {
+      showErrorToast("Failed to update team name");
+    } finally {
+      setSavingName(false);
+    }
+  }
+
   async function handleRoleChange(memberId: string, newRole: string) {
     setUpdatingRole(memberId);
     try {
@@ -146,7 +172,35 @@ export default function TeamManagement() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Users size={18} className="text-rose-500" />
-          <h3 className="font-heading text-lg font-semibold text-stone-900">Team</h3>
+          {editingName ? (
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={teamName}
+                onChange={(e) => setTeamName(e.target.value)}
+                className="font-heading text-lg font-semibold text-stone-900 border border-stone-200 rounded-lg px-2 py-0.5 focus:outline-none focus:ring-2 focus:ring-rose-200"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === "Enter") handleSaveName(); if (e.key === "Escape") { setTeamName(team.name || ""); setEditingName(false); } }}
+              />
+              <button
+                onClick={handleSaveName}
+                disabled={savingName}
+                className="p-1 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+              >
+                {savingName ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setEditingName(true)}
+              className="flex items-center gap-1.5 group"
+            >
+              <h3 className="font-heading text-lg font-semibold text-stone-900">
+                {team.name || "Unnamed Team"}
+              </h3>
+              <Pencil size={12} className="text-stone-300 group-hover:text-stone-500 transition-colors" />
+            </button>
+          )}
         </div>
         <span className="text-sm text-stone-400">
           {activeCount} / {team.max_members} members
