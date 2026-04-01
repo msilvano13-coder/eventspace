@@ -285,8 +285,8 @@ export default function HomePage() {
           <div className="mt-10 sm:mt-12 flex flex-col sm:flex-row gap-12 sm:gap-20 max-w-4xl">
             <p className="text-lg sm:text-xl text-stone-500 leading-relaxed max-w-lg">
               Floor plans, guest lists, vendor contracts, timelines, and a
-              wedding website — all in one place. Built for professional
-              planners and couples doing it themselves.
+              wedding website — all in one place. Built for planners,
+              planning teams, and couples doing it themselves.
             </p>
 
             <div className="flex flex-col gap-3 sm:pt-1">
@@ -326,11 +326,9 @@ export default function HomePage() {
           </p>
           <div className="flex flex-wrap items-center gap-x-10 gap-y-3 text-sm text-stone-500">
             {[
+              "DIY Couples",
               "Wedding Planners",
-              "Corporate Events",
-              "Galas & Fundraisers",
-              "Private Parties",
-              "Conferences",
+              "Planning Teams",
             ].map((item) => (
               <span key={item} className="whitespace-nowrap">
                 {item}
@@ -554,7 +552,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-6 max-w-3xl">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl">
             {/* DIY */}
             <div className="rounded-2xl border border-stone-200/60 bg-white p-8">
               <p className="text-[13px] text-emerald-600 font-medium mb-4">
@@ -564,7 +562,7 @@ export default function HomePage() {
                 DIY
               </h3>
               <p className="text-sm text-stone-500 mt-1">
-                Plan your own event, your way
+                Plan your own wedding, your way
               </p>
               <p className="mt-6 flex items-baseline gap-2">
                 <span className="font-heading text-4xl font-bold text-stone-900">
@@ -627,7 +625,7 @@ export default function HomePage() {
                 Professional
               </h3>
               <p className="text-sm text-stone-500 mt-1">
-                Everything to run a planning business
+                Everything to run your planning business
               </p>
               <p className="mt-6 flex items-baseline gap-2">
                 <span className="font-heading text-4xl font-bold text-stone-900">
@@ -666,6 +664,57 @@ export default function HomePage() {
                       <Check
                         size={14}
                         className="shrink-0 text-stone-900 mt-0.5"
+                      />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Teams */}
+            <div className="rounded-2xl border border-stone-200/60 bg-white p-8 sm:col-span-2 lg:col-span-1">
+              <p className="text-[13px] text-violet-600 font-medium mb-4">
+                Coming soon
+              </p>
+              <h3 className="font-heading text-xl font-semibold text-stone-900">
+                Teams
+              </h3>
+              <p className="text-sm text-stone-500 mt-1">
+                Collaborate across your planning team
+              </p>
+              <p className="mt-6 flex items-baseline gap-2">
+                <span className="font-heading text-4xl font-bold text-stone-900">
+                  $20
+                </span>
+                <span className="text-sm text-stone-400">/ member / month</span>
+              </p>
+              <p className="text-sm text-stone-400 mt-1">
+                Built on top of Professional
+              </p>
+
+              <Link
+                href="/sign-up"
+                className="mt-6 block text-center text-[13px] font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 px-6 py-2.5 rounded-lg transition-colors"
+              >
+                Join waitlist
+              </Link>
+
+              <div className="mt-8 pt-6 border-t border-stone-100">
+                <ul className="space-y-3 text-sm text-stone-600">
+                  {[
+                    "Everything in Professional",
+                    "Invite team members",
+                    "Assign events to planners",
+                    "Team-wide event calendar",
+                    "Role-based permissions",
+                    "Shared vendor & template library",
+                    "Team activity & notifications",
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2.5">
+                      <Check
+                        size={14}
+                        className="shrink-0 text-violet-500 mt-0.5"
                       />
                       <span>{item}</span>
                     </li>
@@ -742,7 +791,7 @@ export default function HomePage() {
                 </span>
               </div>
               <p className="text-sm leading-relaxed max-w-xs">
-                Event planning software for professionals and DIY couples.
+                Wedding planning software for planners, teams, and DIY couples.
               </p>
             </div>
 
@@ -780,10 +829,9 @@ export default function HomePage() {
                 Use cases
               </p>
               <ul className="space-y-2.5 text-sm">
-                <li>Wedding Planning</li>
-                <li>Corporate Events</li>
-                <li>Galas & Fundraisers</li>
-                <li>Private Parties</li>
+                <li>DIY Couples</li>
+                <li>Wedding Planners</li>
+                <li>Planning Teams</li>
               </ul>
             </div>
 
