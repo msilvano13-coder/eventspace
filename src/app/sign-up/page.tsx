@@ -84,6 +84,12 @@ function SignUpContent() {
           <p className="text-sm text-stone-500 text-center mb-6">
             {planParam === "diy"
               ? "Create your account to get started with DIY"
+              : planParam === "professional"
+              ? "Create your account to start your free trial"
+              : planParam === "teams_5"
+              ? "Create your account to get started with Team 5"
+              : planParam === "teams_10"
+              ? "Create your account to get started with Team 10"
               : "Get started — choose your plan after sign-up"}
           </p>
 

@@ -578,7 +578,7 @@ export default function HomePage() {
               </p>
 
               <Link
-                href="/sign-up"
+                href="/sign-up?plan=diy"
                 className="mt-6 block text-center text-[13px] font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 px-6 py-2.5 rounded-lg transition-colors"
               >
                 Start planning
@@ -638,7 +638,7 @@ export default function HomePage() {
               </p>
 
               <Link
-                href="/sign-up"
+                href="/sign-up?plan=professional"
                 className="mt-6 block text-center text-[13px] font-medium text-white bg-stone-900 hover:bg-stone-800 px-6 py-2.5 rounded-lg transition-colors"
               >
                 Start free trial
@@ -694,7 +694,7 @@ export default function HomePage() {
               </p>
 
               <Link
-                href="/sign-up"
+                href="/sign-up?plan=teams_5"
                 className="mt-6 block text-center text-[13px] font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 px-6 py-2.5 rounded-lg transition-colors"
               >
                 Get started
@@ -745,7 +745,7 @@ export default function HomePage() {
               </p>
 
               <Link
-                href="/sign-up"
+                href="/sign-up?plan=teams_10"
                 className="mt-6 block text-center text-[13px] font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 px-6 py-2.5 rounded-lg transition-colors"
               >
                 Get started
