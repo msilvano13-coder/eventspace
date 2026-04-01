@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
-  LayoutDashboard,
   Users,
   CalendarDays,
   FileSignature,
@@ -26,177 +25,91 @@ import {
   FileText,
   Send,
   UserCheck,
-  BarChart3,
+  LayoutDashboard,
+  ArrowUpRight,
+  Minus,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /*  Data                                                               */
 /* ------------------------------------------------------------------ */
 
-const PRO_JOURNEY = [
-  {
-    step: "01",
-    title: "Capture the Inquiry",
-    description:
-      "Leads flow into your inquiries pipeline. Qualify, follow up, and convert — all from one dashboard.",
-    icon: Send,
-  },
-  {
-    step: "02",
-    title: "Plan Every Detail",
-    description:
-      "Floor plans, vendors, guest lists, timelines, mood boards, and contracts. Build a complete event in hours, not weeks.",
-    icon: Grid3X3,
-  },
-  {
-    step: "03",
-    title: "Collaborate with Clients",
-    description:
-      "Share a branded portal where clients RSVP guests, sign contracts, fill questionnaires, view their wedding website, and message you directly.",
-    icon: MessageSquare,
-  },
-  {
-    step: "04",
-    title: "Execute Day-Of",
-    description:
-      "Print your timeline PDF, pull up the seating chart on your phone, and run the event with confidence.",
-    icon: CalendarDays,
-  },
-  {
-    step: "05",
-    title: "Close & Get Reviews",
-    description:
-      "Send final invoices, collect payment, and request reviews — building your reputation for the next booking.",
-    icon: Star,
-  },
-];
-
-const DIY_JOURNEY = [
-  {
-    step: "01",
-    title: "Collect RSVPs",
-    description:
-      "Share your wedding website and guest portal link. Guests RSVP, choose meals, and note dietary needs — no spreadsheets required.",
-    icon: UserCheck,
-  },
-  {
-    step: "02",
-    title: "Design Your Layout",
-    description:
-      "Drag tables, chairs, and lighting onto the interactive floor plan. See real dimensions and seat counts. Switch to 3D to visualize the room.",
-    icon: Grid3X3,
-  },
-  {
-    step: "03",
-    title: "Seat Your Guests",
-    description:
-      "Smart seating assigns guests to tables respecting groups, VIPs, and keep-together rules. Or drag and drop manually.",
-    icon: Users,
-  },
-  {
-    step: "04",
-    title: "Build Your Timeline",
-    description:
-      "Create a minute-by-minute day-of schedule. Drag to reorder. Share it with your wedding party and vendors.",
-    icon: CalendarDays,
-  },
-  {
-    step: "05",
-    title: "Print & Go",
-    description:
-      "Export your floor plan, seating chart, and timeline as PDFs. Everything you need for your day-of binder in one click.",
-    icon: FileText,
-  },
-];
-
-const FEATURES = [
+const FEATURES_BENTO = [
   {
     icon: Globe,
-    title: "Wedding Website",
+    title: "Wedding Websites",
     description:
-      "Give your guests a beautiful, personalized wedding website with event details, RSVP, registry links, and your love story — included with every plan.",
+      "RSVP, registry, your story — one link for everything. Included with every plan.",
     badge: "New",
+    size: "large" as const,
   },
   {
     icon: Grid3X3,
-    title: "Interactive Floor Plans",
+    title: "Floor Plans & 3D",
     description:
-      "Drag-and-drop tables, furniture groups, and lighting zones onto a live canvas. Real dimensions in feet and inches. Switch to 3D for client proposals.",
+      "Drag tables onto a live canvas. Real dimensions. Switch to 3D in one click.",
+    size: "large" as const,
   },
   {
     icon: Users,
-    title: "Guest Management & Smart Seating",
+    title: "Smart Seating",
     description:
-      "Track RSVPs, meal choices, and dietary needs. Auto-assign seats with a smart algorithm that respects VIP priority and group cohesion.",
-  },
-  {
-    icon: LayoutDashboard,
-    title: "Dashboard & Calendar",
-    description:
-      "See every event at a glance. Filter by status, search by name or venue, and switch between grid and calendar views.",
-  },
-  {
-    icon: ClipboardList,
-    title: "Vendor & Payment Tracking",
-    description:
-      "Manage vendors by category, track contract totals, and log payments with due dates and paid status.",
+      "Our algorithm seats guests respecting groups, VIPs, and keep-together rules.",
+    size: "medium" as const,
   },
   {
     icon: FileSignature,
     title: "Contracts & E-Signatures",
-    description:
-      "Create contracts from templates, collect dual e-signatures, and track signing status in real time.",
-  },
-  {
-    icon: Receipt,
-    title: "Invoicing & Finances",
-    description:
-      "Generate line-item invoices, track expenses, and view financial reports and dashboards across all your events.",
-  },
-  {
-    icon: CalendarDays,
-    title: "Day-of Timeline & PDF Export",
-    description:
-      "Build a minute-by-minute schedule. Drag to reorder. Export to PDF for day-of binders your team and vendors can follow.",
-  },
-  {
-    icon: Palette,
-    title: "Mood Boards & Color Palettes",
-    description:
-      "Upload inspiration images and define color palettes your clients can view in their portal.",
-  },
-  {
-    icon: MapPin,
-    title: "Vendor Discovery",
-    description:
-      "Search for local vendors powered by Google Places. Save favorites to your preferred vendor list.",
-  },
-  {
-    icon: Camera,
-    title: "Shared Files",
-    description:
-      "Upload contracts, photos, and mood boards to a shared space both you and your client can access.",
+    description: "Templates, dual signatures, real-time tracking.",
+    size: "medium" as const,
   },
   {
     icon: Sparkles,
     title: "Branded Client Portal",
     description:
-      "Give every client their own portal with your logo, brand colors, and tagline — schedules, RSVPs, contracts, files, and messaging in one place.",
+      "Your logo, your colors. Clients RSVP, sign contracts, and message you — no account needed.",
+    size: "medium" as const,
   },
+];
+
+const FEATURES_LIST = [
+  { icon: LayoutDashboard, label: "Dashboard & Calendar" },
+  { icon: ClipboardList, label: "Vendor & Payment Tracking" },
+  { icon: Receipt, label: "Invoicing & Finances" },
+  { icon: CalendarDays, label: "Day-of Timeline & PDF Export" },
+  { icon: Palette, label: "Mood Boards & Palettes" },
+  { icon: MapPin, label: "Vendor Discovery" },
+  { icon: Camera, label: "Shared Files" },
+];
+
+const PRO_STEPS = [
+  { num: "01", label: "Capture inquiries", icon: Send },
+  { num: "02", label: "Plan every detail", icon: Grid3X3 },
+  { num: "03", label: "Collaborate with clients", icon: MessageSquare },
+  { num: "04", label: "Execute day-of", icon: CalendarDays },
+  { num: "05", label: "Close & get reviews", icon: Star },
+];
+
+const DIY_STEPS = [
+  { num: "01", label: "Collect RSVPs", icon: UserCheck },
+  { num: "02", label: "Design your layout", icon: Grid3X3 },
+  { num: "03", label: "Seat your guests", icon: Users },
+  { num: "04", label: "Build your timeline", icon: CalendarDays },
+  { num: "05", label: "Print & go", icon: FileText },
 ];
 
 const FAQS: { q: string; a: string }[] = [
   {
     q: "What's the difference between DIY and Professional?",
-    a: "The DIY plan is a one-time purchase (currently $99, 50% off the regular $199) — perfect for planning a single event like your wedding or a big party. It includes floor plans with 3D visualization, smart seating, guest management, timelines, a wedding website, mood boards, layout templates, and PDF export. Professional is $20/month and unlocks unlimited events plus business tools like inquiries pipeline, invoicing, e-signatures, questionnaires, and a branded client portal.",
+    a: "DIY is a one-time $99 purchase for planning a single event — floor plans, smart seating, guest management, wedding website, timelines, and PDF export. Professional is $20/month with unlimited events plus business tools like inquiries pipeline, invoicing, e-signatures, questionnaires, and a branded client portal.",
   },
   {
     q: "Do I need to install anything?",
-    a: "No. EventSpace runs entirely in your browser. Just open the app and start planning. It works on desktop, tablet, and mobile.",
+    a: "No. EventSpace runs entirely in your browser — desktop, tablet, and mobile.",
   },
   {
     q: "How does the wedding website work?",
-    a: "Every event gets a customizable wedding website you can share with guests. It includes your event details, RSVP form, registry links, and your love story. Guests can RSVP and manage their details directly from the site.",
+    a: "Every event gets a customizable wedding website with your event details, RSVP form, registry links, and your love story. Guests RSVP directly from the page.",
   },
   {
     q: "How does the client portal work?",
@@ -204,77 +117,62 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Can I design floor plans on my phone?",
-    a: "Yes. The floor plan editor is fully optimized for touch devices with mobile-friendly controls, collapsible panels, and gesture support.",
+    a: "Yes. The floor plan editor is fully optimized for touch with mobile-friendly controls and gesture support.",
   },
   {
     q: "Where is my data stored?",
-    a: "Your data is securely stored in the cloud using Supabase. You can access your events from any device by signing in to your account.",
+    a: "Securely in the cloud using Supabase. Access your events from any device.",
   },
   {
-    q: "Can multiple planners use EventSpace on the same account?",
-    a: "Currently, EventSpace is designed for individual planners. Each browser session has its own data. Multi-user collaboration is on the roadmap.",
+    q: "Can multiple planners use one account?",
+    a: "Currently designed for individual planners. Multi-user collaboration is on the roadmap.",
   },
 ];
-
 
 /* ------------------------------------------------------------------ */
 /*  Components                                                         */
 /* ------------------------------------------------------------------ */
 
-function FAQItem({ q, a }: { q: string; a: string }) {
+function FAQItem({ q, a, isLast }: { q: string; a: string; isLast: boolean }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="border-b border-stone-200">
+    <div className={!isLast ? "border-b border-stone-200/60" : ""}>
       <button
-        className="w-full flex items-center justify-between py-5 text-left font-medium text-stone-800 hover:text-rose-600 transition-colors"
+        className="w-full flex items-center justify-between py-5 text-left group"
         onClick={() => setOpen(!open)}
         aria-expanded={open}
       >
-        <span className="pr-4">{q}</span>
-        <ChevronDown
-          size={20}
-          className={`shrink-0 text-stone-400 transition-transform ${open ? "rotate-180" : ""}`}
-        />
+        <span className="text-[15px] font-medium text-stone-800 group-hover:text-stone-900 pr-8 transition-colors">
+          {q}
+        </span>
+        <div
+          className={`w-6 h-6 rounded-full border border-stone-300 flex items-center justify-center shrink-0 transition-all ${
+            open
+              ? "bg-stone-900 border-stone-900 rotate-0"
+              : "bg-transparent rotate-0"
+          }`}
+        >
+          {open ? (
+            <Minus size={12} className="text-white" />
+          ) : (
+            <ChevronDown size={12} className="text-stone-500" />
+          )}
+        </div>
       </button>
-      {open && (
-        <p className="pb-5 text-stone-600 leading-relaxed">{a}</p>
-      )}
-    </div>
-  );
-}
-
-function JourneyStep({
-  step,
-  title,
-  description,
-  icon: Icon,
-  isLast,
-}: {
-  step: string;
-  title: string;
-  description: string;
-  icon: React.ComponentType<{ size?: string | number; className?: string }>;
-  isLast: boolean;
-}) {
-  return (
-    <div className="flex gap-4">
-      <div className="flex flex-col items-center">
-        <div className="w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center text-sm font-bold shrink-0">
-          {step}
+      <div
+        className={`grid transition-all duration-200 ease-out ${
+          open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        }`}
+      >
+        <div className="overflow-hidden">
+          <p className="pb-5 text-[15px] text-stone-500 leading-relaxed max-w-2xl">
+            {a}
+          </p>
         </div>
-        {!isLast && <div className="w-px flex-1 bg-rose-200 my-2" />}
-      </div>
-      <div className="pb-8">
-        <div className="flex items-center gap-2 mb-1">
-          <Icon size={16} className="text-rose-500" />
-          <h4 className="font-heading font-semibold text-stone-900">{title}</h4>
-        </div>
-        <p className="text-sm text-stone-500 leading-relaxed">{description}</p>
       </div>
     </div>
   );
 }
-
 
 /* ------------------------------------------------------------------ */
 /*  Page                                                               */
@@ -284,79 +182,80 @@ export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-stone-50 text-stone-800">
+    <div className="min-h-screen bg-stone-50 text-stone-800 overflow-x-hidden">
       {/* ── Nav ─────────────────────────────────────────────────── */}
-      <nav className="sticky top-0 z-50 bg-stone-50/80 backdrop-blur-lg border-b border-stone-200/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="w-8 h-8 rounded-lg bg-rose-500 flex items-center justify-center text-white font-heading font-bold text-sm">
+      <nav className="sticky top-0 z-50 bg-stone-50/80 backdrop-blur-xl border-b border-stone-200/40">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="w-7 h-7 rounded-md bg-stone-900 flex items-center justify-center text-white font-heading font-bold text-xs">
               E
             </span>
-            <span className="font-heading text-xl font-semibold tracking-tight">
+            <span className="font-heading text-lg font-semibold tracking-tight">
               EventSpace
             </span>
           </Link>
 
-          {/* Desktop links */}
-          <div className="hidden md:flex items-center gap-8 text-sm">
-            <a href="#for-planners" className="text-stone-600 hover:text-stone-900 transition-colors">
-              For Planners
-            </a>
-            <a href="#for-diy" className="text-stone-600 hover:text-stone-900 transition-colors">
-              For DIY
-            </a>
-            <a href="#features" className="text-stone-600 hover:text-stone-900 transition-colors">
-              Features
-            </a>
-            <a href="#pricing" className="text-stone-600 hover:text-stone-900 transition-colors">
-              Pricing
-            </a>
-            <a href="#faq" className="text-stone-600 hover:text-stone-900 transition-colors">
-              FAQ
-            </a>
+          <div className="hidden md:flex items-center gap-1 text-[13px]">
+            {["Features", "Pricing", "FAQ"].map((item) => (
+              <a
+                key={item}
+                href={`#${item.toLowerCase()}`}
+                className="text-stone-500 hover:text-stone-900 px-3 py-1.5 rounded-md hover:bg-stone-100 transition-all"
+              >
+                {item}
+              </a>
+            ))}
           </div>
 
-          <div className="hidden md:flex items-center gap-3">
+          <div className="hidden md:flex items-center gap-2">
             <Link
               href="/sign-in"
-              className="text-sm font-medium text-stone-600 hover:text-stone-900 px-4 py-2 transition-colors"
+              className="text-[13px] text-stone-500 hover:text-stone-900 px-3 py-1.5 transition-colors"
             >
-              Sign In
+              Sign in
             </Link>
             <Link
               href="/sign-up"
-              className="text-sm font-medium text-white bg-rose-500 hover:bg-rose-600 px-5 py-2 rounded-lg transition-colors shadow-sm"
+              className="text-[13px] font-medium text-white bg-stone-900 hover:bg-stone-800 px-4 py-1.5 rounded-lg transition-colors"
             >
-              Get Started
+              Get started
             </Link>
           </div>
 
-          {/* Mobile toggle */}
           <button
-            className="md:hidden p-2 text-stone-600"
+            className="md:hidden p-1.5 -mr-1.5 text-stone-600 hover:text-stone-900"
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             aria-label="Toggle menu"
           >
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </div>
 
-        {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-stone-200 bg-stone-50 px-4 pb-4">
-            <div className="flex flex-col gap-3 pt-3">
-              <a href="#for-planners" className="text-stone-600 py-2" onClick={() => setMobileMenuOpen(false)}>For Planners</a>
-              <a href="#for-diy" className="text-stone-600 py-2" onClick={() => setMobileMenuOpen(false)}>For DIY</a>
-              <a href="#features" className="text-stone-600 py-2" onClick={() => setMobileMenuOpen(false)}>Features</a>
-              <a href="#pricing" className="text-stone-600 py-2" onClick={() => setMobileMenuOpen(false)}>Pricing</a>
-              <a href="#faq" className="text-stone-600 py-2" onClick={() => setMobileMenuOpen(false)}>FAQ</a>
-              <hr className="border-stone-200" />
-              <Link href="/sign-in" className="text-stone-600 py-2">Sign In</Link>
+          <div className="md:hidden border-t border-stone-200/60 bg-stone-50 px-5 pb-5">
+            <div className="flex flex-col gap-1 pt-3">
+              {["Features", "Pricing", "FAQ"].map((item) => (
+                <a
+                  key={item}
+                  href={`#${item.toLowerCase()}`}
+                  className="text-stone-600 py-2 text-[15px]"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {item}
+                </a>
+              ))}
+              <hr className="border-stone-200/60 my-2" />
+              <Link
+                href="/sign-in"
+                className="text-stone-600 py-2 text-[15px]"
+              >
+                Sign in
+              </Link>
               <Link
                 href="/sign-up"
-                className="text-center font-medium text-white bg-rose-500 hover:bg-rose-600 px-5 py-2.5 rounded-lg transition-colors"
+                className="mt-1 text-center font-medium text-white bg-stone-900 px-5 py-2.5 rounded-lg text-[15px]"
               >
-                Get Started
+                Get started
               </Link>
             </div>
           </div>
@@ -364,472 +263,592 @@ export default function HomePage() {
       </nav>
 
       {/* ── Hero ────────────────────────────────────────────────── */}
-      <header className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-rose-50/80 via-stone-50 to-amber-50/40" />
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 pt-20 pb-24 sm:pt-28 sm:pb-32 text-center">
-          <div className="inline-flex items-center gap-2 text-sm text-rose-600 bg-rose-50 border border-rose-100 rounded-full px-4 py-1.5 mb-6">
-            <Sparkles size={14} />
-            <span>Now with wedding websites, interactive floor plans & smart seating</span>
+      <header className="relative pt-24 sm:pt-32 pb-20 sm:pb-28">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          {/* Eyebrow */}
+          <div className="flex items-center gap-3 mb-8">
+            <span className="h-px w-8 bg-rose-400" />
+            <span className="text-[13px] text-rose-500 font-medium tracking-wide uppercase">
+              Event planning, reimagined
+            </span>
           </div>
 
-          <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-stone-900 max-w-4xl mx-auto leading-[1.1]">
-            From First Inquiry to{" "}
-            <span className="text-rose-500">Five-Star Review.</span>
+          {/* Headline — asymmetric, editorial */}
+          <h1 className="font-heading text-[clamp(2.5rem,6vw,5.5rem)] font-bold leading-[0.95] tracking-tight text-stone-900 max-w-5xl">
+            Every detail.
+            <br />
+            <span className="italic font-normal text-stone-400">
+              Intentional.
+            </span>
           </h1>
 
-          <p className="mt-6 text-lg sm:text-xl text-stone-600 max-w-2xl mx-auto leading-relaxed">
-            Whether you&apos;re a professional planner managing a full client roster
-            or planning your own wedding — EventSpace takes you from start to finish.
-          </p>
+          <div className="mt-10 sm:mt-12 flex flex-col sm:flex-row gap-12 sm:gap-20 max-w-4xl">
+            <p className="text-lg sm:text-xl text-stone-500 leading-relaxed max-w-lg">
+              Floor plans, guest lists, vendor contracts, timelines, and a
+              wedding website — all in one place. Built for professional
+              planners and couples doing it themselves.
+            </p>
 
-          {/* Two-path CTA */}
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="/sign-up"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-base font-medium text-white bg-rose-500 hover:bg-rose-600 px-8 py-3.5 rounded-xl transition-colors shadow-md shadow-rose-200"
-            >
-              <BarChart3 size={18} />
-              I&apos;m a Wedding Planner
-            </Link>
-            <Link
-              href="/sign-up"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-base font-medium text-stone-700 bg-white hover:bg-stone-100 px-8 py-3.5 rounded-xl transition-colors border border-stone-200"
-            >
-              <Heart size={18} />
-              I&apos;m Planning My Own Wedding
-            </Link>
+            <div className="flex flex-col gap-3 sm:pt-1">
+              <div>
+                <Link
+                  href="/sign-up"
+                  className="group inline-flex items-center gap-3 text-[15px] font-medium text-stone-900 hover:text-rose-600 transition-colors"
+                >
+                  <span className="w-10 h-10 rounded-full bg-rose-500 group-hover:bg-rose-600 flex items-center justify-center transition-colors">
+                    <ArrowRight size={16} className="text-white" />
+                  </span>
+                  Start free trial
+                </Link>
+                <p className="text-xs text-stone-400 ml-[52px] mt-1">
+                  No credit card required
+                </p>
+              </div>
+              <Link
+                href="/sign-up"
+                className="group inline-flex items-center gap-3 text-[15px] font-medium text-stone-500 hover:text-stone-700 transition-colors"
+              >
+                <span className="w-10 h-10 rounded-full border border-stone-300 group-hover:border-stone-400 flex items-center justify-center transition-colors">
+                  <Heart size={14} className="text-stone-400 group-hover:text-stone-500" />
+                </span>
+                Planning my own wedding
+              </Link>
+            </div>
           </div>
-
-          <p className="mt-6 text-sm text-stone-400">
-            30-day free trial on Professional &middot; No credit card required
-          </p>
         </div>
       </header>
 
-      {/* ── Wedding Website Spotlight ─────────────────────────── */}
-      <section className="py-16 sm:py-20 bg-gradient-to-r from-rose-500 to-pink-500">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col md:flex-row items-center gap-10">
-            <div className="flex-1 text-center md:text-left">
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-rose-100 bg-white/20 rounded-full px-3 py-1 mb-4">
-                <Globe size={12} />
-                New Feature
+      {/* ── Social proof strip ─────────────────────────────────── */}
+      <div className="border-y border-stone-200/60 bg-white">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 py-6 flex flex-wrap items-center justify-between gap-6">
+          <p className="text-[13px] text-stone-400 uppercase tracking-wider font-medium">
+            Works for
+          </p>
+          <div className="flex flex-wrap items-center gap-x-10 gap-y-3 text-sm text-stone-500">
+            {[
+              "Wedding Planners",
+              "Corporate Events",
+              "Galas & Fundraisers",
+              "Private Parties",
+              "Conferences",
+            ].map((item) => (
+              <span key={item} className="whitespace-nowrap">
+                {item}
               </span>
-              <h2 className="font-heading text-3xl sm:text-4xl font-bold text-white leading-tight">
-                Beautiful Wedding Websites, Built In
-              </h2>
-              <p className="mt-4 text-lg text-rose-100 leading-relaxed">
-                Share your love story, event details, and registry links with a personalized
-                wedding website. Guests RSVP directly from the page — no third-party tools needed.
-              </p>
-              <ul className="mt-6 space-y-2 text-sm text-rose-50">
-                {[
-                  "Personalized event details & love story",
-                  "Built-in RSVP with meal & dietary tracking",
-                  "Registry links & accommodation info",
-                  "Matches your event branding",
-                  "Included with every plan — DIY and Pro",
-                ].map((item) => (
-                  <li key={item} className="flex items-center gap-2">
-                    <Check size={14} className="shrink-0 text-white" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/sign-up"
-                className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-rose-600 bg-white hover:bg-rose-50 px-6 py-2.5 rounded-lg transition-colors shadow-sm"
-              >
-                Create Your Wedding Website
-                <ArrowRight size={16} />
-              </Link>
-            </div>
-            <div className="flex-1 max-w-sm">
-              <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/20 p-6 text-center">
-                <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto mb-4">
-                  <Globe size={32} className="text-white" />
-                </div>
-                <p className="text-white font-heading font-semibold text-lg">Sarah & James</p>
-                <p className="text-rose-200 text-sm mt-1">June 15, 2026 &middot; Napa Valley</p>
-                <div className="mt-4 space-y-2 text-xs text-rose-100">
-                  <div className="bg-white/10 rounded-lg py-2 px-3">Our Story</div>
-                  <div className="bg-white/10 rounded-lg py-2 px-3">Event Details</div>
-                  <div className="bg-white/10 rounded-lg py-2 px-3">RSVP</div>
-                  <div className="bg-white/10 rounded-lg py-2 px-3">Registry</div>
-                </div>
-              </div>
-            </div>
+            ))}
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* ── Journey: Wedding Planners (Pro) ───────────────────── */}
-      <section id="for-planners" className="py-20 sm:py-28 bg-white border-b border-stone-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="grid lg:grid-cols-2 gap-14 items-start">
-            {/* Left: pitch */}
-            <div>
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-rose-600 bg-rose-50 border border-rose-100 rounded-full px-3 py-1 mb-4">
-                Professional Plan
+      {/* ── Features — Bento ──────────────────────────────────── */}
+      <section id="features" className="py-24 sm:py-32">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <div className="max-w-2xl mb-16">
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900 leading-tight">
+              Everything in one place.
+              <br />
+              <span className="text-stone-400 font-normal">
+                No more juggling tools.
               </span>
-              <h2 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900 leading-tight">
-                From Inquiry to Five-Star Review
-              </h2>
-              <p className="mt-4 text-lg text-stone-500 leading-relaxed">
-                EventSpace replaces your patchwork of spreadsheets, PDFs, and email chains
-                with one platform that handles every stage of your planning business.
-              </p>
-
-              <div className="mt-8 grid grid-cols-2 gap-4 text-center">
-                {[
-                  { label: "Inquiries Pipeline", icon: Send },
-                  { label: "Branded Portal", icon: Sparkles },
-                  { label: "E-Signatures", icon: FileSignature },
-                  { label: "Invoicing", icon: Receipt },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="bg-stone-50 rounded-xl p-4 border border-stone-100"
-                  >
-                    <item.icon size={20} className="text-rose-500 mx-auto mb-2" />
-                    <p className="text-xs font-medium text-stone-700">{item.label}</p>
-                  </div>
-                ))}
-              </div>
-
-              <Link
-                href="/sign-up"
-                className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-white bg-rose-500 hover:bg-rose-600 px-6 py-2.5 rounded-lg transition-colors shadow-sm"
-              >
-                Start 30-Day Free Trial
-                <ArrowRight size={16} />
-              </Link>
-              <p className="mt-2 text-xs text-stone-400">$20/mo after trial &middot; Cancel anytime</p>
-            </div>
-
-            {/* Right: journey steps */}
-            <div>
-              {PRO_JOURNEY.map((s, i) => (
-                <JourneyStep
-                  key={s.step}
-                  {...s}
-                  isLast={i === PRO_JOURNEY.length - 1}
-                />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Journey: DIY ─────────────────────────────────────── */}
-      <section id="for-diy" className="py-20 sm:py-28">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="grid lg:grid-cols-2 gap-14 items-start">
-            {/* Left: journey steps (reversed layout for visual variety) */}
-            <div className="order-2 lg:order-1">
-              {DIY_JOURNEY.map((s, i) => (
-                <JourneyStep
-                  key={s.step}
-                  {...s}
-                  isLast={i === DIY_JOURNEY.length - 1}
-                />
-              ))}
-            </div>
-
-            {/* Right: pitch */}
-            <div className="order-1 lg:order-2">
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-100 rounded-full px-3 py-1 mb-4">
-                DIY Plan
-              </span>
-              <h2 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900 leading-tight">
-                From RSVP to Day-of PDF
-              </h2>
-              <p className="mt-4 text-lg text-stone-500 leading-relaxed">
-                Planning your own wedding? Skip the expensive planner software. EventSpace
-                gives you professional-grade tools for a single, one-time price.
-              </p>
-
-              <div className="mt-8 grid grid-cols-2 gap-4 text-center">
-                {[
-                  { label: "Wedding Website", icon: Globe },
-                  { label: "Floor Plans & 3D", icon: Grid3X3 },
-                  { label: "Smart Seating", icon: Users },
-                  { label: "PDF Export", icon: FileText },
-                ].map((item) => (
-                  <div
-                    key={item.label}
-                    className="bg-white rounded-xl p-4 border border-stone-100 shadow-sm"
-                  >
-                    <item.icon size={20} className="text-emerald-500 mx-auto mb-2" />
-                    <p className="text-xs font-medium text-stone-700">{item.label}</p>
-                  </div>
-                ))}
-              </div>
-
-              <Link
-                href="/sign-up"
-                className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-white bg-emerald-500 hover:bg-emerald-600 px-6 py-2.5 rounded-lg transition-colors shadow-sm"
-              >
-                Start Planning — $99 One-Time
-                <ArrowRight size={16} />
-              </Link>
-              <p className="mt-2 text-xs text-stone-400">
-                <span className="line-through">$199</span>
-                <span className="ml-1 text-emerald-600 font-medium">50% off — limited time</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── All Features ─────────────────────────────────────── */}
-      <section id="features" className="py-20 sm:py-28 bg-white border-y border-stone-100">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900">
-              Everything You Need in One Place
             </h2>
-            <p className="mt-4 text-lg text-stone-500 max-w-2xl mx-auto">
-              Wedding websites, floor plans, vendors, guests, contracts, timelines,
-              and client communication — no more juggling tools.
-            </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {FEATURES.map((f) => (
+          {/* Bento grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {/* Large cards — span 2 cols on lg */}
+            {FEATURES_BENTO.filter((f) => f.size === "large").map((f) => (
               <div
                 key={f.title}
-                className="bg-stone-50 rounded-2xl p-6 border border-stone-100 hover:shadow-card transition-shadow relative"
+                className="lg:col-span-1 bg-white rounded-2xl p-7 sm:p-8 border border-stone-200/60 hover:border-stone-300 transition-colors relative group"
               >
                 {"badge" in f && f.badge && (
-                  <span className="absolute top-4 right-4 text-[10px] font-bold text-rose-600 bg-rose-50 border border-rose-100 rounded-full px-2 py-0.5">
+                  <span className="absolute top-6 right-6 text-[11px] font-semibold text-rose-500 bg-rose-50 rounded-full px-2.5 py-0.5">
                     {f.badge}
                   </span>
                 )}
-                <div className="w-10 h-10 rounded-lg bg-rose-50 flex items-center justify-center mb-4">
-                  <f.icon size={20} className="text-rose-500" />
+                <div className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center mb-5 group-hover:bg-rose-50 transition-colors">
+                  <f.icon
+                    size={20}
+                    className="text-stone-500 group-hover:text-rose-500 transition-colors"
+                  />
                 </div>
-                <h3 className="font-heading text-lg font-semibold text-stone-900 mb-2">
+                <h3 className="font-heading text-xl font-semibold text-stone-900 mb-2">
                   {f.title}
                 </h3>
-                <p className="text-stone-500 leading-relaxed text-sm">
+                <p className="text-[15px] text-stone-500 leading-relaxed">
                   {f.description}
                 </p>
               </div>
             ))}
+
+            {/* Medium cards */}
+            {FEATURES_BENTO.filter((f) => f.size === "medium").map((f) => (
+              <div
+                key={f.title}
+                className="bg-white rounded-2xl p-7 border border-stone-200/60 hover:border-stone-300 transition-colors group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center mb-5 group-hover:bg-rose-50 transition-colors">
+                  <f.icon
+                    size={20}
+                    className="text-stone-500 group-hover:text-rose-500 transition-colors"
+                  />
+                </div>
+                <h3 className="font-heading text-lg font-semibold text-stone-900 mb-1.5">
+                  {f.title}
+                </h3>
+                <p className="text-sm text-stone-500 leading-relaxed">
+                  {f.description}
+                </p>
+              </div>
+            ))}
+
+            {/* "And more" compact card */}
+            <div className="bg-stone-100/60 rounded-2xl p-7 border border-stone-200/40">
+              <p className="text-xs text-stone-400 uppercase tracking-wider font-medium mb-4">
+                Plus
+              </p>
+              <div className="space-y-3">
+                {FEATURES_LIST.map((f) => (
+                  <div key={f.label} className="flex items-center gap-3">
+                    <f.icon size={15} className="text-stone-400 shrink-0" />
+                    <span className="text-sm text-stone-600">{f.label}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── How it works — Pro vs DIY side by side ────────────── */}
+      <section className="py-24 sm:py-32 bg-white border-y border-stone-200/60">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <div className="max-w-2xl mb-16">
+            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900 leading-tight">
+              Two paths.
+              <br />
+              <span className="text-stone-400 font-normal">
+                Same great tools.
+              </span>
+            </h2>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Pro path */}
+            <div className="rounded-2xl border border-stone-200/60 bg-stone-50/50 p-8 sm:p-10">
+              <div className="flex items-center gap-3 mb-8">
+                <span className="text-[11px] font-semibold text-stone-500 bg-stone-200/60 rounded-full px-3 py-1 uppercase tracking-wider">
+                  Professional
+                </span>
+                <span className="text-[13px] text-stone-400">
+                  $20/mo &middot; 30-day free trial
+                </span>
+              </div>
+
+              <p className="font-heading text-2xl font-semibold text-stone-900 mb-2">
+                From inquiry to five-star review
+              </p>
+              <p className="text-[15px] text-stone-500 mb-8 leading-relaxed">
+                Replace your patchwork of spreadsheets, PDFs, and email chains
+                with one platform.
+              </p>
+
+              <div className="space-y-0">
+                {PRO_STEPS.map((s, i) => (
+                  <div key={s.num} className="flex items-center gap-4 group">
+                    <div className="flex flex-col items-center">
+                      <span className="text-[11px] font-mono text-stone-400 w-6 text-center">
+                        {s.num}
+                      </span>
+                      {i < PRO_STEPS.length - 1 && (
+                        <div className="w-px h-6 bg-stone-200 mt-1" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 py-2">
+                      <s.icon
+                        size={15}
+                        className="text-stone-400 group-hover:text-rose-500 transition-colors shrink-0"
+                      />
+                      <span className="text-[15px] text-stone-700 group-hover:text-stone-900 transition-colors">
+                        {s.label}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Link
+                href="/sign-up"
+                className="mt-8 inline-flex items-center gap-2 text-[13px] font-medium text-stone-900 hover:text-rose-600 transition-colors"
+              >
+                Start free trial
+                <ArrowUpRight size={14} />
+              </Link>
+            </div>
+
+            {/* DIY path */}
+            <div className="rounded-2xl border border-rose-200/60 bg-rose-50/30 p-8 sm:p-10">
+              <div className="flex items-center gap-3 mb-8">
+                <span className="text-[11px] font-semibold text-rose-500 bg-rose-100/60 rounded-full px-3 py-1 uppercase tracking-wider">
+                  DIY
+                </span>
+                <span className="text-[13px] text-stone-400">
+                  $99 one-time{" "}
+                  <span className="line-through text-stone-300">$199</span>
+                </span>
+              </div>
+
+              <p className="font-heading text-2xl font-semibold text-stone-900 mb-2">
+                From RSVP to day-of PDF
+              </p>
+              <p className="text-[15px] text-stone-500 mb-8 leading-relaxed">
+                Professional-grade planning tools for your wedding, without the
+                professional price tag.
+              </p>
+
+              <div className="space-y-0">
+                {DIY_STEPS.map((s, i) => (
+                  <div key={s.num} className="flex items-center gap-4 group">
+                    <div className="flex flex-col items-center">
+                      <span className="text-[11px] font-mono text-stone-400 w-6 text-center">
+                        {s.num}
+                      </span>
+                      {i < DIY_STEPS.length - 1 && (
+                        <div className="w-px h-6 bg-rose-200/60 mt-1" />
+                      )}
+                    </div>
+                    <div className="flex items-center gap-3 py-2">
+                      <s.icon
+                        size={15}
+                        className="text-stone-400 group-hover:text-rose-500 transition-colors shrink-0"
+                      />
+                      <span className="text-[15px] text-stone-700 group-hover:text-stone-900 transition-colors">
+                        {s.label}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <Link
+                href="/sign-up"
+                className="mt-8 inline-flex items-center gap-2 text-[13px] font-medium text-stone-900 hover:text-rose-600 transition-colors"
+              >
+                Start planning
+                <ArrowUpRight size={14} />
+              </Link>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ── Pricing ────────────────────────────────────────────── */}
-      <section id="pricing" className="py-20 sm:py-28">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-14">
+      <section id="pricing" className="py-24 sm:py-32">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <div className="max-w-2xl mb-16">
             <h2 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900">
-              Simple, Transparent Pricing
+              Pricing
             </h2>
-            <p className="mt-4 text-lg text-stone-500 max-w-2xl mx-auto">
-              One event or a whole business — pick the plan that fits.
+            <p className="mt-3 text-lg text-stone-500">
+              One event or a whole business — pick what fits.
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-6 max-w-3xl mx-auto">
+          <div className="grid sm:grid-cols-2 gap-6 max-w-3xl">
             {/* DIY */}
-            <div className="bg-stone-50 rounded-2xl p-8 border border-stone-200 relative">
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
-                50% Off — Limited Time
-              </span>
-              <h3 className="font-heading text-xl font-semibold text-stone-900">DIY</h3>
-              <p className="mt-1 text-sm text-stone-500">Plan your own event, your way</p>
-              <p className="mt-6">
-                <span className="font-heading text-4xl font-bold text-stone-900">$99</span>
-                <span className="text-stone-400 text-sm"> one-time</span>
+            <div className="rounded-2xl border border-stone-200/60 bg-white p-8">
+              <p className="text-[13px] text-emerald-600 font-medium mb-4">
+                50% off — limited time
               </p>
-              <p className="mt-1 text-sm text-stone-400">
+              <h3 className="font-heading text-xl font-semibold text-stone-900">
+                DIY
+              </h3>
+              <p className="text-sm text-stone-500 mt-1">
+                Plan your own event, your way
+              </p>
+              <p className="mt-6 flex items-baseline gap-2">
+                <span className="font-heading text-4xl font-bold text-stone-900">
+                  $99
+                </span>
+                <span className="text-sm text-stone-400">one-time</span>
+              </p>
+              <p className="text-sm text-stone-400 mt-1">
                 <span className="line-through">$199</span>
-                <span className="ml-1.5 text-emerald-600 font-medium">Save $100</span>
+                <span className="ml-2 text-emerald-600 font-medium">
+                  Save $100
+                </span>
               </p>
+
               <Link
                 href="/sign-up"
-                className="mt-6 block text-center font-medium text-stone-700 bg-white hover:bg-stone-100 border border-stone-200 px-6 py-2.5 rounded-lg transition-colors text-sm"
+                className="mt-6 block text-center text-[13px] font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 px-6 py-2.5 rounded-lg transition-colors"
               >
-                Start Planning
+                Start planning
               </Link>
-              <p className="mt-5 mb-4 text-xs text-stone-400 font-medium uppercase tracking-wider">From RSVP to day-of PDF</p>
-              <ul className="space-y-3 text-sm text-stone-600">
-                {[
-                  "1 active event",
-                  "Wedding website",
-                  "Floor plan editor with 3D view",
-                  "6 venue presets (tent, garden, barn & more)",
-                  "Smart seating algorithm",
-                  "Guest management & RSVPs",
-                  "Day-of timeline",
-                  "Vendor tracking & search",
-                  "Contracts & budget",
-                  "Color palette & mood board",
-                  "Shared files",
-                  "Layout templates",
-                  "PDF floor plan & timeline export",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <Check size={16} className="shrink-0 text-emerald-500 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+
+              <div className="mt-8 pt-6 border-t border-stone-100">
+                <ul className="space-y-3 text-sm text-stone-600">
+                  {[
+                    "1 active event",
+                    "Wedding website",
+                    "Floor plan editor with 3D view",
+                    "6 venue presets",
+                    "Smart seating algorithm",
+                    "Guest management & RSVPs",
+                    "Day-of timeline",
+                    "Vendor tracking & search",
+                    "Contracts & budget",
+                    "Color palette & mood board",
+                    "Shared files",
+                    "Layout templates",
+                    "PDF export",
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2.5">
+                      <Check
+                        size={14}
+                        className="shrink-0 text-stone-400 mt-0.5"
+                      />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
 
             {/* Professional */}
-            <div className="bg-white rounded-2xl p-8 border-2 border-rose-500 shadow-lg relative">
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-rose-500 text-white text-xs font-medium px-3 py-1 rounded-full">
-                For Professionals
+            <div className="rounded-2xl border-2 border-stone-900 bg-white p-8 relative">
+              <span className="absolute -top-3 left-6 bg-stone-900 text-white text-[11px] font-medium px-3 py-1 rounded-full">
+                Most popular
               </span>
-              <h3 className="font-heading text-xl font-semibold text-stone-900">Professional</h3>
-              <p className="mt-1 text-sm text-stone-500">Everything you need to run a planning business</p>
-              <p className="mt-6">
-                <span className="font-heading text-4xl font-bold text-stone-900">$20</span>
-                <span className="text-stone-400 text-sm"> / month</span>
+              <p className="text-[13px] text-rose-500 font-medium mb-4">
+                30-day free trial
               </p>
+              <h3 className="font-heading text-xl font-semibold text-stone-900">
+                Professional
+              </h3>
+              <p className="text-sm text-stone-500 mt-1">
+                Everything to run a planning business
+              </p>
+              <p className="mt-6 flex items-baseline gap-2">
+                <span className="font-heading text-4xl font-bold text-stone-900">
+                  $20
+                </span>
+                <span className="text-sm text-stone-400">/ month</span>
+              </p>
+              <p className="text-sm text-stone-400 mt-1">
+                No credit card required
+              </p>
+
               <Link
                 href="/sign-up"
-                className="mt-6 block text-center font-medium text-white bg-rose-500 hover:bg-rose-600 px-6 py-2.5 rounded-lg transition-colors text-sm shadow-sm"
+                className="mt-6 block text-center text-[13px] font-medium text-white bg-stone-900 hover:bg-stone-800 px-6 py-2.5 rounded-lg transition-colors"
               >
-                Start 30-Day Free Trial
+                Start free trial
               </Link>
-              <p className="text-xs text-stone-400 mt-2 text-center">No credit card required</p>
-              <p className="mt-5 mb-4 text-xs text-stone-400 font-medium uppercase tracking-wider">From inquiry to five-star review</p>
-              <ul className="space-y-3 text-sm text-stone-600">
-                {[
-                  "Unlimited events",
-                  "Everything in DIY",
-                  "Inquiries & leads pipeline",
-                  "Client questionnaires",
-                  "Invoicing & payment tracking",
-                  "Financial reports & dashboard",
-                  "Calendar view (all events)",
-                  "Preferred vendors list",
-                  "Contract templates & e-signatures",
-                  "Branded client portal",
-                  "CSV import & export",
-                  "Priority support",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <Check size={16} className="shrink-0 text-emerald-500 mt-0.5" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
+
+              <div className="mt-8 pt-6 border-t border-stone-100">
+                <ul className="space-y-3 text-sm text-stone-600">
+                  {[
+                    "Unlimited events",
+                    "Everything in DIY",
+                    "Inquiries & leads pipeline",
+                    "Client questionnaires",
+                    "Invoicing & payment tracking",
+                    "Financial reports & dashboard",
+                    "Calendar view (all events)",
+                    "Preferred vendors list",
+                    "Contract templates & e-signatures",
+                    "Branded client portal",
+                    "CSV import & export",
+                    "Priority support",
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2.5">
+                      <Check
+                        size={14}
+                        className="shrink-0 text-stone-900 mt-0.5"
+                      />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
       {/* ── FAQ ─────────────────────────────────────────────────── */}
-      <section id="faq" className="py-20 sm:py-28 bg-white border-t border-stone-100">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          <div className="text-center mb-14">
-            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900">
-              Frequently Asked Questions
-            </h2>
-          </div>
-          <div>
-            {FAQS.map((faq) => (
-              <FAQItem key={faq.q} q={faq.q} a={faq.a} />
-            ))}
+      <section
+        id="faq"
+        className="py-24 sm:py-32 bg-white border-t border-stone-200/60"
+      >
+        <div className="max-w-7xl mx-auto px-5 sm:px-8">
+          <div className="grid lg:grid-cols-[1fr_2fr] gap-16">
+            <div>
+              <h2 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900 sticky top-24">
+                FAQ
+              </h2>
+            </div>
+            <div>
+              {FAQS.map((faq, i) => (
+                <FAQItem
+                  key={faq.q}
+                  q={faq.q}
+                  a={faq.a}
+                  isLast={i === FAQS.length - 1}
+                />
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── CTA Banner ─────────────────────────────────────────── */}
-      <section className="py-20 sm:py-28 bg-gradient-to-br from-rose-500 to-rose-600">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="font-heading text-3xl sm:text-4xl font-bold text-white">
-            Ready to Plan Smarter?
+      {/* ── Final CTA — minimal, not a banner ────────────────── */}
+      <section className="py-24 sm:py-32 border-t border-stone-200/60">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 text-center">
+          <h2 className="font-heading text-3xl sm:text-5xl font-bold text-stone-900 leading-tight">
+            Your next event
+            <br />
+            <span className="italic font-normal text-stone-400">
+              starts here.
+            </span>
           </h2>
-          <p className="mt-4 text-lg text-rose-100 max-w-xl mx-auto">
-            Join thousands of planners and couples using EventSpace to create unforgettable events.
-          </p>
-          <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/sign-up"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-base font-medium text-rose-600 bg-white hover:bg-rose-50 px-8 py-3.5 rounded-xl transition-colors shadow-md"
+              className="inline-flex items-center gap-2.5 text-[15px] font-medium text-white bg-stone-900 hover:bg-stone-800 px-7 py-3 rounded-xl transition-colors"
             >
-              Get Started Free
-              <ArrowRight size={18} />
+              Get started free
+              <ArrowRight size={16} />
             </Link>
           </div>
+          <p className="mt-4 text-sm text-stone-400">
+            Free 30-day trial &middot; No credit card &middot; Cancel anytime
+          </p>
         </div>
       </section>
 
       {/* ── Footer ─────────────────────────────────────────────── */}
-      <footer className="bg-stone-900 text-stone-400 py-16">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
+      <footer className="bg-stone-900 text-stone-400">
+        <div className="max-w-7xl mx-auto px-5 sm:px-8 py-16">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
-            {/* Brand */}
             <div>
-              <div className="flex items-center gap-2 mb-4">
-                <span className="w-8 h-8 rounded-lg bg-rose-500 flex items-center justify-center text-white font-heading font-bold text-sm">
+              <div className="flex items-center gap-2.5 mb-4">
+                <span className="w-7 h-7 rounded-md bg-white/10 flex items-center justify-center text-white font-heading font-bold text-xs">
                   E
                 </span>
-                <span className="font-heading text-xl font-semibold text-white">
+                <span className="font-heading text-lg font-semibold text-white">
                   EventSpace
                 </span>
               </div>
-              <p className="text-sm leading-relaxed">
-                Event planning software for professionals and DIY planners.
-                From inquiry to review. From RSVP to day-of PDF.
+              <p className="text-sm leading-relaxed max-w-xs">
+                Event planning software for professionals and DIY couples.
               </p>
             </div>
 
-            {/* Product */}
             <div>
-              <h4 className="font-heading text-sm font-semibold text-white mb-4 uppercase tracking-wider">
+              <p className="text-[11px] font-medium text-stone-500 uppercase tracking-wider mb-4">
                 Product
-              </h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#features" className="hover:text-white transition-colors">Features</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">Pricing</a></li>
-                <li><a href="#for-planners" className="hover:text-white transition-colors">For Planners</a></li>
-                <li><a href="#for-diy" className="hover:text-white transition-colors">For DIY</a></li>
-                <li><a href="#faq" className="hover:text-white transition-colors">FAQ</a></li>
+              </p>
+              <ul className="space-y-2.5 text-sm">
+                <li>
+                  <a
+                    href="#features"
+                    className="hover:text-white transition-colors"
+                  >
+                    Features
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#pricing"
+                    className="hover:text-white transition-colors"
+                  >
+                    Pricing
+                  </a>
+                </li>
+                <li>
+                  <a href="#faq" className="hover:text-white transition-colors">
+                    FAQ
+                  </a>
+                </li>
               </ul>
             </div>
 
-            {/* Use Cases */}
             <div>
-              <h4 className="font-heading text-sm font-semibold text-white mb-4 uppercase tracking-wider">
-                Use Cases
-              </h4>
-              <ul className="space-y-2 text-sm">
-                <li><span className="hover:text-white transition-colors cursor-default">Wedding Planning</span></li>
-                <li><span className="hover:text-white transition-colors cursor-default">Corporate Events</span></li>
-                <li><span className="hover:text-white transition-colors cursor-default">Galas & Fundraisers</span></li>
-                <li><span className="hover:text-white transition-colors cursor-default">Private Parties</span></li>
-                <li><span className="hover:text-white transition-colors cursor-default">Conferences</span></li>
+              <p className="text-[11px] font-medium text-stone-500 uppercase tracking-wider mb-4">
+                Use cases
+              </p>
+              <ul className="space-y-2.5 text-sm">
+                <li>Wedding Planning</li>
+                <li>Corporate Events</li>
+                <li>Galas & Fundraisers</li>
+                <li>Private Parties</li>
               </ul>
             </div>
 
-            {/* Resources */}
             <div>
-              <h4 className="font-heading text-sm font-semibold text-white mb-4 uppercase tracking-wider">
+              <p className="text-[11px] font-medium text-stone-500 uppercase tracking-wider mb-4">
                 Resources
-              </h4>
-              <ul className="space-y-2 text-sm">
-                <li><Link href="/sign-in" className="hover:text-white transition-colors">Sign In</Link></li>
-                <li><Link href="/sign-up" className="hover:text-white transition-colors">Get Started</Link></li>
-                <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-                <li><Link href="/blog" className="hover:text-white transition-colors">Blog</Link></li>
+              </p>
+              <ul className="space-y-2.5 text-sm">
+                <li>
+                  <Link
+                    href="/sign-in"
+                    className="hover:text-white transition-colors"
+                  >
+                    Sign in
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/sign-up"
+                    className="hover:text-white transition-colors"
+                  >
+                    Get started
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/privacy"
+                    className="hover:text-white transition-colors"
+                  >
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    href="/blog"
+                    className="hover:text-white transition-colors"
+                  >
+                    Blog
+                  </Link>
+                </li>
               </ul>
             </div>
           </div>
 
-          <div className="mt-12 pt-8 border-t border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm">
-            <p>&copy; {new Date().getFullYear()} EventSpace. All rights reserved.</p>
+          <div className="mt-14 pt-8 border-t border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-[13px]">
+            <p>&copy; {new Date().getFullYear()} EventSpace</p>
             <div className="flex gap-6">
-              <Link href="/privacy" className="hover:text-white transition-colors">Privacy</Link>
-              <Link href="/terms" className="hover:text-white transition-colors">Terms</Link>
-              <Link href="/blog" className="hover:text-white transition-colors">Blog</Link>
+              <Link
+                href="/privacy"
+                className="hover:text-white transition-colors"
+              >
+                Privacy
+              </Link>
+              <Link
+                href="/terms"
+                className="hover:text-white transition-colors"
+              >
+                Terms
+              </Link>
+              <Link
+                href="/blog"
+                className="hover:text-white transition-colors"
+              >
+                Blog
+              </Link>
             </div>
           </div>
         </div>
