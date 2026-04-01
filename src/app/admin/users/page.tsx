@@ -111,7 +111,7 @@ export default function AdminUsers() {
   }
 
   return (
-    <div className="px-4 py-6 sm:px-6 md:px-8 max-w-5xl">
+    <div className="px-4 py-6 sm:px-6 md:px-8 max-w-6xl">
       <div className="mb-6">
         <h1 className="text-2xl font-heading font-bold text-stone-800">Users</h1>
         <p className="text-sm text-stone-400 mt-1">
@@ -158,16 +158,16 @@ export default function AdminUsers() {
           <div className="p-8 text-center text-sm text-stone-400">No users found.</div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full text-sm table-fixed">
               <thead>
                 <tr className="text-left text-stone-400 border-b border-stone-100">
-                  <th className="px-5 py-3 font-medium">Name</th>
-                  <th className="px-5 py-3 font-medium">Email</th>
-                  <th className="px-5 py-3 font-medium">Plan</th>
-                  <th className="px-5 py-3 font-medium">Trial Ends</th>
-                  <th className="px-5 py-3 font-medium">Events</th>
-                  <th className="px-5 py-3 font-medium">Signed Up</th>
-                  <th className="px-5 py-3 font-medium">Actions</th>
+                  <th className="px-5 py-3 font-medium w-[12%]">Name</th>
+                  <th className="px-5 py-3 font-medium w-[22%]">Email</th>
+                  <th className="px-5 py-3 font-medium w-[8%]">Plan</th>
+                  <th className="px-5 py-3 font-medium w-[10%]">Trial Ends</th>
+                  <th className="px-5 py-3 font-medium w-[7%]">Events</th>
+                  <th className="px-5 py-3 font-medium w-[10%]">Signed Up</th>
+                  <th className="px-5 py-3 font-medium w-[31%]">Actions</th>
                 </tr>
               </thead>
               <tbody>
