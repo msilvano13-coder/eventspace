@@ -552,7 +552,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 max-w-6xl">
             {/* DIY */}
             <div className="rounded-2xl border border-stone-200/60 bg-white p-8">
               <p className="text-[13px] text-emerald-600 font-medium mb-4">
@@ -672,40 +672,91 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Teams */}
-            <div className="rounded-2xl border border-stone-200/60 bg-white p-8 sm:col-span-2 lg:col-span-1">
+            {/* Team 5 */}
+            <div className="rounded-2xl border border-stone-200/60 bg-white p-8">
               <p className="text-[13px] text-violet-600 font-medium mb-4">
-                Coming soon
+                Small teams
               </p>
               <h3 className="font-heading text-xl font-semibold text-stone-900">
-                Teams
+                Team 5
               </h3>
               <p className="text-sm text-stone-500 mt-1">
-                Collaborate across your planning team
+                Up to 5 team members
               </p>
               <p className="mt-6 flex items-baseline gap-2">
                 <span className="font-heading text-4xl font-bold text-stone-900">
-                  $20
+                  $50
                 </span>
-                <span className="text-sm text-stone-400">/ member / month</span>
+                <span className="text-sm text-stone-400">/ month</span>
               </p>
               <p className="text-sm text-stone-400 mt-1">
-                Built on top of Professional
+                Everything in Professional, plus
               </p>
 
               <Link
                 href="/sign-up"
                 className="mt-6 block text-center text-[13px] font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 px-6 py-2.5 rounded-lg transition-colors"
               >
-                Join waitlist
+                Get started
               </Link>
 
               <div className="mt-8 pt-6 border-t border-stone-100">
                 <ul className="space-y-3 text-sm text-stone-600">
                   {[
                     "Everything in Professional",
-                    "Invite team members",
-                    "Assign events to planners",
+                    "Up to 5 team members",
+                    "Invite & assign events",
+                    "Team-wide event calendar",
+                    "Role-based permissions",
+                    "Shared vendor & template library",
+                    "Team activity & notifications",
+                  ].map((item) => (
+                    <li key={item} className="flex items-start gap-2.5">
+                      <Check
+                        size={14}
+                        className="shrink-0 text-violet-500 mt-0.5"
+                      />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Team 10 */}
+            <div className="rounded-2xl border border-stone-200/60 bg-white p-8">
+              <p className="text-[13px] text-violet-600 font-medium mb-4">
+                Growing teams
+              </p>
+              <h3 className="font-heading text-xl font-semibold text-stone-900">
+                Team 10
+              </h3>
+              <p className="text-sm text-stone-500 mt-1">
+                Up to 10 team members
+              </p>
+              <p className="mt-6 flex items-baseline gap-2">
+                <span className="font-heading text-4xl font-bold text-stone-900">
+                  $100
+                </span>
+                <span className="text-sm text-stone-400">/ month</span>
+              </p>
+              <p className="text-sm text-stone-400 mt-1">
+                Best value for larger teams
+              </p>
+
+              <Link
+                href="/sign-up"
+                className="mt-6 block text-center text-[13px] font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 px-6 py-2.5 rounded-lg transition-colors"
+              >
+                Get started
+              </Link>
+
+              <div className="mt-8 pt-6 border-t border-stone-100">
+                <ul className="space-y-3 text-sm text-stone-600">
+                  {[
+                    "Everything in Professional",
+                    "Up to 10 team members",
+                    "Invite & assign events",
                     "Team-wide event calendar",
                     "Role-based permissions",
                     "Shared vendor & template library",
