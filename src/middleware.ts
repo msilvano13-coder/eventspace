@@ -7,8 +7,9 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Run on /planner routes and auth pages, skip static files and API routes
+    // Run on /planner routes, /admin routes, and auth pages, skip static files and API routes
     "/planner/:path*",
+    "/admin/:path*",
     "/sign-in",
     "/sign-up",
   ],

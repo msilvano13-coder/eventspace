@@ -93,6 +93,22 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Protect /admin routes — require auth + admin email
+  if (request.nextUrl.pathname.startsWith("/admin")) {
+    if (!user) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/sign-in";
+      url.searchParams.set("redirect", request.nextUrl.pathname);
+      return NextResponse.redirect(url);
+    }
+    if (user.email !== "ashley@ashleysilvanohair.com") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/planner";
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
+  }
+
   // Protect /planner routes — redirect to sign-in if not authenticated
   if (!user && request.nextUrl.pathname.startsWith("/planner")) {
     const url = request.nextUrl.clone();
