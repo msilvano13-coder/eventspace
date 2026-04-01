@@ -26,7 +26,28 @@ export async function GET() {
       .eq("team_id", team.id)
       .neq("status", "removed")
       .order("invited_at", { ascending: true });
-    members = data ?? [];
+
+    // Enrich active members with profile names
+    const rawMembers = data ?? [];
+    const activeUserIds = rawMembers
+      .filter((m: { user_id: string | null }) => m.user_id)
+      .map((m: { user_id: string }) => m.user_id);
+
+    let profileMap: Record<string, string> = {};
+    if (activeUserIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, planner_name")
+        .in("id", activeUserIds);
+      profileMap = Object.fromEntries(
+        (profiles ?? []).map((p: { id: string; planner_name: string }) => [p.id, p.planner_name])
+      );
+    }
+
+    members = rawMembers.map((m: { user_id: string | null }) => ({
+      ...m,
+      name: m.user_id ? profileMap[m.user_id] || "" : "",
+    }));
   }
 
   // Fetch teams this user is a member of

@@ -7,6 +7,7 @@ import { showErrorToast } from "@/lib/error-toast";
 interface TeamMember {
   id: string;
   email: string;
+  name: string;
   status: "pending" | "active" | "removed";
   role: string;
   invited_at: string;
@@ -20,6 +21,12 @@ interface Team {
   max_members: number;
 }
 
+const ROLES = [
+  { value: "coordinator", label: "Coordinator" },
+  { value: "assistant", label: "Assistant" },
+  { value: "viewer", label: "Viewer" },
+];
+
 export default function TeamManagement() {
   const [team, setTeam] = useState<Team | null>(null);
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -27,6 +34,7 @@ export default function TeamManagement() {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [updatingRole, setUpdatingRole] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   async function fetchTeam() {
@@ -96,6 +104,30 @@ export default function TeamManagement() {
     }
   }
 
+  async function handleRoleChange(memberId: string, newRole: string) {
+    setUpdatingRole(memberId);
+    try {
+      const res = await fetch(`/api/teams/members/${memberId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: newRole }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setMembers((prev) =>
+          prev.map((m) => (m.id === memberId ? { ...m, role: newRole } : m))
+        );
+      } else {
+        showErrorToast(data.error || "Failed to update role");
+      }
+    } catch {
+      showErrorToast("Failed to update role");
+    } finally {
+      setUpdatingRole(null);
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-stone-400 py-4">
@@ -161,10 +193,17 @@ export default function TeamManagement() {
             <li key={member.id} className="flex items-center justify-between py-3">
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-full bg-stone-100 flex items-center justify-center text-stone-500 text-xs font-medium">
-                  {member.email.charAt(0).toUpperCase()}
+                  {(member.name || member.email).charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-stone-900">{member.email}</p>
+                  {member.name ? (
+                    <>
+                      <p className="text-sm font-medium text-stone-900">{member.name}</p>
+                      <p className="text-xs text-stone-400">{member.email}</p>
+                    </>
+                  ) : (
+                    <p className="text-sm font-medium text-stone-900">{member.email}</p>
+                  )}
                   <div className="flex items-center gap-2 mt-0.5">
                     {member.status === "active" ? (
                       <span className="flex items-center gap-1 text-xs text-emerald-600">
@@ -175,7 +214,18 @@ export default function TeamManagement() {
                         <Clock size={12} /> Pending
                       </span>
                     )}
-                    <span className="text-xs text-stone-400 capitalize">{member.role}</span>
+                    <select
+                      value={member.role}
+                      onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                      disabled={updatingRole === member.id}
+                      className="text-xs text-stone-500 bg-transparent border-none cursor-pointer hover:text-stone-700 focus:outline-none disabled:opacity-50"
+                    >
+                      {ROLES.map((r) => (
+                        <option key={r.value} value={r.value}>
+                          {r.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               </div>

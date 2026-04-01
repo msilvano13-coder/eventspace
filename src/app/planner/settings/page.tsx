@@ -346,41 +346,6 @@ function SettingsContent() {
           </div>
         </div>
 
-        {/* Preview */}
-        <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft">
-          <h2 className="font-heading font-semibold text-stone-800 mb-4">Client Portal Preview</h2>
-          <div className="border border-stone-200 rounded-xl overflow-hidden">
-            <div className="px-4 py-3 flex items-center gap-3" style={{ backgroundColor: form.brandColor + "15" }}>
-              {form.logoUrl ? (
-                <img src={form.logoUrl} alt="" className="w-8 h-8 rounded-lg object-cover" />
-              ) : (
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white font-heading font-bold text-sm"
-                  style={{ backgroundColor: form.brandColor }}
-                >
-                  {(form.businessName || "E")[0].toUpperCase()}
-                </div>
-              )}
-              <div>
-                <p className="text-sm font-heading font-semibold text-stone-800">
-                  {form.businessName || "Your Business Name"}
-                </p>
-                {form.tagline && (
-                  <p className="text-[10px] text-stone-400">{form.tagline}</p>
-                )}
-              </div>
-            </div>
-            <div className="px-4 py-6 text-center">
-              <p className="text-xs text-stone-300">Client portal content...</p>
-            </div>
-            <div className="px-4 py-2 border-t border-stone-100 text-center">
-              <p className="text-[10px] text-stone-300">
-                Planned by {form.businessName || "Your Business"} {form.website && `· ${form.website}`}
-              </p>
-            </div>
-          </div>
-        </div>
-
         {/* Team Management — only for Professional plan owners */}
         {profile.plan === "professional" && <TeamManagement />}
 
