@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet, Settings, Inbox, BarChart3, Search, Heart, FileText, MoreHorizontal, X, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -11,8 +11,6 @@ import { usePlannerProfile } from "@/hooks/useStore";
 import { isProFeature } from "@/lib/plan-features";
 import TeamSwitcher from "@/components/layout/TeamSwitcher";
 import NotificationBell from "@/components/layout/NotificationBell";
-import { getTeamContext } from "@/lib/team-context";
-
 const navItems = [
   { href: "/planner", label: "Dashboard", icon: LayoutDashboard },
   { href: "/planner/inquiries", label: "Inquiries", icon: Inbox },
@@ -39,8 +37,13 @@ export default function Sidebar() {
   const router = useRouter();
   const profile = usePlannerProfile();
   const isDiy = profile.plan === "diy";
-  const teamContext = getTeamContext();
-  const isInTeamContext = !!teamContext;
+  const [isTeamMember, setIsTeamMember] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/teams").then(r => r.json()).then(data => {
+      if (data.memberships && data.memberships.length > 0) setIsTeamMember(true);
+    }).catch(() => {});
+  }, []);
 
   const TEAM_MEMBER_ROUTES = new Set(["/planner", "/planner/calendar"]);
 
@@ -76,7 +79,7 @@ export default function Sidebar() {
             const active =
               pathname === item.href || pathname.startsWith(item.href + "/");
             if (isDiy && isProFeature(item.href)) return null;
-            if (isInTeamContext && !TEAM_MEMBER_ROUTES.has(item.href)) return null;
+            if (isTeamMember && !TEAM_MEMBER_ROUTES.has(item.href)) return null;
             return (
               <Link
                 key={item.href}
@@ -121,7 +124,7 @@ export default function Sidebar() {
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white border-t border-stone-200 md:hidden mobile-bottom-nav">
         <div className="flex items-center h-14">
-          {mobileMainItems.filter((item) => !(isDiy && isProFeature(item.href)) && (!isInTeamContext || TEAM_MEMBER_ROUTES.has(item.href))).map((item) => {
+          {mobileMainItems.filter((item) => !(isDiy && isProFeature(item.href)) && (!isTeamMember || TEAM_MEMBER_ROUTES.has(item.href))).map((item) => {
             const active =
               pathname === item.href || pathname.startsWith(item.href + "/");
             return (
@@ -162,7 +165,7 @@ export default function Sidebar() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="grid grid-cols-3 gap-1">
-              {mobileMoreItems.filter((item) => !(isDiy && isProFeature(item.href)) && (!isInTeamContext || TEAM_MEMBER_ROUTES.has(item.href))).map((item) => {
+              {mobileMoreItems.filter((item) => !(isDiy && isProFeature(item.href)) && (!isTeamMember || TEAM_MEMBER_ROUTES.has(item.href))).map((item) => {
                 const active =
                   pathname === item.href || pathname.startsWith(item.href + "/");
                 return (
