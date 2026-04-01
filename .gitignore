@@ -34,3 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated docs & scripts
+ADMIN_MANUAL.md
+*.pdf
+generate_*.py
+EventSpace_Sales_Brochure.py

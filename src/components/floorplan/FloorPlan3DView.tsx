@@ -9,6 +9,8 @@ import { LightingZone } from "@/lib/types";
 import { FURNITURE_CATALOG } from "@/lib/constants";
 import { ErrorBoundary } from "./FloorPlan3DErrorBoundary";
 import VenueEnvironment, { VenuePreset, VenuePresetDef, VENUE_PRESETS } from "./VenueEnvironment";
+import ProceduralEnvMap from "./ProceduralEnvMap";
+import { QualityProvider } from "./QualityTier";
 
 // ── 3D Settings ──
 
@@ -41,11 +43,11 @@ const LINEN_COLORS: Record<View3DSettings["linenColor"], string> = {
   gold: "#d4b96a",
 };
 
-const FLOOR_MATERIALS: Record<View3DSettings["floorMaterial"], { color: string; roughness: number; metalness: number }> = {
-  hardwood: { color: "#b8986a", roughness: 0.7, metalness: 0.03 },
-  marble: { color: "#e8e0d0", roughness: 0.15, metalness: 0.12 },
-  carpet: { color: "#8a7b6b", roughness: 0.95, metalness: 0.0 },
-  concrete: { color: "#a0a0a0", roughness: 0.85, metalness: 0.02 },
+const FLOOR_MATERIALS: Record<View3DSettings["floorMaterial"], { color: string; roughness: number; metalness: number; envMapIntensity: number }> = {
+  hardwood: { color: "#b8986a", roughness: 0.7, metalness: 0.03, envMapIntensity: 0.3 },
+  marble: { color: "#e8e0d0", roughness: 0.15, metalness: 0.12, envMapIntensity: 0.6 },
+  carpet: { color: "#8a7b6b", roughness: 0.95, metalness: 0.0, envMapIntensity: 0.02 },
+  concrete: { color: "#a0a0a0", roughness: 0.85, metalness: 0.02, envMapIntensity: 0.1 },
 };
 
 const LIGHTING_MOODS: Record<View3DSettings["lightingMood"], {
@@ -119,46 +121,51 @@ function getHeight(furnitureId: string): number {
 interface PBRProps {
   roughness: number;
   metalness: number;
+  envMapIntensity?: number;
+  clearcoat?: number;
+  clearcoatRoughness?: number;
 }
 
 const FURNITURE_PBR: Record<string, PBRProps> = {
-  // Wood tables — warm, slightly rough
-  "round-table-60": { roughness: 0.7, metalness: 0.0 },
-  "round-table-72": { roughness: 0.7, metalness: 0.0 },
-  "rect-table-6": { roughness: 0.7, metalness: 0.0 },
-  "rect-table-8": { roughness: 0.7, metalness: 0.0 },
-  "sweetheart-table": { roughness: 0.6, metalness: 0.0 },
-  "gift-table": { roughness: 0.7, metalness: 0.0 },
-  "cake-table": { roughness: 0.6, metalness: 0.0 },
-  "guest-book-table": { roughness: 0.7, metalness: 0.0 },
-  // High-gloss surfaces
-  "cocktail-table": { roughness: 0.3, metalness: 0.1 },
-  "high-top-table": { roughness: 0.3, metalness: 0.1 },
-  // Seating — fabric/upholstery
-  "chair": { roughness: 0.85, metalness: 0.0 },
-  "sofa": { roughness: 0.9, metalness: 0.0 },
-  // Metal/service items
-  "bar": { roughness: 0.4, metalness: 0.3 },
-  "buffet": { roughness: 0.5, metalness: 0.1 },
-  "dj-booth": { roughness: 0.5, metalness: 0.2 },
-  // Flat surfaces
-  "dance-floor": { roughness: 0.2, metalness: 0.05 },
-  "stage": { roughness: 0.6, metalness: 0.0 },
-  "aisle-runner": { roughness: 0.95, metalness: 0.0 },
+  // Wood tables — warm, slightly rough, subtle sheen
+  "round-table-60": { roughness: 0.7, metalness: 0.0, envMapIntensity: 0.4 },
+  "round-table-72": { roughness: 0.7, metalness: 0.0, envMapIntensity: 0.4 },
+  "rect-table-6": { roughness: 0.7, metalness: 0.0, envMapIntensity: 0.4 },
+  "rect-table-8": { roughness: 0.7, metalness: 0.0, envMapIntensity: 0.4 },
+  "sweetheart-table": { roughness: 0.6, metalness: 0.0, envMapIntensity: 0.5 },
+  "gift-table": { roughness: 0.7, metalness: 0.0, envMapIntensity: 0.4 },
+  "cake-table": { roughness: 0.6, metalness: 0.0, envMapIntensity: 0.5 },
+  "guest-book-table": { roughness: 0.7, metalness: 0.0, envMapIntensity: 0.4 },
+  // High-gloss surfaces — polished bar-top look with clearcoat
+  "cocktail-table": { roughness: 0.3, metalness: 0.1, envMapIntensity: 0.8, clearcoat: 0.3, clearcoatRoughness: 0.1 },
+  "high-top-table": { roughness: 0.3, metalness: 0.1, envMapIntensity: 0.8, clearcoat: 0.3, clearcoatRoughness: 0.1 },
+  // Seating — fabric/upholstery, almost no reflections
+  "chair": { roughness: 0.85, metalness: 0.0, envMapIntensity: 0.08 },
+  "sofa": { roughness: 0.9, metalness: 0.0, envMapIntensity: 0.05 },
+  // Metal/service items — polished countertops
+  "bar": { roughness: 0.4, metalness: 0.3, envMapIntensity: 0.9, clearcoat: 0.4, clearcoatRoughness: 0.15 },
+  "buffet": { roughness: 0.5, metalness: 0.1, envMapIntensity: 0.5 },
+  "dj-booth": { roughness: 0.5, metalness: 0.2, envMapIntensity: 0.6 },
+  // Flat surfaces — dance floor is glossy and reflective
+  "dance-floor": { roughness: 0.2, metalness: 0.05, envMapIntensity: 1.2, clearcoat: 0.5, clearcoatRoughness: 0.05 },
+  "stage": { roughness: 0.6, metalness: 0.0, envMapIntensity: 0.3 },
+  "aisle-runner": { roughness: 0.95, metalness: 0.0, envMapIntensity: 0.02 },
   // Structures
-  "photo-booth": { roughness: 0.5, metalness: 0.1 },
-  "arch": { roughness: 0.6, metalness: 0.0 },
-  "draping": { roughness: 0.95, metalness: 0.0 },
+  "photo-booth": { roughness: 0.5, metalness: 0.1, envMapIntensity: 0.4 },
+  "arch": { roughness: 0.6, metalness: 0.0, envMapIntensity: 0.3 },
+  "draping": { roughness: 0.95, metalness: 0.0, envMapIntensity: 0.02 },
   // Service stations
-  "dessert-station": { roughness: 0.5, metalness: 0.1 },
-  "coffee-station": { roughness: 0.4, metalness: 0.2 },
+  "dessert-station": { roughness: 0.5, metalness: 0.1, envMapIntensity: 0.5 },
+  "coffee-station": { roughness: 0.4, metalness: 0.2, envMapIntensity: 0.6 },
   // Decor
-  "flower-arrangement": { roughness: 0.9, metalness: 0.0 },
-  "uplighting": { roughness: 0.3, metalness: 0.5 },
+  "flower-arrangement": { roughness: 0.9, metalness: 0.0, envMapIntensity: 0.1 },
+  "uplighting": { roughness: 0.3, metalness: 0.5, envMapIntensity: 0.8 },
 };
 
+const DEFAULT_PBR: PBRProps = { roughness: 0.6, metalness: 0.0, envMapIntensity: 0.3 };
+
 function getPBR(furnitureId: string): PBRProps {
-  return FURNITURE_PBR[furnitureId] ?? { roughness: 0.6, metalness: 0.0 };
+  return FURNITURE_PBR[furnitureId] ?? DEFAULT_PBR;
 }
 
 // ── Color cache (avoid allocating THREE.Color on every render, bounded to prevent leaks) ──
@@ -517,12 +524,12 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         {/* Tablecloth — slightly wider cylinder draped from top */}
         <mesh position={[0, tableTopY - clothDrop / 2, 0]} receiveShadow>
           <cylinderGeometry args={[clothRadius, clothRadius * 1.08, clothDrop, 32]} />
-          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} envMapIntensity={0.05} />
         </mesh>
         {/* Tablecloth top disc */}
         <mesh position={[0, tableTopY + topThick / 2 + 0.01, 0]} receiveShadow>
           <cylinderGeometry args={[clothRadius, clothRadius, 0.05, 32]} />
-          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} envMapIntensity={0.05} />
         </mesh>
         {/* Scalloped tablecloth edge — 8 gathered bumps around perimeter */}
         {Array.from({ length: 8 }).map((_, i) => {
@@ -534,7 +541,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
               Math.sin(angle) * clothRadius * 0.95,
             ]} receiveShadow>
               <cylinderGeometry args={[2.5 * S, 3 * S, 3 * S, 8]} />
-              <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
+              <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} envMapIntensity={0.05} />
             </mesh>
           );
         })}
@@ -569,15 +576,15 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
           <cylinderGeometry args={[0.6 * S, 0.6 * S, tableTopY - 2 * S, 8]} />
           <meshStandardMaterial color={woodColor} roughness={0.2} metalness={0.4} />
         </mesh>
-        {/* Table top — thin */}
+        {/* Table top — thin, polished with clearcoat */}
         <mesh position={[0, tableTopY, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[radius, radius, 1 * S, 32]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <meshPhysicalMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} clearcoat={pbr.clearcoat ?? 0} clearcoatRoughness={pbr.clearcoatRoughness ?? 0} />
         </mesh>
         {/* Optional small cloth/topper */}
         <mesh position={[0, tableTopY + 0.55 * S, 0]} receiveShadow>
           <cylinderGeometry args={[radius * 0.85, radius * 0.85, 0.1, 32]} />
-          <meshStandardMaterial color={linenColor} roughness={0.9} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.9} metalness={0} envMapIntensity={0.05} />
         </mesh>
         {settings.showLabels && <FurnitureLabel label={obj.label} y={tableTopY + 2 * S} />}
       </group>
@@ -610,7 +617,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         {/* Table surface */}
         <mesh position={[0, tableTopY - topThick / 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[w, topThick, d]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
         </mesh>
         {/* Table apron — front/back */}
         {[-1, 1].map((side) => (
@@ -629,27 +636,27 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         {/* Linen top */}
         <mesh position={[0, tableTopY + 0.05, 0]} receiveShadow>
           <boxGeometry args={[w + clothOverhang * 2, 0.08, d + clothOverhang * 2]} />
-          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} envMapIntensity={0.05} />
         </mesh>
         {/* Linen drape — front */}
         <mesh position={[0, tableTopY - clothDrop / 2, d / 2 + clothOverhang]} receiveShadow>
           <boxGeometry args={[w + clothOverhang * 2, clothDrop, 0.08]} />
-          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} envMapIntensity={0.05} />
         </mesh>
         {/* Linen drape — back */}
         <mesh position={[0, tableTopY - clothDrop / 2, -d / 2 - clothOverhang]} receiveShadow>
           <boxGeometry args={[w + clothOverhang * 2, clothDrop, 0.08]} />
-          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} envMapIntensity={0.05} />
         </mesh>
         {/* Linen drape — left */}
         <mesh position={[-w / 2 - clothOverhang, tableTopY - clothDrop / 2, 0]} receiveShadow>
           <boxGeometry args={[0.08, clothDrop, d + clothOverhang * 2]} />
-          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} envMapIntensity={0.05} />
         </mesh>
         {/* Linen drape — right */}
         <mesh position={[w / 2 + clothOverhang, tableTopY - clothDrop / 2, 0]} receiveShadow>
           <boxGeometry args={[0.08, clothDrop, d + clothOverhang * 2]} />
-          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} />
+          <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} envMapIntensity={0.05} />
         </mesh>
         {settings.showLabels && <FurnitureLabel label={obj.label} y={tableTopY + 2 * S} />}
       </group>
@@ -745,7 +752,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
             {/* Seat cushion pad */}
             <mesh position={[0, seatY + seatThick * 0.7, 0]} receiveShadow>
               <boxGeometry args={[w + 0.3 * S, seatThick * 0.5, d + 0.3 * S]} />
-              <meshStandardMaterial color={linenColor} roughness={0.85} metalness={0} />
+              <meshStandardMaterial color={linenColor} roughness={0.85} metalness={0} envMapIntensity={0.05} />
             </mesh>
           </>
         )}
@@ -791,7 +798,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         {/* Seat base */}
         <mesh position={[0, footH + cushionH / 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[w - armW * 2, cushionH, cushionD]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
         </mesh>
         {/* Seat cushion divider line */}
         <mesh position={[0, seatTopY + 0.02, 0]}>
@@ -801,13 +808,13 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         {/* Back rest */}
         <mesh position={[0, seatTopY + backH / 2, -cushionD / 2 - backThick / 2 + 1 * S]} castShadow receiveShadow>
           <boxGeometry args={[w - armW * 2, backH, backThick]} />
-          <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
         </mesh>
         {/* Armrests */}
         {[-1, 1].map((side) => (
           <mesh key={`arm-${side}`} position={[side * (w / 2 - armW / 2), seatTopY + armH / 2, -backThick / 2]} castShadow receiveShadow>
             <boxGeometry args={[armW, armH, cushionD + backThick - 1 * S]} />
-            <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+            <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
           </mesh>
         ))}
         {settings.showLabels && <FurnitureLabel label={obj.label} y={seatTopY + backH + 2 * S} />}
@@ -827,12 +834,16 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         {/* Main body */}
         <mesh position={[0, (counterH - topThick) / 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[w, counterH - topThick, d]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
         </mesh>
-        {/* Countertop with overhang */}
+        {/* Countertop with overhang — polished surface */}
         <mesh position={[0, counterH - topThick / 2, overhang / 2]} castShadow receiveShadow>
           <boxGeometry args={[w + overhang, topThick, d + overhang]} />
-          <meshStandardMaterial color={strokeColor} roughness={0.4} metalness={0.12} />
+          {isBar ? (
+            <meshPhysicalMaterial color={strokeColor} roughness={0.35} metalness={0.15} envMapIntensity={0.9} clearcoat={0.4} clearcoatRoughness={0.15} />
+          ) : (
+            <meshStandardMaterial color={strokeColor} roughness={0.4} metalness={0.12} envMapIntensity={0.5} />
+          )}
         </mesh>
         {/* Front decorative panel inset */}
         <mesh position={[0, (counterH - topThick) / 2, d / 2 + 0.05]}>
@@ -857,14 +868,26 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
     const floorH = 1.5 * S;
     return (
       <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
-        {/* Main surface — light base color for dance floor */}
+        {/* Main surface — light base color for dance floor, polished with clearcoat */}
         <mesh position={[0, floorH / 2, 0]} receiveShadow castShadow>
           <boxGeometry args={[w, floorH, d]} />
-          <meshStandardMaterial
-            color={isDanceFloor ? tileLight : fillColor}
-            roughness={isDanceFloor ? 0.15 : pbr.roughness}
-            metalness={isDanceFloor ? 0.08 : pbr.metalness}
-          />
+          {isDanceFloor ? (
+            <meshPhysicalMaterial
+              color={tileLight}
+              roughness={0.15}
+              metalness={0.08}
+              envMapIntensity={pbr.envMapIntensity}
+              clearcoat={pbr.clearcoat ?? 0}
+              clearcoatRoughness={pbr.clearcoatRoughness ?? 0}
+            />
+          ) : (
+            <meshStandardMaterial
+              color={fillColor}
+              roughness={pbr.roughness}
+              metalness={pbr.metalness}
+              envMapIntensity={pbr.envMapIntensity}
+            />
+          )}
         </mesh>
         {/* Raised border frame — 4 rails */}
         {isDanceFloor && (
@@ -933,7 +956,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         {/* Main platform */}
         <mesh position={[0, h3d / 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[w, h3d, d]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
         </mesh>
         {/* Carpet top surface */}
         <mesh position={[0, h3d + 0.05, 0]} receiveShadow>
@@ -966,7 +989,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         {Array.from({ length: stepCount }).map((_, i) => (
           <mesh key={`step-${i}`} position={[-w / 2 - stepW / 2, stepH * (i + 0.5), 0]} castShadow receiveShadow>
             <boxGeometry args={[stepW, stepH - 0.1 * S, d * 0.4]} />
-            <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+            <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
           </mesh>
         ))}
         {/* Monitor wedge speakers at front edges */}
@@ -996,7 +1019,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         {/* Main console body */}
         <mesh position={[0, consoleH / 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[w, consoleH, d]} />
-          <meshStandardMaterial color={darkColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <meshStandardMaterial color={darkColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
         </mesh>
         {/* Front facade */}
         <mesh position={[0, consoleH / 2, d / 2 + 0.15]} castShadow>
@@ -1059,13 +1082,13 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         {cornerOffsets.map(([cx, cz], i) => (
           <mesh key={i} position={[cx, postH / 2, cz]} castShadow receiveShadow>
             <cylinderGeometry args={[postRadius, postRadius, postH, 8]} />
-            <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+            <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
           </mesh>
         ))}
         {/* Top frame */}
         <mesh position={[0, postH - topThick / 2, 0]} castShadow receiveShadow>
           <boxGeometry args={[w, topThick, d]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
         </mesh>
         {/* Backdrop curtain */}
         <mesh position={[0, postH / 2, -d / 2 + 0.5 * S]}>
@@ -1125,28 +1148,28 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         {[leftColX, rightColX].map((cx, i) => (
           <mesh key={`plinth-${i}`} position={[cx, 1.5 * S, 0]} castShadow receiveShadow>
             <cylinderGeometry args={[postRadius * 1.3, postRadius * 1.4, 3 * S, 12]} />
-            <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+            <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
           </mesh>
         ))}
         {/* Columns — tapered */}
         {[leftColX, rightColX].map((cx, i) => (
           <mesh key={`col-${i}`} position={[cx, postH / 2, 0]} castShadow receiveShadow>
             <cylinderGeometry args={[postRadius * 0.75, postRadius, postH, 12]} />
-            <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+            <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
           </mesh>
         ))}
         {/* Column capitals */}
         {[leftColX, rightColX].map((cx, i) => (
           <mesh key={`cap-${i}`} position={[cx, postH - 1.5 * S, 0]} castShadow receiveShadow>
             <cylinderGeometry args={[postRadius * 1.2, postRadius * 0.85, 3 * S, 12]} />
-            <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+            <meshStandardMaterial color={strokeColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
           </mesh>
         ))}
         {/* Decorative sphere finials on capitals */}
         {[leftColX, rightColX].map((cx, i) => (
           <mesh key={`finial-${i}`} position={[cx, postH + postRadius * 0.4, 0]} castShadow>
             <sphereGeometry args={[postRadius * 0.4, 8, 8]} />
-            <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+            <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
           </mesh>
         ))}
         {/* Curved arc segments */}
@@ -1164,14 +1187,14 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
           return (
             <mesh key={`arc-${i}`} position={[segX, segY, 0]} rotation={[0, 0, rotZ]} castShadow receiveShadow>
               <boxGeometry args={[segW, segHeight, segDepth]} />
-              <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+              <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
             </mesh>
           );
         })}
         {/* Keystone at apex */}
         <mesh position={[0, postH + arcRise, 0]} castShadow>
           <sphereGeometry args={[2.5 * S, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
         </mesh>
         {settings.showLabels && <FurnitureLabel label={obj.label} y={postH + arcRise + 3 * S} />}
       </group>
@@ -1311,7 +1334,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
       <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
         <mesh position={[0, h3d / 2, 0]} castShadow receiveShadow>
           <cylinderGeometry args={[radius, radius, h3d, 32]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
         </mesh>
         {settings.showLabels && <FurnitureLabel label={obj.label} y={h3d + 2 * S} />}
       </group>
@@ -1325,7 +1348,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
       <group position={[posX, 0.5 * S, posZ]} rotation={[0, rotY, 0]}>
         <mesh receiveShadow>
           <boxGeometry args={[w, 1 * S, d]} />
-          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+          <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
         </mesh>
       </group>
     );
@@ -1343,7 +1366,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
     <group position={[posX, halfH, posZ]} rotation={[0, rotY, 0]}>
       <mesh position={[0, halfH - 1 * S, 0]} castShadow receiveShadow>
         <boxGeometry args={[w, 2 * S, d]} />
-        <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} />
+        <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
       </mesh>
       {legPositions.map((pos, i) => (
         <mesh key={i} position={pos} castShadow>
@@ -1408,7 +1431,7 @@ function RoomFloor({ obj, originX, originY, settings, showWalls = true, floorOve
       {/* Floor — key forces remount when material changes to ensure R3F applies new color */}
       <mesh key={`floor-${floorMat.color}-${floorMat.roughness}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
-        <meshStandardMaterial color={floorMat.color} side={DoubleSide} roughness={floorMat.roughness} metalness={floorMat.metalness} />
+        <meshStandardMaterial color={floorMat.color} side={DoubleSide} roughness={floorMat.roughness} metalness={floorMat.metalness} envMapIntensity={(floorMat as { envMapIntensity?: number }).envMapIntensity ?? 0.3} />
       </mesh>
       {/* Walls, baseboard, crown — only when venue has walls */}
       {showWalls && (
@@ -1746,8 +1769,8 @@ function FloorPlan3DScene({
 
   return (
     <>
-      {/* Scene uses ambient + directional + hemisphere lighting instead of external HDR
-         (Environment component fetches HDR from CDN which is blocked by CSP) */}
+      {/* Procedural environment map — gives PBR materials something to reflect */}
+      <ProceduralEnvMap mood={settings.lightingMood} />
 
       {/* Fog for depth */}
       <fog attach="fog" args={[fogColor, maxDim * 2, maxDim * 5]} />
@@ -1790,7 +1813,7 @@ function FloorPlan3DScene({
       {rooms.length === 0 && (
         <mesh key={`ground-${effectiveFloor.color}`} rotation={[-Math.PI / 2, 0, 0]} position={[roomBounds.cx, -0.01, roomBounds.cz]} receiveShadow>
           <planeGeometry args={[roomBounds.span * 1.5, roomBounds.span * 1.5]} />
-          <meshStandardMaterial color={effectiveFloor.color} roughness={effectiveFloor.roughness} metalness={effectiveFloor.metalness} />
+          <meshStandardMaterial color={effectiveFloor.color} roughness={effectiveFloor.roughness} metalness={effectiveFloor.metalness} envMapIntensity={(effectiveFloor as { envMapIntensity?: number }).envMapIntensity ?? 0.3} />
         </mesh>
       )}
 
@@ -2127,9 +2150,11 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
             toneMappingExposure: 1.1,
           }}
         >
-          <Suspense fallback={null}>
-            <FloorPlan3DScene {...props} centerX={centerX} centerZ={centerZ} settings={settings} />
-          </Suspense>
+          <QualityProvider>
+            <Suspense fallback={null}>
+              <FloorPlan3DScene {...props} centerX={centerX} centerZ={centerZ} settings={settings} />
+            </Suspense>
+          </QualityProvider>
         </Canvas>
         <Settings3DPanel
           settings={settings}
