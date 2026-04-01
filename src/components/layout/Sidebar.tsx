@@ -6,6 +6,7 @@ import { useState } from "react";
 import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet, Settings, Inbox, BarChart3, Search, Heart, FileText, MoreHorizontal, X, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { clearUserIdCache } from "@/lib/supabase/db";
 import { usePlannerProfile } from "@/hooks/useStore";
 import { isProFeature } from "@/lib/plan-features";
 
@@ -37,6 +38,7 @@ export default function Sidebar() {
   const isDiy = profile.plan === "diy";
 
   async function handleSignOut() {
+    clearUserIdCache();
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/sign-in");

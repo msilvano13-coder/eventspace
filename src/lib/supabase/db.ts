@@ -34,19 +34,27 @@ import type { PlanType } from "@/lib/types";
 // Helper: get current authenticated user id
 // ────────────────────────────────────────────────────────────────────────────
 
+let userIdPromise: Promise<string> | null = null;
+
 export async function getUserId(): Promise<string> {
-  const supabase = createClient();
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser();
-  if (error || !user) throw new Error("Not authenticated");
-  return user.id;
+  if (userIdPromise) return userIdPromise;
+  userIdPromise = (async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    if (error || !user) {
+      userIdPromise = null;
+      throw new Error("Not authenticated");
+    }
+    return user.id;
+  })();
+  return userIdPromise;
 }
 
-/** @deprecated No-op, cache has been removed for safety */
 export function clearUserIdCache(): void {
-  // Intentionally empty — kept for backwards compatibility with any call sites
+  userIdPromise = null;
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -1559,28 +1567,40 @@ export async function replaceFloorPlans(
       throw new Error(`replaceFloorPlans (delete all): ${delError.message}`);
   }
 
-  // Batch delete lighting zones for all plans, then re-insert
-  if (planIds.length > 0) {
-    const { error: delZoneError } = await supabase
-      .from("lighting_zones")
-      .delete()
-      .in("floor_plan_id", planIds);
-    if (delZoneError)
-      throw new Error(
-        `replaceFloorPlans (delete zones): ${delZoneError.message}`
-      );
-  }
-
+  // Upsert lighting zones, then delete any that were removed
   const allZones = plans.flatMap((fp) =>
     fp.lightingZones.map((lz) => lightingZoneToRow(lz, fp.id))
   );
   if (allZones.length > 0) {
     const { error: lzError } = await supabase
       .from("lighting_zones")
-      .insert(allZones);
+      .upsert(allZones, { onConflict: "id" });
     if (lzError)
       throw new Error(
-        `replaceFloorPlans (insert zones): ${lzError.message}`
+        `replaceFloorPlans (upsert zones): ${lzError.message}`
+      );
+
+    const zoneIds = allZones.map((z) => z.id);
+    if (planIds.length > 0) {
+      const { error: delZoneError } = await supabase
+        .from("lighting_zones")
+        .delete()
+        .in("floor_plan_id", planIds)
+        .not("id", "in", `(${zoneIds.join(",")})`);
+      if (delZoneError)
+        throw new Error(
+          `replaceFloorPlans (delete removed zones): ${delZoneError.message}`
+        );
+    }
+  } else if (planIds.length > 0) {
+    // No zones — delete all for these plans
+    const { error: delZoneError } = await supabase
+      .from("lighting_zones")
+      .delete()
+      .in("floor_plan_id", planIds);
+    if (delZoneError)
+      throw new Error(
+        `replaceFloorPlans (delete all zones): ${delZoneError.message}`
       );
   }
 }
