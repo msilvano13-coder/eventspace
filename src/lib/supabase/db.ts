@@ -1047,27 +1047,40 @@ export async function fetchEvents(
 
   let data, error;
   if (teamContext) {
-    // Team member: fetch events they're assigned to via team_event_assignments
-    const { data: assignments, error: aErr } = await supabase
-      .from("team_event_assignments")
-      .select("event_id")
-      .eq("team_id", teamContext.teamId)
-      .eq("member_id", await getTeamMemberId(supabase, teamContext.teamId, userId));
+    // Verify user is actually a member of this team (cookie may be stale)
+    const memberId = await getTeamMemberId(supabase, teamContext.teamId, userId);
 
-    if (aErr) throw new Error(`fetchEvents (team assignments): ${aErr.message}`);
-    const eventIds = (assignments ?? []).map((a: { event_id: string }) => a.event_id);
+    if (memberId) {
+      // Team member: fetch events they're assigned to via team_event_assignments
+      const { data: assignments, error: aErr } = await supabase
+        .from("team_event_assignments")
+        .select("event_id")
+        .eq("team_id", teamContext.teamId)
+        .eq("member_id", memberId);
 
-    if (eventIds.length === 0) {
-      return { data: [], hasMore: false };
+      if (aErr) throw new Error(`fetchEvents (team assignments): ${aErr.message}`);
+      const eventIds = (assignments ?? []).map((a: { event_id: string }) => a.event_id);
+
+      if (eventIds.length === 0) {
+        return { data: [], hasMore: false };
+      }
+
+      ({ data, error } = await supabase
+        .from("events")
+        .select("*")
+        .in("id", eventIds)
+        .order("created_at", { ascending: false })
+        .range(offset, offset + limit));
+    } else {
+      // Stale cookie — user is not a member of this team, clear cookie and fall through
+      if (typeof document !== "undefined") {
+        document.cookie = "es_team_context=; path=/; max-age=0";
+      }
+      teamContext = null;
     }
+  }
 
-    ({ data, error } = await supabase
-      .from("events")
-      .select("*")
-      .in("id", eventIds)
-      .order("created_at", { ascending: false })
-      .range(offset, offset + limit));
-  } else {
+  if (!teamContext) {
     // Owner: fetch own events
     ({ data, error } = await supabase
       .from("events")
