@@ -23,15 +23,25 @@ CREATE POLICY "teams_owner_all" ON teams
   FOR ALL USING (auth.uid() = owner_id)
   WITH CHECK (auth.uid() = owner_id);
 
+-- Helper to check team membership without triggering RLS recursion
+CREATE OR REPLACE FUNCTION public.is_team_member(p_team_id UUID)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM team_members
+    WHERE team_id = p_team_id
+      AND user_id = auth.uid()
+      AND status = 'active'
+  );
+$$;
+
 -- Active team members can read their team
 CREATE POLICY "teams_member_select" ON teams
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM team_members tm
-      WHERE tm.team_id = teams.id
-        AND tm.user_id = auth.uid()
-        AND tm.status = 'active'
-    )
+    auth.uid() = owner_id OR public.is_team_member(id)
   );
 
 -- ── Team members table ──
