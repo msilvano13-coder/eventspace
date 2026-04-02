@@ -36,6 +36,7 @@ import {
   Archive,
   RotateCcw,
   Globe,
+  UtensilsCrossed,
 } from "lucide-react";
 import { TimelineItem, QuestionnaireAssignment, Expense, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
 import MessageThread from "@/components/event/MessageThread";
@@ -470,6 +471,14 @@ export default function EventDetailPage() {
           <Layout size={22} className="text-rose-400 mb-2" />
           <h3 className="font-heading font-semibold text-stone-800 group-hover:text-rose-500 text-sm">Floor Plan</h3>
           <p className="text-xs text-stone-400 mt-1">Design layout</p>
+        </Link>
+        <Link
+          href={`/planner/${event.id}/tablescape`}
+          className="bg-white border border-stone-200 rounded-2xl p-5 shadow-soft hover:shadow-card transition-all group"
+        >
+          <UtensilsCrossed size={22} className="text-teal-400 mb-2" />
+          <h3 className="font-heading font-semibold text-stone-800 group-hover:text-teal-500 text-sm">Tablescape</h3>
+          <p className="text-xs text-stone-400 mt-1">{(event.tablescapes ?? []).length} designs</p>
         </Link>
         <Link
           href={`/planner/${event.id}/files`}

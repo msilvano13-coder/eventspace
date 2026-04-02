@@ -28,7 +28,7 @@ FabricObject.prototype.toObject = function (propertiesToInclude?: string[]) {
 };
 
 import { v4 as uuid } from "uuid";
-import { FurnitureItemDef, LightingZone, RoomPreset } from "@/lib/types";
+import { FurnitureItemDef, LightingZone, RoomPreset, Tablescape } from "@/lib/types";
 import { getFurnitureById } from "./furniture-items";
 import FurniturePalette from "./FurniturePalette";
 import Toolbar, { RotationSnapValue, ROTATION_SNAP_OPTIONS } from "./Toolbar";
@@ -50,6 +50,9 @@ interface Props {
   onCanvasReady?: (getDataURL: () => string | null) => void;
   // Seating drag-and-drop — called when a guest is dropped onto a table on the canvas
   onGuestDrop?: (guestId: string, tableId: string) => void;
+  // Tablescape assignment — available designs to assign to tables
+  tablescapes?: Tablescape[];
+  onAssignTablescape?: (tableObjectId: string, tablescapeId: string | null) => void;
 }
 
 interface SelectedInfo {
@@ -60,6 +63,7 @@ interface SelectedInfo {
   height: number;
   angle: number;
   furnitureId: string;
+  tablescapeId?: string;
 }
 
 // ── Lighting helpers ──
@@ -184,6 +188,8 @@ export default function FloorPlanEditor({
   readOnly = false,
   onCanvasReady,
   onGuestDrop,
+  tablescapes = [],
+  onAssignTablescape,
 }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -673,6 +679,7 @@ export default function FloorPlanEditor({
           height: bound.height,
           angle: active.angle || 0,
           furnitureId: active.data?.furnitureId || "",
+          tablescapeId: active.data?.tablescapeId || undefined,
         });
         if (onSelectZoneRef.current) {
           onSelectZoneRef.current(null);
@@ -1344,6 +1351,30 @@ export default function FloorPlanEditor({
     triggerAutoSave();
   }
 
+  function handleAssignTablescapeToSelected(tablescapeId: string | null) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    const active = canvas.getActiveObject();
+    if (!active || !active.data) return;
+
+    // Update the Fabric.js object's data
+    active.data = { ...active.data, tablescapeId: tablescapeId || undefined };
+    canvas.requestRenderAll();
+
+    // Update the properties panel
+    if (selectedInfo) {
+      setSelectedInfo({ ...selectedInfo, tablescapeId: tablescapeId || undefined });
+    }
+
+    // Notify parent so it can persist (via canvas JSON auto-save)
+    if (onAssignTablescape && active.data.tableId) {
+      onAssignTablescape(active.data.tableId, tablescapeId);
+    }
+
+    pushUndo();
+    triggerAutoSave();
+  }
+
   function handleRotateSelected() {
     const canvas = fabricRef.current;
     if (!canvas) return;
@@ -1738,6 +1769,8 @@ export default function FloorPlanEditor({
             onUpdateAngle={handleUpdateAngle}
             onDelete={handleDeleteSelected}
             rotationSnap={rotationSnap}
+            tablescapes={tablescapes}
+            onAssignTablescape={handleAssignTablescapeToSelected}
           />
         </div>
 
@@ -1789,6 +1822,8 @@ export default function FloorPlanEditor({
               onDelete={handleDeleteSelected}
               rotationSnap={rotationSnap}
               mobile
+              tablescapes={tablescapes}
+              onAssignTablescape={handleAssignTablescapeToSelected}
             />
           </div>
         )}

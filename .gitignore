@@ -35,6 +35,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# 3D model assets (served from Supabase Storage CDN)
+/public/models/
+
 # generated docs & scripts
 ADMIN_MANUAL.md
 *.pdf

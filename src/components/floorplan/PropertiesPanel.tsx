@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Trash2 } from "lucide-react";
+import { Trash2, UtensilsCrossed } from "lucide-react";
 import { pxToFeetInches } from "@/lib/constants";
 import { getFurnitureById } from "./furniture-items";
 import type { RotationSnapValue } from "./Toolbar";
+import type { Tablescape } from "@/lib/types";
 
 export interface SelectedObjectInfo {
   label: string;
@@ -14,6 +15,7 @@ export interface SelectedObjectInfo {
   height: number;
   angle: number;
   furnitureId: string;
+  tablescapeId?: string;
 }
 
 interface Props {
@@ -23,6 +25,8 @@ interface Props {
   onDelete: () => void;
   mobile?: boolean;
   rotationSnap?: RotationSnapValue;
+  tablescapes?: Tablescape[];
+  onAssignTablescape?: (tablescapeId: string | null) => void;
 }
 
 export default function PropertiesPanel({
@@ -32,6 +36,8 @@ export default function PropertiesPanel({
   onDelete,
   mobile,
   rotationSnap = false as RotationSnapValue,
+  tablescapes,
+  onAssignTablescape,
 }: Props) {
   const [label, setLabel] = useState("");
 
@@ -119,6 +125,35 @@ export default function PropertiesPanel({
           {Math.round(selected.angle)}°
         </p>
       </div>
+
+      {/* Tablescape assignment — only for tables */}
+      {tablescapes && onAssignTablescape && /^(round-table|rect-table|sweetheart)/.test(selected.furnitureId) && (
+        <div>
+          <label className="block text-[10px] font-medium text-stone-400 uppercase tracking-wider mb-1.5">
+            <span className="flex items-center gap-1">
+              <UtensilsCrossed size={10} />
+              Tablescape
+            </span>
+          </label>
+          <select
+            value={selected.tablescapeId || ""}
+            onChange={(e) => onAssignTablescape(e.target.value || null)}
+            className="w-full border border-stone-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-teal-400/30 focus:border-teal-400 outline-none transition-colors bg-white"
+          >
+            <option value="">None</option>
+            {tablescapes.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name} ({t.items.length} items)
+              </option>
+            ))}
+          </select>
+          {selected.tablescapeId && (
+            <p className="text-[9px] text-teal-500 mt-1">
+              Will render in 3D preview
+            </p>
+          )}
+        </div>
+      )}
 
       <button
         onClick={onDelete}

@@ -45,7 +45,7 @@ export default function FloorPlanPage() {
   const event = useEvent(eventId);
   const loading = useEventsLoading();
   const coreLoaded = useEventCoreLoaded(eventId);
-  useEventSubEntities(eventId, ["guests"]);
+  useEventSubEntities(eventId, ["guests", "tablescapes"]);
   const { updateEvent } = useStoreActions();
   const readOnly = useIsTeamMember();
   const [activePlanId, setActivePlanId] = useState<string | null>(null);
@@ -340,6 +340,7 @@ export default function FloorPlanPage() {
                 floorPlanJSON={activePlan.json}
                 lightingZones={lightingZones}
                 lightingEnabled={showLighting}
+                tablescapes={event.tablescapes ?? []}
               />
             )
           ) : (
@@ -357,6 +358,7 @@ export default function FloorPlanPage() {
                 onCanvasReady={(getDataURL) => { getCanvasDataURLRef.current = getDataURL; }}
                 onGuestDrop={readOnly ? undefined : handleGuestDrop}
                 readOnly={readOnly}
+                tablescapes={event.tablescapes ?? []}
               />
             )
           )}

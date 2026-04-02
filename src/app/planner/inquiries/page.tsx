@@ -67,6 +67,7 @@ export default function InquiriesPage() {
       status: "planning",
       floorPlanJSON: null,
       floorPlans: createDefaultFloorPlans(),
+      tablescapes: [],
       files: [],
       timeline: [],
       schedule: [],

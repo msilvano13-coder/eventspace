@@ -19,6 +19,8 @@ import type {
   MoodBoardImage,
   Message,
   DiscoveredVendor,
+  Tablescape,
+  TablescapeItem,
   PlannerProfile,
   Questionnaire,
   Inquiry,
@@ -178,6 +180,7 @@ function eventCoreFromRow(r: any): Event {
       ? r.floor_plans.map(floorPlanFromRow)
       : [],
     // All other sub-entities: empty defaults (never merged by store for core loads)
+    tablescapes: [],
     timeline: [],
     schedule: [],
     vendors: [],
@@ -204,6 +207,9 @@ function eventFromRow(r: any): Event {
     ...eventCoreFields(r),
     floorPlans: Array.isArray(r.floor_plans)
       ? r.floor_plans.map(floorPlanFromRow)
+      : [],
+    tablescapes: Array.isArray(r.tablescapes)
+      ? r.tablescapes.map(tablescapeFromRow)
       : [],
     timeline: Array.isArray(r.timeline_items)
       ? r.timeline_items.map(timelineItemFromRow)
@@ -713,6 +719,65 @@ function moodBoardImageFromRow(r: any): MoodBoardImage {
     addedAt: r.added_at,
     storagePath: r.storage_path ?? null,
     storageThumb: r.storage_thumb ?? null,
+  };
+}
+
+// ── Tablescape ──
+
+function tablescapeItemToRow(item: TablescapeItem, tablescapeId: string, index: number = 0) {
+  return {
+    id: item.id,
+    tablescape_id: tablescapeId,
+    asset_id: item.assetId,
+    position_x: item.positionX,
+    position_y: item.positionY,
+    position_z: item.positionZ,
+    rotation_y: item.rotationY,
+    scale: item.scale,
+    color_override: item.colorOverride ?? null,
+    sort_order: index,
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function tablescapeItemFromRow(r: any): TablescapeItem {
+  return {
+    id: r.id,
+    assetId: r.asset_id,
+    positionX: r.position_x ?? 0,
+    positionY: r.position_y ?? 0,
+    positionZ: r.position_z ?? 0,
+    rotationY: r.rotation_y ?? 0,
+    scale: r.scale ?? 1,
+    colorOverride: r.color_override ?? null,
+  };
+}
+
+function tablescapeToRow(t: Tablescape, eventId: string, index: number, userId?: string) {
+  const row: Record<string, unknown> = {
+    id: t.id,
+    event_id: eventId,
+    name: t.name,
+    table_shape: t.tableShape,
+    table_width: t.tableWidth,
+    table_depth: t.tableDepth,
+    sort_order: index,
+  };
+  if (userId) row.user_id = userId;
+  return row;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function tablescapeFromRow(r: any): Tablescape {
+  return {
+    id: r.id,
+    name: r.name ?? "Untitled",
+    tableShape: r.table_shape ?? "round",
+    tableWidth: r.table_width ?? 60,
+    tableDepth: r.table_depth ?? 60,
+    items: Array.isArray(r.tablescape_items)
+      ? r.tablescape_items.map(tablescapeItemFromRow)
+      : [],
   };
 }
 
@@ -1285,6 +1350,18 @@ export async function fetchEventDiscoveredVendors(eventId: string): Promise<Disc
     .limit(500);
   if (error) throw new Error(`fetchEventDiscoveredVendors: ${error.message}`);
   return (data ?? []).map(discoveredVendorFromRow);
+}
+
+export async function fetchEventTablescapes(eventId: string): Promise<Tablescape[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("tablescapes")
+    .select("*, tablescape_items(*)")
+    .eq("event_id", eventId)
+    .order("sort_order", { ascending: true })
+    .limit(100);
+  if (error) throw new Error(`fetchEventTablescapes: ${error.message}`);
+  return (data ?? []).map(tablescapeFromRow);
 }
 
 export async function createEvent(
@@ -1879,6 +1956,80 @@ export async function replaceMessages(
   }
 }
 
+export async function replaceTablescapes(
+  eventId: string,
+  tablescapes: Tablescape[]
+): Promise<void> {
+  const supabase = createClient();
+  const userId = await getUserId();
+
+  const tsIds = tablescapes.map((t) => t.id);
+
+  // Upsert tablescapes
+  if (tablescapes.length > 0) {
+    const { error: upsertError } = await supabase
+      .from("tablescapes")
+      .upsert(tablescapes.map((t, i) => tablescapeToRow(t, eventId, i, userId)), {
+        onConflict: "id",
+      });
+    if (upsertError)
+      throw new Error(`replaceTablescapes (upsert): ${upsertError.message}`);
+  }
+
+  // Delete removed tablescapes
+  if (tsIds.length > 0) {
+    const { error: delError } = await supabase
+      .from("tablescapes")
+      .delete()
+      .eq("event_id", eventId)
+      .not("id", "in", `(${tsIds.join(",")})`);
+    if (delError)
+      throw new Error(`replaceTablescapes (delete removed): ${delError.message}`);
+  } else {
+    const { error: delError } = await supabase
+      .from("tablescapes")
+      .delete()
+      .eq("event_id", eventId);
+    if (delError)
+      throw new Error(`replaceTablescapes (delete all): ${delError.message}`);
+  }
+
+  // Replace tablescape items via RPC (SECURITY DEFINER bypasses per-row RLS).
+  // Falls back to direct delete+insert if the RPC hasn't been deployed yet.
+  for (const t of tablescapes) {
+    const itemRows = t.items.map((item, i) => tablescapeItemToRow(item, t.id, i));
+
+    const { error: rpcError } = await supabase.rpc("replace_tablescape_items", {
+      p_tablescape_id: t.id,
+      p_user_id: userId,
+      p_items: itemRows,
+    });
+
+    if (rpcError) {
+      // If the RPC function doesn't exist yet, fall back to direct operations
+      if (rpcError.message.includes("replace_tablescape_items") || rpcError.code === "42883") {
+        console.warn("[replaceTablescapes] RPC not available, falling back to direct ops");
+        const { error: delItemError } = await supabase
+          .from("tablescape_items")
+          .delete()
+          .eq("tablescape_id", t.id);
+        if (delItemError)
+          throw new Error(`replaceTablescapes (delete items ${t.id}): ${delItemError.message}`);
+
+        if (t.items.length > 0) {
+          const { error: itemError } = await supabase
+            .from("tablescape_items")
+            .insert(itemRows);
+          if (itemError)
+            throw new Error(`replaceTablescapes (insert items ${t.id}): ${itemError.message}`);
+        }
+      } else {
+        throw new Error(`replaceTablescapes (rpc items ${t.id}): ${rpcError.message}`);
+      }
+    }
+  }
+}
+
 export async function replaceDiscoveredVendors(
   eventId: string,
   vendors: DiscoveredVendor[]
@@ -2309,6 +2460,7 @@ function clientEventFromRow(r: any): Event {
         angle: lz.angle ?? 0, height: lz.height ?? 8, spread: lz.spread ?? 45, notes: lz.notes,
       })),
     })),
+    tablescapes: [],
     timeline: (r.timeline_items ?? []).map((t: any) => ({
       id: t.id, title: t.title, dueDate: t.due_date ?? null,
       completed: t.completed ?? false, order: t.sort_order ?? 0,

@@ -143,7 +143,7 @@ for (const toFn of toRowFns) {
   if (!toCols || !fromCols) continue;
 
   // Columns we expect to only appear in one direction
-  const WRITE_ONLY = new Set(["user_id", "event_id", "planner_id", "floor_plan_id", "vendor_id", "invoice_id", "sort_order"]);
+  const WRITE_ONLY = new Set(["user_id", "event_id", "planner_id", "floor_plan_id", "vendor_id", "invoice_id", "tablescape_id", "sort_order"]);
   // Read-only: auto-generated or joined child tables
   const READ_ONLY = new Set([
     "id", "created_at", "updated_at",
@@ -151,6 +151,7 @@ for (const toFn of toRowFns) {
     "floor_plans", "timeline_items", "schedule_items", "questionnaire_assignments",
     "budget_items", "event_contracts", "shared_files", "mood_board_images",
     "discovered_vendors", "lighting_zones", "vendor_payments", "invoice_line_items",
+    "tablescapes", "tablescape_items",
   ]);
 
   const inToNotFrom = Array.from(toCols).filter(

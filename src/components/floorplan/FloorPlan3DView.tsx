@@ -5,8 +5,9 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, MeshReflectorMaterial, RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import { Color, Vector2, Shape, DoubleSide, ACESFilmicToneMapping } from "three";
+import { useGLTF } from "@react-three/drei";
 import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
-import { LightingZone } from "@/lib/types";
+import { LightingZone, Tablescape } from "@/lib/types";
 import { FURNITURE_CATALOG } from "@/lib/constants";
 import { ErrorBoundary } from "./FloorPlan3DErrorBoundary";
 import VenueEnvironment, { VenuePreset, VenuePresetDef, VENUE_PRESETS } from "./VenueEnvironment";
@@ -343,6 +344,8 @@ interface ParsedObject {
   inTableSet?: boolean;
   tableSetFurnitureId?: string;
   tableCenter?: { x: number; y: number };
+  tablescapeId?: string;
+  tableId?: string;
 }
 
 /** Heights in 3D (in inches, matching the 1px = 1 inch scale) */
@@ -500,6 +503,7 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
     inTableSet = false,
     tableSetFurnitureId?: string,
     tableCenter?: { x: number; y: number },
+    parentTablescapeId?: string,
   ) {
     const data = obj.data;
     // Apply parent scale AND rotation to child positions within groups
@@ -522,8 +526,9 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
       // If this is a table set, recurse into sub-objects to render each piece
       if (data?.isTableSet) {
         const center = { x: absX, y: absY };
+        const groupTablescapeId = data.tablescapeId || parentTablescapeId;
         for (const child of obj.objects) {
-          processObject(child, absX, absY, absAngle, ownScaleX, ownScaleY, true, data.furnitureId, center);
+          processObject(child, absX, absY, absAngle, ownScaleX, ownScaleY, true, data.furnitureId, center, groupTablescapeId);
         }
         return;
       }
@@ -553,6 +558,8 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
           inTableSet,
           tableSetFurnitureId,
           tableCenter,
+          tablescapeId: data.tablescapeId || parentTablescapeId || undefined,
+          tableId: data.tableId || undefined,
         });
         return;
       }
@@ -837,7 +844,84 @@ function InteractiveFurniture({ children, enabled }: { children: React.ReactNode
   );
 }
 
-function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject; originX: number; originY: number; settings: View3DSettings }) {
+// ── Tablescape items rendered on a table in 3D ──
+
+const TABLESCAPE_CATEGORY_SIZE: Record<string, number> = {
+  "charger-set-plates": 0.33,
+  "china-dishware": 0.27,
+  "flatware": 0.22,
+  "glassware": 0.08,
+  "linens": 0.45,
+  "serving-pieces": 0.30,
+};
+
+function TablescapeGLBItemInner({ item, asset }: { item: { positionX: number; positionY: number; positionZ: number; rotationY: number; scale: number }; asset: { category: string; filePath: string } }) {
+  const url = `/models/${asset.filePath}`;
+  const { scene } = useGLTF(url);
+  const autoScale = useMemo(() => {
+    const box = new THREE.Box3().setFromObject(scene);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    if (maxDim === 0) return 1;
+    const target = TABLESCAPE_CATEGORY_SIZE[asset.category] ?? 0.25;
+    return target / maxDim;
+  }, [scene, asset.category]);
+  const cloned = useMemo(() => scene.clone(true), [scene]);
+
+  return (
+    <group
+      position={[item.positionX, item.positionY, item.positionZ]}
+      rotation={[0, item.rotationY, 0]}
+      scale={autoScale * item.scale}
+    >
+      <primitive object={cloned} />
+    </group>
+  );
+}
+
+function TablescapeGLBItem({ item, manifest }: { item: { assetId: string; positionX: number; positionY: number; positionZ: number; rotationY: number; scale: number }; manifest: Record<string, { category: string; filePath: string }> }) {
+  const asset = manifest[item.assetId];
+  if (!asset) return null;
+  return <TablescapeGLBItemInner item={item} asset={asset} />;
+}
+
+/**
+ * Render tablescape items on a table in the floorplan 3D view.
+ *
+ * Coordinate system conversion:
+ * - Tablescape editor works in meters (INCHES_TO_METERS = 0.0254)
+ * - FloorPlan 3D uses S = 1/12 (1 inch = 1/12 unit, so 1 foot = 1 unit)
+ * - Conversion: meters → floorplan units = 1 / 0.3048 ≈ 3.2808 (meters to feet)
+ */
+const METERS_TO_FLOORPLAN = 1 / 0.3048; // 1 meter = 3.2808 floorplan units (feet)
+
+function TablescapeItems3D({ tablescape, tableTopY }: { tablescape: Tablescape; tableTopY: number }) {
+  const [manifest, setManifest] = useState<Record<string, { category: string; filePath: string }> | null>(null);
+
+  useEffect(() => {
+    fetch("/models-manifest.json")
+      .then((r) => r.json())
+      .then((data) => setManifest(data.models))
+      .catch(() => {});
+  }, []);
+
+  if (!manifest || tablescape.items.length === 0) return null;
+
+  return (
+    <group position={[0, tableTopY, 0]} scale={METERS_TO_FLOORPLAN}>
+      {tablescape.items.map((item) => (
+        <Suspense key={item.id} fallback={null}>
+          <TablescapeGLBItem
+            item={{ ...item, positionY: item.positionY - 0.78 }}
+            manifest={manifest}
+          />
+        </Suspense>
+      ))}
+    </group>
+  );
+}
+
+function FurnitureMesh({ obj, originX, originY, settings, tablescapes }: { obj: ParsedObject; originX: number; originY: number; settings: View3DSettings; tablescapes?: Tablescape[] }) {
   const h3d = getHeight(obj.furnitureId) * S;
   const pbr = getPBR(obj.furnitureId);
 
@@ -944,16 +1028,24 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
             </mesh>
           );
         })}
-        {/* Centerpiece vase */}
-        <mesh position={[0, tableTopY + topThick / 2 + 2 * S, 0]} castShadow>
-          <cylinderGeometry args={[0.8 * S, 1.2 * S, 4 * S, 8]} />
-          <meshStandardMaterial color={strokeColor} roughness={0.3} metalness={0.15} />
-        </mesh>
-        {/* Centerpiece flowers */}
-        <mesh position={[0, tableTopY + topThick / 2 + 5 * S, 0]} castShadow>
-          <sphereGeometry args={[1.5 * S, 8, 8]} />
-          <meshStandardMaterial color={fillColor} roughness={0.7} metalness={0} />
-        </mesh>
+        {/* Centerpiece or tablescape items */}
+        {obj.tablescapeId && tablescapes && tablescapes.find((t) => t.id === obj.tablescapeId) ? (
+          <TablescapeItems3D
+            tablescape={tablescapes.find((t) => t.id === obj.tablescapeId)!}
+            tableTopY={tableTopY + topThick / 2}
+          />
+        ) : (
+          <>
+            <mesh position={[0, tableTopY + topThick / 2 + 2 * S, 0]} castShadow>
+              <cylinderGeometry args={[0.8 * S, 1.2 * S, 4 * S, 8]} />
+              <meshStandardMaterial color={strokeColor} roughness={0.3} metalness={0.15} />
+            </mesh>
+            <mesh position={[0, tableTopY + topThick / 2 + 5 * S, 0]} castShadow>
+              <sphereGeometry args={[1.5 * S, 8, 8]} />
+              <meshStandardMaterial color={fillColor} roughness={0.7} metalness={0} />
+            </mesh>
+          </>
+        )}
         {settings.showLabels && <FurnitureLabel label={obj.label} y={tableTopY + topThick + 2 * S} />}
       </group>
     );
@@ -1056,6 +1148,13 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
           <boxGeometry args={[0.08, clothDrop, d + clothOverhang * 2]} />
           <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} envMapIntensity={0.05} />
         </mesh>
+        {/* Centerpiece or tablescape items */}
+        {obj.tablescapeId && tablescapes && tablescapes.find((t) => t.id === obj.tablescapeId) ? (
+          <TablescapeItems3D
+            tablescape={tablescapes.find((t) => t.id === obj.tablescapeId)!}
+            tableTopY={tableTopY}
+          />
+        ) : null}
         {settings.showLabels && <FurnitureLabel label={obj.label} y={tableTopY + 2 * S} />}
       </group>
     );
@@ -2308,12 +2407,14 @@ interface FloorPlan3DViewProps {
   floorPlanJSON: string | null;
   lightingZones: LightingZone[];
   lightingEnabled: boolean;
+  tablescapes?: Tablescape[];
 }
 
 function FloorPlan3DScene({
   floorPlanJSON,
   lightingZones,
   lightingEnabled,
+  tablescapes,
   centerX: cx,
   centerZ: cz,
   settings,
@@ -2457,7 +2558,7 @@ function FloorPlan3DScene({
       {/* Furniture */}
       {furniture.map((obj, i) => (
         <InteractiveFurniture key={`f-${i}`} enabled>
-          <FurnitureMesh obj={obj} originX={originX} originY={originY} settings={settings} />
+          <FurnitureMesh obj={obj} originX={originX} originY={originY} settings={settings} tablescapes={tablescapes} />
         </InteractiveFurniture>
       ))}
 

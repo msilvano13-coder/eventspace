@@ -10,11 +10,13 @@ import {
   replaceGuests, replaceQuestionnaireAssignments, replaceInvoices,
   replaceExpenses, replaceBudget, replaceContracts, replaceFiles,
   replaceMoodBoard, replaceMessages, replaceDiscoveredVendors,
+  replaceTablescapes,
   fetchEventGuests, fetchEventTimeline, fetchEventSchedule,
   fetchEventVendors, fetchEventInvoices, fetchEventExpenses,
   fetchEventBudget, fetchEventContracts, fetchEventFiles,
   fetchEventMoodBoard, fetchEventMessages, fetchEventQuestionnaireAssignments,
   fetchEventDiscoveredVendors,
+  fetchEventTablescapes,
 } from "@/lib/supabase/db";
 
 type Listener = () => void;
@@ -24,7 +26,7 @@ const EMPTY: Event[] = [];
 export const SUB_ENTITY_KEYS = new Set<string>([
   "timeline", "schedule", "floorPlans", "vendors", "guests",
   "questionnaires", "invoices", "expenses", "budget", "contracts",
-  "files", "moodBoard", "messages", "discoveredVendors",
+  "files", "moodBoard", "messages", "discoveredVendors", "tablescapes",
 ]);
 
 const SUB_ENTITY_REPLACERS: Record<string, (eventId: string, data: any) => Promise<void>> = {
@@ -42,6 +44,7 @@ const SUB_ENTITY_REPLACERS: Record<string, (eventId: string, data: any) => Promi
   moodBoard: replaceMoodBoard,
   messages: replaceMessages,
   discoveredVendors: replaceDiscoveredVendors,
+  tablescapes: replaceTablescapes,
 };
 
 // Map sub-entity keys to their lazy fetcher
@@ -59,6 +62,7 @@ const SUB_ENTITY_FETCHERS: Record<string, (eventId: string) => Promise<any>> = {
   messages: fetchEventMessages,
   questionnaires: fetchEventQuestionnaireAssignments,
   discoveredVendors: fetchEventDiscoveredVendors,
+  tablescapes: fetchEventTablescapes,
 };
 
 const MAX_CACHED_EVENTS = 100;
@@ -332,6 +336,7 @@ class EventStore {
         })
       );
     } catch (err) {
+      console.error("[EventStore] Save failed:", err);
       showErrorToast("Failed to save changes. Your edits have been reverted.");
       // Rollback: restore previous state
       this.events.set(id, existing);

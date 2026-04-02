@@ -1,0 +1,5939 @@
+{
+  "version": 1,
+  "generatedAt": "2026-04-02T10:08:02.426Z",
+  "totalModels": 278,
+  "models": {
+    "alden-round-back-bar": {
+      "id": "alden-round-back-bar",
+      "name": "Alden Round Back Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/alden-round-back-bar.glb",
+      "fileSize": 5924632,
+      "variants": [
+        {
+          "name": "Alden Round Back Bar Black",
+          "color": "Black",
+          "material": "",
+          "productFolder": "alden-round-back-bar-black"
+        },
+        {
+          "name": "Alden Round Back Bar White",
+          "color": "White",
+          "material": "",
+          "productFolder": "alden-round-back-bar-white"
+        }
+      ]
+    },
+    "antique-mirror-bar": {
+      "id": "antique-mirror-bar",
+      "name": "Antique Mirror Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/antique-mirror-bar.glb",
+      "fileSize": 9182528,
+      "variants": [
+        {
+          "name": "Antique Mirror Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "antique-mirror-bar"
+        }
+      ]
+    },
+    "augusto-dj-booth": {
+      "id": "augusto-dj-booth",
+      "name": "Augusto DJ Booth",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/augusto-dj-booth.glb",
+      "fileSize": 8678648,
+      "variants": [
+        {
+          "name": "Augusto White DJ Booth",
+          "color": "",
+          "material": "",
+          "productFolder": "augusto-white-dj-booth"
+        }
+      ]
+    },
+    "augusto-panel-bar-corner-pedestal": {
+      "id": "augusto-panel-bar-corner-pedestal",
+      "name": "Augusto Panel Bar Corner Pedestal",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/augusto-panel-bar-corner-pedestal.glb",
+      "fileSize": 6211312,
+      "variants": [
+        {
+          "name": "Augusto Frost Panel Bar Corner Pedestal",
+          "color": "",
+          "material": "",
+          "productFolder": "augusto-frost-panel-bar-corner-pedestal"
+        },
+        {
+          "name": "Augusto Sage Panel Bar Corner Pedestal",
+          "color": "",
+          "material": "",
+          "productFolder": "augusto-sage-panel-bar-corner-pedestal"
+        }
+      ]
+    },
+    "augusto-panel-bar": {
+      "id": "augusto-panel-bar",
+      "name": "Augusto Panel Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/augusto-panel-bar.glb",
+      "fileSize": 6879008,
+      "variants": [
+        {
+          "name": "Augusto Frost Panel Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "augusto-frost-panel-bar"
+        },
+        {
+          "name": "Augusto Sage Panel Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "augusto-sage-panel-bar"
+        }
+      ]
+    },
+    "bar-tops": {
+      "id": "bar-tops",
+      "name": "Bar Tops",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/bar-tops.glb",
+      "fileSize": 6262340,
+      "variants": [
+        {
+          "name": "Bar Tops",
+          "color": "",
+          "material": "",
+          "productFolder": "bar-tops"
+        }
+      ]
+    },
+    "boss-bar": {
+      "id": "boss-bar",
+      "name": "Boss Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/boss-bar.glb",
+      "fileSize": 8176020,
+      "variants": [
+        {
+          "name": "6′ Black Boss Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "6-black-boss-bar"
+        }
+      ]
+    },
+    "bradford-triple-panel-bar": {
+      "id": "bradford-triple-panel-bar",
+      "name": "Bradford Triple Panel Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/bradford-triple-panel-bar.glb",
+      "fileSize": 7060448,
+      "variants": [
+        {
+          "name": "Bradford Brunswick Green Triple Panel Bar",
+          "color": "Green",
+          "material": "",
+          "productFolder": "bradford-brunswick-green-triple-panel-bar"
+        },
+        {
+          "name": "Bradford Oxford Blue Triple Panel Bar",
+          "color": "Blue",
+          "material": "",
+          "productFolder": "bradford-oxford-blue-triple-panel-bar"
+        }
+      ]
+    },
+    "cedar-dj-booth": {
+      "id": "cedar-dj-booth",
+      "name": "Cedar DJ Booth",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/cedar-dj-booth.glb",
+      "fileSize": 6619292,
+      "variants": [
+        {
+          "name": "6’x42″ Cedar DJ Booth",
+          "color": "",
+          "material": "",
+          "productFolder": "6-x42-cedar-dj-booth"
+        }
+      ]
+    },
+    "champagne-hedge-wall": {
+      "id": "champagne-hedge-wall",
+      "name": "Champagne Hedge Wall",
+      "category": "room-dividers-stanchions",
+      "catalog": "floorplan",
+      "complexity": "complex",
+      "filePath": "floorplan/room-dividers-stanchions/champagne-hedge-wall.glb",
+      "fileSize": 17338084,
+      "variants": [
+        {
+          "name": "Champagne Hedge Wall with White Base",
+          "color": "",
+          "material": "",
+          "productFolder": "champagne-hedge-wall-with-white-base"
+        },
+        {
+          "name": "Champagne Hedge Walls",
+          "color": "",
+          "material": "Faux Boxwood",
+          "productFolder": "champagne-hedge-walls"
+        }
+      ]
+    },
+    "chevron-bar": {
+      "id": "chevron-bar",
+      "name": "Chevron Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/chevron-bar.glb",
+      "fileSize": 10414352,
+      "variants": [
+        {
+          "name": "Chevron Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "chevron-bar"
+        }
+      ]
+    },
+    "chloe-back-bar-shelving-unit": {
+      "id": "chloe-back-bar-shelving-unit",
+      "name": "Chloe Back Bar/Shelving Unit",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/chloe-back-bar-shelving-unit.glb",
+      "fileSize": 3725992,
+      "variants": [
+        {
+          "name": "Chloe White Back Bar/Shelving Unit",
+          "color": "",
+          "material": "",
+          "productFolder": "chloe-white-back-bar-shelving-unit"
+        }
+      ]
+    },
+    "cleopatra-bar": {
+      "id": "cleopatra-bar",
+      "name": "Cleopatra Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/cleopatra-bar.glb",
+      "fileSize": 7584800,
+      "variants": [
+        {
+          "name": "6′ Cleopatra Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "6-cleopatra-bar"
+        }
+      ]
+    },
+    "curved-madison-bar": {
+      "id": "curved-madison-bar",
+      "name": "Curved Madison Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/curved-madison-bar.glb",
+      "fileSize": 5849000,
+      "variants": [
+        {
+          "name": "Curved Madison Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "curved-madison-bar"
+        }
+      ]
+    },
+    "curved-morph-bar": {
+      "id": "curved-morph-bar",
+      "name": "Curved Morph Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/curved-morph-bar.glb",
+      "fileSize": 7647196,
+      "variants": [
+        {
+          "name": "Curved Morph Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "curved-morph-bar"
+        }
+      ]
+    },
+    "deco-bar-return": {
+      "id": "deco-bar-return",
+      "name": "Deco Bar Return",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/deco-bar-return.glb",
+      "fileSize": 6876560,
+      "variants": [
+        {
+          "name": "Deco Bar Return",
+          "color": "",
+          "material": "",
+          "productFolder": "deco-bar-return"
+        }
+      ]
+    },
+    "deco-mirror-bar": {
+      "id": "deco-mirror-bar",
+      "name": "Deco Mirror Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/deco-mirror-bar.glb",
+      "fileSize": 7967952,
+      "variants": [
+        {
+          "name": "Deco Mirror Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "deco-mirror-bar"
+        }
+      ]
+    },
+    "madison-bar": {
+      "id": "madison-bar",
+      "name": "Madison Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/madison-bar.glb",
+      "fileSize": 6081412,
+      "variants": [
+        {
+          "name": "Madison Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "madison-bar"
+        }
+      ]
+    },
+    "mahogany-pub-bar": {
+      "id": "mahogany-pub-bar",
+      "name": "Mahogany Pub Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/mahogany-pub-bar.glb",
+      "fileSize": 6643764,
+      "variants": [
+        {
+          "name": "6′ Mahogany Pub Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "6-mahogany-pub-bar"
+        }
+      ]
+    },
+    "morph-mirror-bar-return": {
+      "id": "morph-mirror-bar-return",
+      "name": "Morph Mirror Bar Return",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/morph-mirror-bar-return.glb",
+      "fileSize": 7886648,
+      "variants": [
+        {
+          "name": "3′ Morph Mirror Bar Return",
+          "color": "",
+          "material": "",
+          "productFolder": "3-morph-mirror-bar-return"
+        }
+      ]
+    },
+    "morph-mirror-bar": {
+      "id": "morph-mirror-bar",
+      "name": "Morph Mirror Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/morph-mirror-bar.glb",
+      "fileSize": 8261904,
+      "variants": [
+        {
+          "name": "Morph Mirror Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "morph-mirror-bar"
+        }
+      ]
+    },
+    "natural-cedar-bar": {
+      "id": "natural-cedar-bar",
+      "name": "Natural Cedar Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/natural-cedar-bar.glb",
+      "fileSize": 8307092,
+      "variants": [
+        {
+          "name": "6′ Natural Cedar Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "6-natural-cedar-bar"
+        }
+      ]
+    },
+    "natural-rustic-bar": {
+      "id": "natural-rustic-bar",
+      "name": "Natural Rustic Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/natural-rustic-bar.glb",
+      "fileSize": 8134388,
+      "variants": [
+        {
+          "name": "6′ Natural Rustic Bar",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "6-natural-rustic-bar"
+        }
+      ]
+    },
+    "pablo-back-bar": {
+      "id": "pablo-back-bar",
+      "name": "Pablo Back Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/pablo-back-bar.glb",
+      "fileSize": 5804000,
+      "variants": [
+        {
+          "name": "Pablo Back Bar",
+          "color": "Gold",
+          "material": "",
+          "productFolder": "pablo-back-bar"
+        }
+      ]
+    },
+    "raelyn-lux-back-bar": {
+      "id": "raelyn-lux-back-bar",
+      "name": "Raelyn Lux Back Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/raelyn-lux-back-bar.glb",
+      "fileSize": 5966256,
+      "variants": [
+        {
+          "name": "Raelyn Lux Frost Back Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "raelyn-lux-frost-back-bar"
+        },
+        {
+          "name": "Raelyn Lux Sage Back Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "raelyn-lux-sage-back-bar"
+        }
+      ]
+    },
+    "raw-bar": {
+      "id": "raw-bar",
+      "name": "Raw Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/raw-bar.glb",
+      "fileSize": 13997964,
+      "variants": [
+        {
+          "name": "6′ Raw Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "6-raw-bar"
+        }
+      ]
+    },
+    "regency-back-bar": {
+      "id": "regency-back-bar",
+      "name": "Regency Back Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/regency-back-bar.glb",
+      "fileSize": 4666200,
+      "variants": [
+        {
+          "name": "Regency Gold Back Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "regency-gold-back-bar"
+        }
+      ]
+    },
+    "round-back-bar-display": {
+      "id": "round-back-bar-display",
+      "name": "Round Back Bar Display",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/round-back-bar-display.glb",
+      "fileSize": 4350084,
+      "variants": [
+        {
+          "name": "Round Back Bar Display",
+          "color": "",
+          "material": "",
+          "productFolder": "round-back-bar-display"
+        }
+      ]
+    },
+    "ruffle-bar-return": {
+      "id": "ruffle-bar-return",
+      "name": "Ruffle Bar Return",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/ruffle-bar-return.glb",
+      "fileSize": 8565644,
+      "variants": [
+        {
+          "name": "3′ White Ruffle Bar Return",
+          "color": "",
+          "material": "",
+          "productFolder": "3-white-ruffle-bar-return"
+        }
+      ]
+    },
+    "ruffle-bar": {
+      "id": "ruffle-bar",
+      "name": "Ruffle Bar",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/ruffle-bar.glb",
+      "fileSize": 8685024,
+      "variants": [
+        {
+          "name": "White Ruffle Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "white-ruffle-bar"
+        }
+      ]
+    },
+    "ruffle-dj-booth": {
+      "id": "ruffle-dj-booth",
+      "name": "Ruffle DJ Booth",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/ruffle-dj-booth.glb",
+      "fileSize": 10703776,
+      "variants": [
+        {
+          "name": "6’x42″ Black Ruffle DJ Booth",
+          "color": "",
+          "material": "",
+          "productFolder": "6-x42-black-ruffle-dj-booth"
+        },
+        {
+          "name": "6’x42″ White Ruffle DJ Booth",
+          "color": "",
+          "material": "",
+          "productFolder": "6-x42-white-ruffle-dj-booth"
+        }
+      ]
+    },
+    "sloane-slatted-bar": {
+      "id": "sloane-slatted-bar",
+      "name": "Sloane Slatted Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/sloane-slatted-bar.glb",
+      "fileSize": 8709600,
+      "variants": [
+        {
+          "name": "Sloane Natural Slatted Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "sloane-natural-slatted-bar"
+        }
+      ]
+    },
+    "solomon-back-bar": {
+      "id": "solomon-back-bar",
+      "name": "Solomon Back Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/solomon-back-bar.glb",
+      "fileSize": 5869516,
+      "variants": [
+        {
+          "name": "Solomon Brunswick Green Back Bar",
+          "color": "Green",
+          "material": "",
+          "productFolder": "solomon-brunswick-green-back-bar"
+        },
+        {
+          "name": "Solomon Oxford Blue Back Bar",
+          "color": "Green",
+          "material": "",
+          "productFolder": "solomon-oxford-blue-back-bar"
+        }
+      ]
+    },
+    "versa-bar": {
+      "id": "versa-bar",
+      "name": "Versa Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/versa-bar.glb",
+      "fileSize": 7374844,
+      "variants": [
+        {
+          "name": "Black Versa Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "black-versa-bar"
+        }
+      ]
+    },
+    "whiskey-barrel-bar": {
+      "id": "whiskey-barrel-bar",
+      "name": "Whiskey Barrel Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/whiskey-barrel-bar.glb",
+      "fileSize": 371844,
+      "variants": [
+        {
+          "name": "8’x34″ Whiskey Barrel Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "8-x34-whiskey-barrel-bar"
+        }
+      ]
+    },
+    "white-wood-bar": {
+      "id": "white-wood-bar",
+      "name": "White Wood Bar",
+      "category": "bars-back-bars",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/bars-back-bars/white-wood-bar.glb",
+      "fileSize": 9532232,
+      "variants": [
+        {
+          "name": "6′ White Wood Bar",
+          "color": "White",
+          "material": "",
+          "productFolder": "6-white-wood-bar"
+        }
+      ]
+    },
+    "wire-acrylic-back-bar": {
+      "id": "wire-acrylic-back-bar",
+      "name": "Wire/Acrylic Back Bar",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/wire-acrylic-back-bar.glb",
+      "fileSize": 3987484,
+      "variants": [
+        {
+          "name": "40″x69″x14″ White Wire/Acrylic Back Bar",
+          "color": "",
+          "material": "",
+          "productFolder": "40-x69-x14-white-wire-acrylic-back-bar"
+        }
+      ]
+    },
+    "alloy-barstool": {
+      "id": "alloy-barstool",
+      "name": "Alloy Barstool",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/alloy-barstool.glb",
+      "fileSize": 4357908,
+      "variants": [
+        {
+          "name": "Alloy Barstool",
+          "color": "",
+          "material": "",
+          "productFolder": "alloy-barstool"
+        }
+      ]
+    },
+    "alloy-chair": {
+      "id": "alloy-chair",
+      "name": "Alloy Chair",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/alloy-chair.glb",
+      "fileSize": 5057716,
+      "variants": [
+        {
+          "name": "Alloy Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "alloy-chair"
+        }
+      ]
+    },
+    "au-barstool": {
+      "id": "au-barstool",
+      "name": "Au Barstool",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/au-barstool.glb",
+      "fileSize": 4283932,
+      "variants": [
+        {
+          "name": "Au Barstool",
+          "color": "",
+          "material": "",
+          "productFolder": "au-barstool"
+        }
+      ]
+    },
+    "bamboo-folding-chair": {
+      "id": "bamboo-folding-chair",
+      "name": "Bamboo Folding Chair",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/bamboo-folding-chair.glb",
+      "fileSize": 4540468,
+      "variants": [
+        {
+          "name": "Bamboo Folding Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "bamboo-folding-chair"
+        }
+      ]
+    },
+    "barstool-ballroom": {
+      "id": "barstool-ballroom",
+      "name": "Barstool Ballroom",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/barstool-ballroom.glb",
+      "fileSize": 3652824,
+      "variants": [
+        {
+          "name": "Barstool Ballroom Black",
+          "color": "",
+          "material": "",
+          "productFolder": "barstool-ballroom-black"
+        },
+        {
+          "name": "Barstool Ballroom Gold",
+          "color": "",
+          "material": "",
+          "productFolder": "barstool-ballroom-gold"
+        },
+        {
+          "name": "Barstool Ballroom Natural",
+          "color": "",
+          "material": "",
+          "productFolder": "barstool-ballroom-natural"
+        },
+        {
+          "name": "Barstool Ballroom Silver",
+          "color": "",
+          "material": "",
+          "productFolder": "barstool-ballroom-silver"
+        },
+        {
+          "name": "Barstool Ballroom Walnut",
+          "color": "",
+          "material": "",
+          "productFolder": "barstool-ballroom-walnut"
+        },
+        {
+          "name": "Barstool Ballroom White",
+          "color": "",
+          "material": "",
+          "productFolder": "barstool-ballroom-white"
+        }
+      ]
+    },
+    "barstool-gunmetal": {
+      "id": "barstool-gunmetal",
+      "name": "Barstool Gunmetal",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/barstool-gunmetal.glb",
+      "fileSize": 3725112,
+      "variants": [
+        {
+          "name": "Barstool Gunmetal",
+          "color": "",
+          "material": "",
+          "productFolder": "barstool-gunmetal"
+        }
+      ]
+    },
+    "barstool-margaux": {
+      "id": "barstool-margaux",
+      "name": "Barstool Margaux",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/barstool-margaux.glb",
+      "fileSize": 4002420,
+      "variants": [
+        {
+          "name": "Barstool Margaux Beechwood",
+          "color": "",
+          "material": "",
+          "productFolder": "barstool-margaux-beechwood"
+        }
+      ]
+    },
+    "barstool-mirage": {
+      "id": "barstool-mirage",
+      "name": "Barstool Mirage",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/barstool-mirage.glb",
+      "fileSize": 8081212,
+      "variants": [
+        {
+          "name": "Barstool Mirage Clear",
+          "color": "",
+          "material": "",
+          "productFolder": "barstool-mirage-clear"
+        }
+      ]
+    },
+    "barstool-napa": {
+      "id": "barstool-napa",
+      "name": "Barstool Napa",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/barstool-napa.glb",
+      "fileSize": 4872224,
+      "variants": [
+        {
+          "name": "Barstool Napa Antique",
+          "color": "",
+          "material": "",
+          "productFolder": "barstool-napa-antique"
+        }
+      ]
+    },
+    "bentwood-chair": {
+      "id": "bentwood-chair",
+      "name": "Bentwood Chair",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/bentwood-chair.glb",
+      "fileSize": 4350500,
+      "variants": [
+        {
+          "name": "Bentwood Black Chair",
+          "color": "Black",
+          "material": "",
+          "productFolder": "bentwood-black-chair"
+        },
+        {
+          "name": "Bentwood Light Fruitwood Chair",
+          "color": "Brown",
+          "material": "",
+          "productFolder": "bentwood-light-fruitwood-chair"
+        },
+        {
+          "name": "Bentwood Natural Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "bentwood-natural-chair"
+        }
+      ]
+    },
+    "bistro-chair": {
+      "id": "bistro-chair",
+      "name": "Bistro Chair",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/bistro-chair.glb",
+      "fileSize": 4603008,
+      "variants": [
+        {
+          "name": "Bistro Gunmetal Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "bistro-gunmetal-chair"
+        }
+      ]
+    },
+    "booster-seat": {
+      "id": "booster-seat",
+      "name": "Booster Seat",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/booster-seat.glb",
+      "fileSize": 5176836,
+      "variants": [
+        {
+          "name": "Booster Seat",
+          "color": "",
+          "material": "Plastic",
+          "productFolder": "booster-seat"
+        }
+      ]
+    },
+    "calypso-barstool": {
+      "id": "calypso-barstool",
+      "name": "Calypso Barstool",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/calypso-barstool.glb",
+      "fileSize": 5895344,
+      "variants": [
+        {
+          "name": "Calypso Barstool",
+          "color": "",
+          "material": "",
+          "productFolder": "calypso-barstool"
+        }
+      ]
+    },
+    "chiavari-ballroom-chair": {
+      "id": "chiavari-ballroom-chair",
+      "name": "Chiavari Ballroom Chair",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/chiavari-ballroom-chair.glb",
+      "fileSize": 3972304,
+      "variants": [
+        {
+          "name": "Chiavari Ballroom Black Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "chiavari-ballroom-black-chair"
+        },
+        {
+          "name": "Chiavari Ballroom Crystal Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "chiavari-ballroom-crystal-chair"
+        },
+        {
+          "name": "Chiavari Ballroom Fruitwood Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "chiavari-ballroom-fruitwood-chair"
+        },
+        {
+          "name": "Chiavari Ballroom Gold Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "chiavari-ballroom-gold-chair"
+        },
+        {
+          "name": "Chiavari Ballroom Natural Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "chiavari-ballroom-natural-chair"
+        },
+        {
+          "name": "Chiavari Ballroom Red Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "chiavari-ballroom-red-chair"
+        },
+        {
+          "name": "Chiavari Ballroom Sandstone Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "chiavari-ballroom-sandstone-chair"
+        },
+        {
+          "name": "Chiavari Ballroom Silver Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "chiavari-ballroom-silver-chair"
+        },
+        {
+          "name": "Chiavari Ballroom Walnut Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "chiavari-ballroom-walnut-chair"
+        },
+        {
+          "name": "Chiavari Ballroom White Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "chiavari-ballroom-white-chair"
+        },
+        {
+          "name": "Chiavari Ballroom White Wash Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "chiavari-ballroom-white-wash-chair"
+        }
+      ]
+    },
+    "childrens-chair": {
+      "id": "childrens-chair",
+      "name": "Childrens Chair",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/childrens-chair.glb",
+      "fileSize": 5334200,
+      "variants": [
+        {
+          "name": "Childrens Blue w/ White Chair",
+          "color": "",
+          "material": "Metal, Plastic",
+          "productFolder": "childrens-blue-w-white-chair"
+        },
+        {
+          "name": "Childrens Samsonite White Chair",
+          "color": "",
+          "material": "Metal, Plastic",
+          "productFolder": "childrens-samsonite-white-chair"
+        }
+      ]
+    },
+    "chippendale-chair": {
+      "id": "chippendale-chair",
+      "name": "Chippendale Chair",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/chippendale-chair.glb",
+      "fileSize": 5097936,
+      "variants": [
+        {
+          "name": "Chippendale Clear Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "chippendale-clear-chair"
+        }
+      ]
+    },
+    "classic-louis-chair": {
+      "id": "classic-louis-chair",
+      "name": "Classic Louis Chair",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/classic-louis-chair.glb",
+      "fileSize": 5317160,
+      "variants": [
+        {
+          "name": "Classic Louis Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "classic-louis-chair"
+        }
+      ]
+    },
+    "elan-chair": {
+      "id": "elan-chair",
+      "name": "Elan Chair",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/elan-chair.glb",
+      "fileSize": 5378876,
+      "variants": [
+        {
+          "name": "Elan Natural Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "elan-natural-chair"
+        }
+      ]
+    },
+    "rustic-bench": {
+      "id": "rustic-bench",
+      "name": "Rustic Bench",
+      "category": "chairs",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/chairs/rustic-bench.glb",
+      "fileSize": 6564776,
+      "variants": [
+        {
+          "name": "8′ Rustic Brown Bench",
+          "color": "",
+          "material": "",
+          "productFolder": "8-rustic-brown-bench"
+        }
+      ]
+    },
+    "aria-side-table": {
+      "id": "aria-side-table",
+      "name": "Aria Side Table",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/aria-side-table.glb",
+      "fileSize": 5918192,
+      "variants": [
+        {
+          "name": "Aria Gold & Acrylic Side Table",
+          "color": "",
+          "material": "",
+          "productFolder": "aria-gold-acrylic-side-table"
+        }
+      ]
+    },
+    "augusto-center-console": {
+      "id": "augusto-center-console",
+      "name": "Augusto Center Console",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/augusto-center-console.glb",
+      "fileSize": 6422456,
+      "variants": [
+        {
+          "name": "Augusto White Center Console",
+          "color": "White",
+          "material": "",
+          "productFolder": "augusto-white-center-console"
+        }
+      ]
+    },
+    "boucle-swivel-side-chair": {
+      "id": "boucle-swivel-side-chair",
+      "name": "Boucle Swivel Side Chair",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/boucle-swivel-side-chair.glb",
+      "fileSize": 6940384,
+      "variants": [
+        {
+          "name": "White Boucle Swivel Side Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "white-boucle-swivel-side-chair"
+        }
+      ]
+    },
+    "cloud-boucle-chaise-sofa": {
+      "id": "cloud-boucle-chaise-sofa",
+      "name": "Cloud Boucle Chaise Sofa",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/cloud-boucle-chaise-sofa.glb",
+      "fileSize": 6295720,
+      "variants": [
+        {
+          "name": "Cloud Ivory Boucle Chaise Sofa",
+          "color": "",
+          "material": "",
+          "productFolder": "cloud-ivory-boucle-chaise-sofa"
+        }
+      ]
+    },
+    "hayley-glass-coffee-table": {
+      "id": "hayley-glass-coffee-table",
+      "name": "Hayley Glass Coffee Table",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/hayley-glass-coffee-table.glb",
+      "fileSize": 5128956,
+      "variants": [
+        {
+          "name": "Hayley Tempered Glass Coffee Table",
+          "color": "",
+          "material": "",
+          "productFolder": "hayley-tempered-glass-coffee-table"
+        }
+      ]
+    },
+    "hourglass-side-table": {
+      "id": "hourglass-side-table",
+      "name": "Hourglass Side Table",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/hourglass-side-table.glb",
+      "fileSize": 5505588,
+      "variants": [
+        {
+          "name": "White & Gold Hourglass Side Table",
+          "color": "Gold, White, You May Also Like",
+          "material": "",
+          "productFolder": "white-gold-hourglass-side-table"
+        }
+      ]
+    },
+    "knox-side-table": {
+      "id": "knox-side-table",
+      "name": "Knox Side Table",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/knox-side-table.glb",
+      "fileSize": 6200960,
+      "variants": [
+        {
+          "name": "Knox Antique Brass Side Table",
+          "color": "",
+          "material": "",
+          "productFolder": "knox-antique-brass-side-table"
+        },
+        {
+          "name": "Knox Dark Bronze Side Table",
+          "color": "",
+          "material": "",
+          "productFolder": "knox-dark-bronze-side-table"
+        }
+      ]
+    },
+    "lounge-collection": {
+      "id": "lounge-collection",
+      "name": "Lounge Collection",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "complex",
+      "filePath": "floorplan/furniture/lounge-collection.glb",
+      "fileSize": 11836244,
+      "variants": [
+        {
+          "name": "Au Natural Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "au-natural-lounge-collection"
+        },
+        {
+          "name": "Beachside Bash Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "beachside-bash-lounge-collection"
+        },
+        {
+          "name": "Blush & Bloom Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "blush-bloom-lounge-collection"
+        },
+        {
+          "name": "Brass & Cognac Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "brass-cognac-lounge-collection"
+        },
+        {
+          "name": "Coastal Charm Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "coastal-charm-lounge-collection"
+        },
+        {
+          "name": "Desert Daydream Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "desert-daydream-lounge-collection"
+        },
+        {
+          "name": "Gilded Garden Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "gilded-garden-lounge-collection"
+        },
+        {
+          "name": "Icy Blue Escape Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "icy-blue-escape-lounge-collection"
+        },
+        {
+          "name": "Midnight Luxe Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "midnight-luxe-lounge-collection"
+        },
+        {
+          "name": "Modern Mirage Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "modern-mirage-lounge-collection"
+        },
+        {
+          "name": "Moonlight Martini Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "moonlight-martini-lounge-collection"
+        },
+        {
+          "name": "Outdoor Oasis Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "outdoor-oasis-lounge-collection"
+        },
+        {
+          "name": "Pearl & Polished Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "pearl-polished-lounge-collection"
+        },
+        {
+          "name": "Sage Soirée Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "sage-soir-e-lounge-collection"
+        },
+        {
+          "name": "Sienna Sol Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "sienna-sol-lounge-collection"
+        },
+        {
+          "name": "Verdant Vibes Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "verdant-vibes-lounge-collection"
+        },
+        {
+          "name": "Woven Whisper Lounge Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "woven-whisper-lounge-collection"
+        }
+      ]
+    },
+    "maeve-side-table": {
+      "id": "maeve-side-table",
+      "name": "Maeve Side Table",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/maeve-side-table.glb",
+      "fileSize": 6592232,
+      "variants": [
+        {
+          "name": "Maeve White Wood Side Table",
+          "color": "",
+          "material": "",
+          "productFolder": "maeve-white-wood-side-table"
+        }
+      ]
+    },
+    "martini-side-table": {
+      "id": "martini-side-table",
+      "name": "Martini Side Table",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/martini-side-table.glb",
+      "fileSize": 6013508,
+      "variants": [
+        {
+          "name": "White Martini Side Table",
+          "color": "",
+          "material": "",
+          "productFolder": "white-martini-side-table"
+        }
+      ]
+    },
+    "maxwell-curved-banquette": {
+      "id": "maxwell-curved-banquette",
+      "name": "Maxwell Curved Banquette",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/maxwell-curved-banquette.glb",
+      "fileSize": 5691600,
+      "variants": [
+        {
+          "name": "Maxwell Blue Velvet Curved Banquette / Sofa",
+          "color": "Blue",
+          "material": "",
+          "productFolder": "maxwell-blue-velvet-curved-banquette-sofa"
+        },
+        {
+          "name": "Maxwell Ivory Velvet Curved Banquette / Sofa",
+          "color": "Ivory & Beige",
+          "material": "",
+          "productFolder": "maxwell-ivory-velvet-curved-banquette-sofa"
+        }
+      ]
+    },
+    "milano-sofa": {
+      "id": "milano-sofa",
+      "name": "Milano Sofa",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/milano-sofa.glb",
+      "fileSize": 6794080,
+      "variants": [
+        {
+          "name": "Milano Cognac Sofa",
+          "color": "Brown",
+          "material": "",
+          "productFolder": "milano-cognac-sofa"
+        }
+      ]
+    },
+    "ormond-ottoman": {
+      "id": "ormond-ottoman",
+      "name": "Ormond Ottoman",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/ormond-ottoman.glb",
+      "fileSize": 7861676,
+      "variants": [
+        {
+          "name": "Ormond Boucle Ottoman",
+          "color": "Brown, White",
+          "material": "",
+          "productFolder": "ormond-boucle-ottoman"
+        }
+      ]
+    },
+    "oval-carved-coffee-table": {
+      "id": "oval-carved-coffee-table",
+      "name": "Oval Carved Coffee Table",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "complex",
+      "filePath": "floorplan/furniture/oval-carved-coffee-table.glb",
+      "fileSize": 5134896,
+      "variants": [
+        {
+          "name": "Oval Whitewash Carved Coffee Table",
+          "color": "White",
+          "material": "",
+          "productFolder": "oval-whitewash-carved-coffee-table"
+        }
+      ]
+    },
+    "pasha-side-chair": {
+      "id": "pasha-side-chair",
+      "name": "Pasha Side Chair",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/pasha-side-chair.glb",
+      "fileSize": 9474648,
+      "variants": [
+        {
+          "name": "Clear Pasha Side Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "clear-pasha-side-chair"
+        }
+      ]
+    },
+    "pillow-package": {
+      "id": "pillow-package",
+      "name": "Pillow Package",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "complex",
+      "filePath": "floorplan/furniture/pillow-package.glb",
+      "fileSize": 9107256,
+      "variants": [
+        {
+          "name": "Astral Amethyst Pillow Package",
+          "color": "Purple",
+          "material": "",
+          "productFolder": "astral-amethyst-pillow-package"
+        },
+        {
+          "name": "Cosmic Cerulean Pillow Package",
+          "color": "Blue",
+          "material": "",
+          "productFolder": "cosmic-cerulean-pillow-package"
+        },
+        {
+          "name": "White Pillow Package",
+          "color": "",
+          "material": "",
+          "productFolder": "white-pillow-package"
+        }
+      ]
+    },
+    "rome-white-fluted-table": {
+      "id": "rome-white-fluted-table",
+      "name": "Rome White Fluted Table",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/rome-white-fluted-table.glb",
+      "fileSize": 8706448,
+      "variants": [
+        {
+          "name": "Rome White Fluted Coffee Table",
+          "color": "",
+          "material": "",
+          "productFolder": "rome-white-fluted-coffee-table"
+        },
+        {
+          "name": "Rome White Fluted Side Tables",
+          "color": "",
+          "material": "",
+          "productFolder": "rome-white-fluted-side-tables"
+        }
+      ]
+    },
+    "saari-swivel-side-chair": {
+      "id": "saari-swivel-side-chair",
+      "name": "Saari Swivel Side Chair",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/saari-swivel-side-chair.glb",
+      "fileSize": 5602628,
+      "variants": [
+        {
+          "name": "Saari Brown Velvet Swivel Side Chair",
+          "color": "Brown",
+          "material": "",
+          "productFolder": "saari-brown-velvet-swivel-side-chair"
+        }
+      ]
+    },
+    "taylor-side-table": {
+      "id": "taylor-side-table",
+      "name": "Taylor Side Table",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/taylor-side-table.glb",
+      "fileSize": 11922176,
+      "variants": [
+        {
+          "name": "Taylor Black Side Table",
+          "color": "Black",
+          "material": "",
+          "productFolder": "taylor-black-side-table"
+        }
+      ]
+    },
+    "thalia-sofa": {
+      "id": "thalia-sofa",
+      "name": "Thalia Sofa",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/thalia-sofa.glb",
+      "fileSize": 6105564,
+      "variants": [
+        {
+          "name": "Thalia Sofa",
+          "color": "",
+          "material": "",
+          "productFolder": "thalia-sofa"
+        }
+      ]
+    },
+    "vivian-dining-table": {
+      "id": "vivian-dining-table",
+      "name": "Vivian Dining Table",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/vivian-dining-table.glb",
+      "fileSize": 6007740,
+      "variants": [
+        {
+          "name": "Vivian Dining Table",
+          "color": "",
+          "material": "",
+          "productFolder": "vivian-dining-table"
+        }
+      ]
+    },
+    "wallis-bench": {
+      "id": "wallis-bench",
+      "name": "Wallis Bench",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/wallis-bench.glb",
+      "fileSize": 5453164,
+      "variants": [
+        {
+          "name": "Wallis Bench",
+          "color": "",
+          "material": "",
+          "productFolder": "wallis-bench"
+        }
+      ]
+    },
+    "white-shelter-seating": {
+      "id": "white-shelter-seating",
+      "name": "White Shelter Seating",
+      "category": "furniture",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/furniture/white-shelter-seating.glb",
+      "fileSize": 7731272,
+      "variants": [
+        {
+          "name": "White Shelter Side Chair",
+          "color": "",
+          "material": "",
+          "productFolder": "white-shelter-side-chair"
+        },
+        {
+          "name": "White Shelter Sofa",
+          "color": "",
+          "material": "",
+          "productFolder": "white-shelter-sofa"
+        }
+      ]
+    },
+    "marquee-lighting-letter": {
+      "id": "marquee-lighting-letter",
+      "name": "Marquee Lighting Letter",
+      "category": "lighting",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/lighting/marquee-lighting-letter.glb",
+      "fileSize": 6068208,
+      "variants": [
+        {
+          "name": "Marquee Lighting “&”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting"
+        },
+        {
+          "name": "Marquee Lighting “A”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-a"
+        },
+        {
+          "name": "Marquee Lighting “B”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-b"
+        },
+        {
+          "name": "Marquee Lighting “C”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-c"
+        },
+        {
+          "name": "Marquee Lighting “D”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-d"
+        },
+        {
+          "name": "Marquee Lighting “E”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-e"
+        },
+        {
+          "name": "Marquee Lighting “F”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-f"
+        },
+        {
+          "name": "Marquee Lighting “G”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-g"
+        },
+        {
+          "name": "Marquee Lighting “H”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-h"
+        },
+        {
+          "name": "Marquee Lighting “I”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-i"
+        },
+        {
+          "name": "Marquee Lighting “J”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-j"
+        },
+        {
+          "name": "Marquee Lighting “K”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-k"
+        },
+        {
+          "name": "Marquee Lighting “L”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-l"
+        },
+        {
+          "name": "Marquee Lighting “M”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-m"
+        },
+        {
+          "name": "Marquee Lighting “N”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-n"
+        },
+        {
+          "name": "Marquee Lighting “O”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-o"
+        },
+        {
+          "name": "Marquee Lighting “P”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-p"
+        },
+        {
+          "name": "Marquee Lighting “Q”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-q"
+        },
+        {
+          "name": "Marquee Lighting “R”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-r"
+        },
+        {
+          "name": "Marquee Lighting “S”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-s"
+        },
+        {
+          "name": "Marquee Lighting “T”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-t"
+        },
+        {
+          "name": "Marquee Lighting “U”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-u"
+        },
+        {
+          "name": "Marquee Lighting “V”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-v"
+        },
+        {
+          "name": "Marquee Lighting “W”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-w"
+        },
+        {
+          "name": "Marquee Lighting “X”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-x"
+        },
+        {
+          "name": "Marquee Lighting “Y”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-y"
+        },
+        {
+          "name": "Marquee Lighting “Z”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-z"
+        }
+      ]
+    },
+    "marquee-lighting-symbol": {
+      "id": "marquee-lighting-symbol",
+      "name": "Marquee Lighting Symbol",
+      "category": "lighting",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/lighting/marquee-lighting-symbol.glb",
+      "fileSize": 7272048,
+      "variants": [
+        {
+          "name": "Marquee Lighting “Anchor”",
+          "color": "",
+          "material": "",
+          "productFolder": "marquee-lighting-anchor"
+        }
+      ]
+    },
+    "bengaline-drape": {
+      "id": "bengaline-drape",
+      "name": "Bengaline Drape",
+      "category": "room-dividers-stanchions",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/room-dividers-stanchions/bengaline-drape.glb",
+      "fileSize": 11870120,
+      "variants": [
+        {
+          "name": "14×5 Bengaline Valentine Red Drape",
+          "color": "",
+          "material": "",
+          "productFolder": "14-5-bengaline-valentine-red-drape"
+        },
+        {
+          "name": "14’x5’ Bengaline Royal Blue Drape",
+          "color": "",
+          "material": "",
+          "productFolder": "14-x5-bengaline-royal-blue-drape"
+        },
+        {
+          "name": "8’x5 Bengaline Royal Blue Drape",
+          "color": "",
+          "material": "",
+          "productFolder": "8-x5-bengaline-royal-blue-drape"
+        },
+        {
+          "name": "8’x5’ Bengaline Valentine Red Drape",
+          "color": "",
+          "material": "",
+          "productFolder": "8-x5-bengaline-valentine-red-drape"
+        }
+      ]
+    },
+    "hedge-panel": {
+      "id": "hedge-panel",
+      "name": "Hedge Panel",
+      "category": "room-dividers-stanchions",
+      "catalog": "floorplan",
+      "complexity": "complex",
+      "filePath": "floorplan/room-dividers-stanchions/hedge-panel.glb",
+      "fileSize": 11390204,
+      "variants": [
+        {
+          "name": "Hedge Short  4’Hx4’Lx8″W 4-Sided",
+          "color": "",
+          "material": "",
+          "productFolder": "hedge-short-4-hx4-lx8-w-4-sided"
+        },
+        {
+          "name": "Hedge Tall 7’Hx4’Lx8″W 3-Sided",
+          "color": "",
+          "material": "",
+          "productFolder": "hedge-tall-7-hx4-lx8-w-3-sided"
+        },
+        {
+          "name": "Hedge Tall White Base 7’H x 4’L x 8″W – 3 Sided",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "hedge-tall-white-base-7-h-x-4-l-x-8-w-3-sided"
+        }
+      ]
+    },
+    "rustic-wood-wall": {
+      "id": "rustic-wood-wall",
+      "name": "Rustic Wood Wall",
+      "category": "room-dividers-stanchions",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/room-dividers-stanchions/rustic-wood-wall.glb",
+      "fileSize": 9478460,
+      "variants": [
+        {
+          "name": "8’x4′ Rustic Wood Wall (2 Bases)",
+          "color": "",
+          "material": "",
+          "productFolder": "8-x4-rustic-wood-wall-2-bases"
+        }
+      ]
+    },
+    "satin-drape-panel": {
+      "id": "satin-drape-panel",
+      "name": "Satin Drape Panel",
+      "category": "room-dividers-stanchions",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/room-dividers-stanchions/satin-drape-panel.glb",
+      "fileSize": 8153832,
+      "variants": [
+        {
+          "name": "14’x4′ Satin Black Drape Panel",
+          "color": "",
+          "material": "Satin",
+          "productFolder": "14-x4-satin-black-drape-panel"
+        },
+        {
+          "name": "14’x4′ Satin Ivory Drape Panel",
+          "color": "",
+          "material": "Satin",
+          "productFolder": "14-x4-satin-ivory-drape-panel"
+        },
+        {
+          "name": "20’x4′ Satin Black Drape Panel",
+          "color": "",
+          "material": "Satin",
+          "productFolder": "20-x4-satin-black-drape-panel"
+        },
+        {
+          "name": "21′ Satin Ivory Drape Panel",
+          "color": "",
+          "material": "Satin",
+          "productFolder": "21-satin-ivory-drape-panel"
+        }
+      ]
+    },
+    "sheer-drape-panel": {
+      "id": "sheer-drape-panel",
+      "name": "Sheer Drape Panel",
+      "category": "room-dividers-stanchions",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/room-dividers-stanchions/sheer-drape-panel.glb",
+      "fileSize": 6248260,
+      "variants": [
+        {
+          "name": "14’x4′ Sheer White Drape Panel",
+          "color": "",
+          "material": "Sheer",
+          "productFolder": "14-x4-sheer-white-drape-panel"
+        },
+        {
+          "name": "16’x10′ Sheer Black Drape Panel",
+          "color": "",
+          "material": "Sheer",
+          "productFolder": "16-x10-sheer-black-drape-panel"
+        },
+        {
+          "name": "16’x10′ Sheer White Drape Panel",
+          "color": "",
+          "material": "Sheer",
+          "productFolder": "16-x10-sheer-white-drape-panel"
+        },
+        {
+          "name": "20’x4′ Sheer White Drape Panel",
+          "color": "",
+          "material": "Sheer",
+          "productFolder": "20-x4-sheer-white-drape-panel"
+        }
+      ]
+    },
+    "stanchion-post": {
+      "id": "stanchion-post",
+      "name": "Stanchion Post",
+      "category": "room-dividers-stanchions",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/room-dividers-stanchions/stanchion-post.glb",
+      "fileSize": 7315272,
+      "variants": [
+        {
+          "name": "Black Stanchion Post w/Retractable 6.5′ Belt",
+          "color": "",
+          "material": "Metal",
+          "productFolder": "black-stanchion-post-w-retractable-6-5-belt"
+        },
+        {
+          "name": "Brass Stanchion",
+          "color": "",
+          "material": "Brass",
+          "productFolder": "brass-stanchion"
+        },
+        {
+          "name": "Premium Chrome Stanchion",
+          "color": "",
+          "material": "Metal",
+          "productFolder": "premium-chrome-stanchion"
+        }
+      ]
+    },
+    "velour-drape-panel": {
+      "id": "velour-drape-panel",
+      "name": "Velour Drape Panel",
+      "category": "room-dividers-stanchions",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/room-dividers-stanchions/velour-drape-panel.glb",
+      "fileSize": 7808552,
+      "variants": [
+        {
+          "name": "14’x4′ Velour Black Drape Panel",
+          "color": "",
+          "material": "Velour",
+          "productFolder": "14-x4-velour-black-drape-panel"
+        },
+        {
+          "name": "8’x4′ Velour Black Drape Panel",
+          "color": "",
+          "material": "Velour",
+          "productFolder": "8-x4-velour-black-drape-panel"
+        }
+      ]
+    },
+    "velour-rope": {
+      "id": "velour-rope",
+      "name": "Velour Rope",
+      "category": "room-dividers-stanchions",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/room-dividers-stanchions/velour-rope.glb",
+      "fileSize": 3821860,
+      "variants": [
+        {
+          "name": "8′ Black Velour Rope",
+          "color": "",
+          "material": "Metal, Velour",
+          "productFolder": "8-black-velour-rope"
+        },
+        {
+          "name": "8′ Navy Velour Rope",
+          "color": "",
+          "material": "Metal, Velour",
+          "productFolder": "8-navy-velour-rope"
+        },
+        {
+          "name": "8′ Red Velour Rope",
+          "color": "",
+          "material": "Metal, Velour",
+          "productFolder": "8-red-velour-rope"
+        },
+        {
+          "name": "8′ Red Velour Rope w/Brass Caps",
+          "color": "",
+          "material": "Brass, Velour",
+          "productFolder": "8-red-velour-rope-w-brass-caps"
+        },
+        {
+          "name": "8′ Royal Blue Velour Rope",
+          "color": "",
+          "material": "Metal, Velour",
+          "productFolder": "8-royal-blue-velour-rope"
+        }
+      ]
+    },
+    "wood-screen": {
+      "id": "wood-screen",
+      "name": "Wood Screen",
+      "category": "room-dividers-stanchions",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/room-dividers-stanchions/wood-screen.glb",
+      "fileSize": 8560880,
+      "variants": [
+        {
+          "name": "7’x7′ Black Wood Screen",
+          "color": "",
+          "material": "",
+          "productFolder": "7-x7-black-wood-screen"
+        },
+        {
+          "name": "7’x7′ Fruitwood Screen",
+          "color": "",
+          "material": "",
+          "productFolder": "7-x7-fruitwood-screen"
+        },
+        {
+          "name": "7’x7′ White Wood Screen",
+          "color": "",
+          "material": "",
+          "productFolder": "7-x7-white-wood-screen"
+        }
+      ]
+    },
+    "acrylic-dance-floor": {
+      "id": "acrylic-dance-floor",
+      "name": "Acrylic Dance Floor",
+      "category": "stages-flooring",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/stages-flooring/acrylic-dance-floor.glb",
+      "fileSize": 348956,
+      "variants": [
+        {
+          "name": "2’x2′ High Gloss Black Acrylic Dance Floor",
+          "color": "",
+          "material": "Acrylic",
+          "productFolder": "2-x2-high-gloss-black-acrylic-dance-floor"
+        },
+        {
+          "name": "2’x4′ High Gloss Black Acrylic Dance Floor",
+          "color": "",
+          "material": "Acrylic",
+          "productFolder": "2-x4-high-gloss-black-acrylic-dance-floor"
+        },
+        {
+          "name": "Acrylic White Dance Floor 2’x2′ Tiles",
+          "color": "",
+          "material": "Acrylic",
+          "productFolder": "acrylic-white-dance-floor-2-x2-tiles"
+        },
+        {
+          "name": "Acrylic White Dance Floor 2’x4′ Tiles",
+          "color": "",
+          "material": "Acrylic",
+          "productFolder": "acrylic-white-dance-floor-2-x4-tiles"
+        }
+      ]
+    },
+    "box-step": {
+      "id": "box-step",
+      "name": "Box Step",
+      "category": "stages-flooring",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/stages-flooring/box-step.glb",
+      "fileSize": 12053108,
+      "variants": [
+        {
+          "name": "6″ Box Step (No Railing)",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "6-box-step-no-railing"
+        },
+        {
+          "name": "8″ Box Step (No Railing)",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "8-box-step-no-railing"
+        }
+      ]
+    },
+    "carpet-roll": {
+      "id": "carpet-roll",
+      "name": "Carpet Roll",
+      "category": "stages-flooring",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/stages-flooring/carpet-roll.glb",
+      "fileSize": 365404,
+      "variants": [
+        {
+          "name": "50’x12′ Black Carpet",
+          "color": "",
+          "material": "Carpet",
+          "productFolder": "50-x12-black-carpet"
+        }
+      ]
+    },
+    "carpet-w-bound-edge": {
+      "id": "carpet-w-bound-edge",
+      "name": "Carpet w/Bound Edge",
+      "category": "stages-flooring",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/stages-flooring/carpet-w-bound-edge.glb",
+      "fileSize": 9691424,
+      "variants": [
+        {
+          "name": "25’x4′ Black Carpet w/Bound Edge",
+          "color": "",
+          "material": "",
+          "productFolder": "25-x4-black-carpet-w-bound-edge"
+        },
+        {
+          "name": "25’x4′ Red Carpet w/Bound Edge",
+          "color": "",
+          "material": "",
+          "productFolder": "25-x4-red-carpet-w-bound-edge"
+        },
+        {
+          "name": "25’x4′ Royal Blue Carpet w/Bound Edge",
+          "color": "",
+          "material": "",
+          "productFolder": "25-x4-royal-blue-carpet-w-bound-edge"
+        },
+        {
+          "name": "25’x6′ Black Carpet w/Bound Edge",
+          "color": "",
+          "material": "Carpet",
+          "productFolder": "25-x6-black-carpet-w-bound-edge"
+        },
+        {
+          "name": "25’x6′ Red Carpet w/Bound Edge",
+          "color": "",
+          "material": "",
+          "productFolder": "25-x6-red-carpet-w-bound-edge"
+        },
+        {
+          "name": "50’x4′ Black Carpet w/Bound Edge",
+          "color": "",
+          "material": "",
+          "productFolder": "50-x4-black-carpet-w-bound-edge"
+        },
+        {
+          "name": "50’x4′ Red Carpet w/Bound Edge",
+          "color": "",
+          "material": "",
+          "productFolder": "50-x4-red-carpet-w-bound-edge"
+        },
+        {
+          "name": "50’x4′ Royal Blue Carpet w/Bound Edge",
+          "color": "",
+          "material": "",
+          "productFolder": "50-x4-royal-blue-carpet-w-bound-edge"
+        },
+        {
+          "name": "50’x6′ Black Carpet w/Bound Edge",
+          "color": "",
+          "material": "Carpet",
+          "productFolder": "50-x6-black-carpet-w-bound-edge"
+        },
+        {
+          "name": "50’x6′ Red Carpet w/Bound Edge",
+          "color": "",
+          "material": "",
+          "productFolder": "50-x6-red-carpet-w-bound-edge"
+        }
+      ]
+    },
+    "dance-floor-panel": {
+      "id": "dance-floor-panel",
+      "name": "Dance Floor Panel",
+      "category": "stages-flooring",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/stages-flooring/dance-floor-panel.glb",
+      "fileSize": 10125360,
+      "variants": [
+        {
+          "name": "2’x2′ Black Dance Floor – Use w/2’x4′ Tiles",
+          "color": "",
+          "material": "",
+          "productFolder": "2-x2-black-dance-floor-use-w-2-x4-tiles"
+        },
+        {
+          "name": "2’x4′ Black & White Dance Floor Panel",
+          "color": "",
+          "material": "",
+          "productFolder": "2-x4-black-white-dance-floor-panel"
+        },
+        {
+          "name": "3’x4′ Black Dance Floor Panel",
+          "color": "",
+          "material": "",
+          "productFolder": "3-x4-black-dance-floor-panel"
+        },
+        {
+          "name": "48″x48″ Oak Plank Dance Floor",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "48-x48-oak-plank-dance-floor"
+        },
+        {
+          "name": "4’x4′ Indoor Golden Mahogany Dance Floor",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "4-x4-indoor-golden-mahogany-dance-floor"
+        },
+        {
+          "name": "4’x4′ White or Black Dance Floor (Add size/$70 Per Section)",
+          "color": "",
+          "material": "",
+          "productFolder": "4-x4-white-or-black-dance-floor-add-size-70-per-section"
+        }
+      ]
+    },
+    "hardboard-staging-section": {
+      "id": "hardboard-staging-section",
+      "name": "Hardboard Staging Section",
+      "category": "stages-flooring",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/stages-flooring/hardboard-staging-section.glb",
+      "fileSize": 13704832,
+      "variants": [
+        {
+          "name": "8’x18″ White Hardboard Sections for Staging",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "8-x18-white-hardboard-sections-for-staging"
+        }
+      ]
+    },
+    "laminate-dance-floor": {
+      "id": "laminate-dance-floor",
+      "name": "Laminate Dance Floor",
+      "category": "stages-flooring",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/stages-flooring/laminate-dance-floor.glb",
+      "fileSize": 5860356,
+      "variants": [
+        {
+          "name": "4’x4′ Laminate Black Indoor Dance Floor",
+          "color": "",
+          "material": "Laminate",
+          "productFolder": "4-x4-laminate-black-indoor-dance-floor"
+        },
+        {
+          "name": "4’x4′ Laminate White Indoor Dance Floor Panel",
+          "color": "",
+          "material": "Laminate",
+          "productFolder": "4-x4-laminate-white-indoor-dance-floor-panel"
+        },
+        {
+          "name": "French Oak Laminate Dance Floor",
+          "color": "",
+          "material": "",
+          "productFolder": "french-oak-laminate-dance-floor"
+        }
+      ]
+    },
+    "madison-stage-surround": {
+      "id": "madison-stage-surround",
+      "name": "Madison Stage Surround",
+      "category": "stages-flooring",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/stages-flooring/madison-stage-surround.glb",
+      "fileSize": 8927620,
+      "variants": [
+        {
+          "name": "Madison Stage Surround",
+          "color": "",
+          "material": "",
+          "productFolder": "madison-stage-surround"
+        }
+      ]
+    },
+    "platform-stage-step": {
+      "id": "platform-stage-step",
+      "name": "Platform Stage Step",
+      "category": "stages-flooring",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/stages-flooring/platform-stage-step.glb",
+      "fileSize": 10811580,
+      "variants": [
+        {
+          "name": "Platform Stage Step White 6’L (16″ or 24″ Stage)",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "platform-stage-step-white-6-l-16-or-24-stage"
+        },
+        {
+          "name": "Platform Stage Step White 6’Lx8″H (16″ Stage)",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "platform-stage-step-white-6-lx8-h-16-stage"
+        },
+        {
+          "name": "Platform Stage Step White 8’L (16″ Stage)",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "platform-stage-step-white-8-l-16-stage"
+        },
+        {
+          "name": "Platform Staging Step (No Rail) 16′ or 24″ H Stage",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "platform-staging-step-no-rail-16-or-24-h-stage"
+        },
+        {
+          "name": "Platform Staging Step (No Rail) 16″ H Stage",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "platform-staging-step-no-rail-16-h-stage"
+        }
+      ]
+    },
+    "round-acrylic-dance-floor": {
+      "id": "round-acrylic-dance-floor",
+      "name": "Round Acrylic Dance Floor",
+      "category": "stages-flooring",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/stages-flooring/round-acrylic-dance-floor.glb",
+      "fileSize": 5905528,
+      "variants": [
+        {
+          "name": "Round White Acrylic Dance Floor",
+          "color": "",
+          "material": "",
+          "productFolder": "round-white-acrylic-dance-floor"
+        }
+      ]
+    },
+    "stage-step-with-rail": {
+      "id": "stage-step-with-rail",
+      "name": "Stage Step with Rail",
+      "category": "stages-flooring",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/stages-flooring/stage-step-with-rail.glb",
+      "fileSize": 9412756,
+      "variants": [
+        {
+          "name": "16″ Step w/Rail",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "16-step-w-rail"
+        }
+      ]
+    },
+    "staging-chair-stop": {
+      "id": "staging-chair-stop",
+      "name": "Staging Chair Stop",
+      "category": "stages-flooring",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/stages-flooring/staging-chair-stop.glb",
+      "fileSize": 10463328,
+      "variants": [
+        {
+          "name": "Staging:  Chair Stop 4′",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "staging-chair-stop-4"
+        },
+        {
+          "name": "Staging:  Chair Stop 8′",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "staging-chair-stop-8"
+        }
+      ]
+    },
+    "staging-section": {
+      "id": "staging-section",
+      "name": "Staging Section",
+      "category": "stages-flooring",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/stages-flooring/staging-section.glb",
+      "fileSize": 9706332,
+      "variants": [
+        {
+          "name": "Staging: 4′ X 4′ Section",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "staging-4-x-4-section"
+        },
+        {
+          "name": "Staging: 4′ X 8′ Section",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "staging-4-x-8-section"
+        }
+      ]
+    },
+    "cecilia-cane-cocktail-table": {
+      "id": "cecilia-cane-cocktail-table",
+      "name": "Cecilia Cane Cocktail Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/tables/cecilia-cane-cocktail-table.glb",
+      "fileSize": 10737480,
+      "variants": [
+        {
+          "name": "Cecilia Cane Black Cocktail Table",
+          "color": "",
+          "material": "",
+          "productFolder": "cecilia-cane-black-cocktail-table"
+        },
+        {
+          "name": "Cecilia Cane Natural Cocktail Table",
+          "color": "",
+          "material": "",
+          "productFolder": "cecilia-cane-natural-cocktail-table"
+        }
+      ]
+    },
+    "colette-pedestal-table": {
+      "id": "colette-pedestal-table",
+      "name": "Colette Pedestal Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/colette-pedestal-table.glb",
+      "fileSize": 8522004,
+      "variants": [
+        {
+          "name": "33″ x 42″H Colette Driftwood Pedestal Table",
+          "color": "",
+          "material": "",
+          "productFolder": "33-x-42-h-colette-driftwood-pedestal-table"
+        },
+        {
+          "name": "33″ x 42″H Colette Grey Wood Pedestal Table",
+          "color": "",
+          "material": "",
+          "productFolder": "33-x-42-h-colette-grey-wood-pedestal-table"
+        }
+      ]
+    },
+    "console-table": {
+      "id": "console-table",
+      "name": "Console Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/console-table.glb",
+      "fileSize": 7812388,
+      "variants": [
+        {
+          "name": "8’x24″ Cedar Console Table",
+          "color": "",
+          "material": "",
+          "productFolder": "8-x24-cedar-console-table"
+        },
+        {
+          "name": "8’x24″ Gray Wash Console Table",
+          "color": "",
+          "material": "",
+          "productFolder": "8-x24-gray-wash-console-table"
+        }
+      ]
+    },
+    "edie-high-cocktail-table": {
+      "id": "edie-high-cocktail-table",
+      "name": "Edie High Cocktail Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/edie-high-cocktail-table.glb",
+      "fileSize": 4061928,
+      "variants": [
+        {
+          "name": "Edie High Cocktail",
+          "color": "",
+          "material": "",
+          "productFolder": "edie-high-cocktail"
+        }
+      ]
+    },
+    "ezra-dining-table": {
+      "id": "ezra-dining-table",
+      "name": "Ezra Dining Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/tables/ezra-dining-table.glb",
+      "fileSize": 5593988,
+      "variants": [
+        {
+          "name": "Ezra Dining Table White",
+          "color": "",
+          "material": "",
+          "productFolder": "ezra-dining-table-white"
+        }
+      ]
+    },
+    "farm-table": {
+      "id": "farm-table",
+      "name": "Farm Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/tables/farm-table.glb",
+      "fileSize": 5461060,
+      "variants": [
+        {
+          "name": "6’x42″ Antique Farm Table",
+          "color": "",
+          "material": "",
+          "productFolder": "6-x42-antique-farm-table"
+        },
+        {
+          "name": "8.5’x40″ Walnut Farm Table",
+          "color": "",
+          "material": "",
+          "productFolder": "8-5-x40-walnut-farm-table"
+        },
+        {
+          "name": "Blair Farm Table",
+          "color": "Brown",
+          "material": "",
+          "productFolder": "blair-farm-table"
+        },
+        {
+          "name": "Rectangular Rustic Brown Farm Tables",
+          "color": "",
+          "material": "",
+          "productFolder": "rectangular-rustic-brown-farm-tables"
+        }
+      ]
+    },
+    "high-cocktail-table": {
+      "id": "high-cocktail-table",
+      "name": "High Cocktail Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/high-cocktail-table.glb",
+      "fileSize": 4733604,
+      "variants": [
+        {
+          "name": "Gold & White High Cocktail Table",
+          "color": "",
+          "material": "",
+          "productFolder": "gold-white-high-cocktail-table"
+        }
+      ]
+    },
+    "honeycomb-cocktail-table": {
+      "id": "honeycomb-cocktail-table",
+      "name": "Honeycomb Cocktail Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/honeycomb-cocktail-table.glb",
+      "fileSize": 8755064,
+      "variants": [
+        {
+          "name": "30″x42″ H Black Honeycomb Cocktail Table",
+          "color": "",
+          "material": "",
+          "productFolder": "30-x42-h-black-honeycomb-cocktail-table"
+        },
+        {
+          "name": "30″x42″ H Gold Honeycomb Cocktail Table",
+          "color": "",
+          "material": "",
+          "productFolder": "30-x42-h-gold-honeycomb-cocktail-table"
+        },
+        {
+          "name": "30″x42″ H Rustic Honeycomb Cocktail Table",
+          "color": "",
+          "material": "",
+          "productFolder": "30-x42-h-rustic-honeycomb-cocktail-table"
+        }
+      ]
+    },
+    "industrial-farm-table": {
+      "id": "industrial-farm-table",
+      "name": "Industrial Farm Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/tables/industrial-farm-table.glb",
+      "fileSize": 6924400,
+      "variants": [
+        {
+          "name": "8′ X 42″ Driftwood Industrial Farm Table",
+          "color": "",
+          "material": "",
+          "productFolder": "8-x-42-driftwood-industrial-farm-table"
+        },
+        {
+          "name": "8′ x 42″ White Wash Industrial Farm Table",
+          "color": "",
+          "material": "",
+          "productFolder": "8-x-42-white-wash-industrial-farm-table"
+        }
+      ]
+    },
+    "james-dining-table": {
+      "id": "james-dining-table",
+      "name": "James Dining Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/tables/james-dining-table.glb",
+      "fileSize": 8061200,
+      "variants": [
+        {
+          "name": "James Dining Table",
+          "color": "",
+          "material": "",
+          "productFolder": "james-dining-table"
+        }
+      ]
+    },
+    "laminate-classroom-table": {
+      "id": "laminate-classroom-table",
+      "name": "Laminate Classroom Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/laminate-classroom-table.glb",
+      "fileSize": 6146128,
+      "variants": [
+        {
+          "name": "6’x18″x30″ Laminate Classroom w/Modesty Panel Table",
+          "color": "",
+          "material": "",
+          "productFolder": "6-x18-x30-laminate-classroom-w-modesty-panel-table"
+        }
+      ]
+    },
+    "lenox-cocktail-table": {
+      "id": "lenox-cocktail-table",
+      "name": "Lenox Cocktail Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/lenox-cocktail-table.glb",
+      "fileSize": 5561140,
+      "variants": [
+        {
+          "name": "Lenox Black Cocktail Table",
+          "color": "Black",
+          "material": "",
+          "productFolder": "lenox-black-cocktail-table"
+        },
+        {
+          "name": "Lenox White Cocktail Table",
+          "color": "",
+          "material": "",
+          "productFolder": "lenox-white-cocktail-table"
+        }
+      ]
+    },
+    "lippa-high-cocktail-table": {
+      "id": "lippa-high-cocktail-table",
+      "name": "Lippa High Cocktail Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/lippa-high-cocktail-table.glb",
+      "fileSize": 4150248,
+      "variants": [
+        {
+          "name": "Lippa Black High Cocktail Table",
+          "color": "Black",
+          "material": "",
+          "productFolder": "lippa-black-high-cocktail-table"
+        },
+        {
+          "name": "Lippa High Cocktail Table",
+          "color": "",
+          "material": "",
+          "productFolder": "lippa-high-cocktail-table"
+        },
+        {
+          "name": "Lippa White High Cocktail Table",
+          "color": "White",
+          "material": "",
+          "productFolder": "lippa-white-high-cocktail-table"
+        }
+      ]
+    },
+    "lippa-low-cocktail-table": {
+      "id": "lippa-low-cocktail-table",
+      "name": "Lippa Low Cocktail Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/lippa-low-cocktail-table.glb",
+      "fileSize": 7479208,
+      "variants": [
+        {
+          "name": "Lippa Black Marble Low Cocktail Table",
+          "color": "Black",
+          "material": "",
+          "productFolder": "lippa-black-marble-low-cocktail-table"
+        },
+        {
+          "name": "Lippa Low Cocktail All White",
+          "color": "White",
+          "material": "",
+          "productFolder": "lippa-low-cocktail-all-white"
+        }
+      ]
+    },
+    "mia-high-cocktail-table": {
+      "id": "mia-high-cocktail-table",
+      "name": "Mia High Cocktail Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/mia-high-cocktail-table.glb",
+      "fileSize": 6195072,
+      "variants": [
+        {
+          "name": "Mia High Cocktail Table",
+          "color": "Silver, White",
+          "material": "",
+          "productFolder": "mia-high-cocktail-table"
+        }
+      ]
+    },
+    "mod-edge-console-table": {
+      "id": "mod-edge-console-table",
+      "name": "Mod Edge Console Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/mod-edge-console-table.glb",
+      "fileSize": 7580784,
+      "variants": [
+        {
+          "name": "8’x24″ Black Mod Edge Console Table",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "8-x24-black-mod-edge-console-table"
+        },
+        {
+          "name": "8’x24″ White Mod Edge Console Table",
+          "color": "",
+          "material": "",
+          "productFolder": "8-x24-white-mod-edge-console-table"
+        }
+      ]
+    },
+    "mod-edge-table": {
+      "id": "mod-edge-table",
+      "name": "Mod Edge Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/mod-edge-table.glb",
+      "fileSize": 8196352,
+      "variants": [
+        {
+          "name": "8’x48″ White Mod Edge Table",
+          "color": "",
+          "material": "",
+          "productFolder": "8-x48-white-mod-edge-table"
+        }
+      ]
+    },
+    "napa-high-top-folding-table": {
+      "id": "napa-high-top-folding-table",
+      "name": "Napa High Top Folding Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/napa-high-top-folding-table.glb",
+      "fileSize": 5730336,
+      "variants": [
+        {
+          "name": "30″ RD Napa Antique High Top Folding Table",
+          "color": "",
+          "material": "",
+          "productFolder": "30-rd-napa-antique-high-top-folding-table"
+        }
+      ]
+    },
+    "nova-pedestal-table": {
+      "id": "nova-pedestal-table",
+      "name": "Nova Pedestal Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/nova-pedestal-table.glb",
+      "fileSize": 5340104,
+      "variants": [
+        {
+          "name": "Nova Gold & Black Pedestal Table",
+          "color": "",
+          "material": "",
+          "productFolder": "nova-gold-black-pedestal-table"
+        }
+      ]
+    },
+    "oval-tables": {
+      "id": "oval-tables",
+      "name": "Oval Tables",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/oval-tables.glb",
+      "fileSize": 5393908,
+      "variants": [
+        {
+          "name": "Oval Tables",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "oval-tables"
+        }
+      ]
+    },
+    "pedestal-tables": {
+      "id": "pedestal-tables",
+      "name": "Pedestal Tables",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/pedestal-tables.glb",
+      "fileSize": 6366432,
+      "variants": [
+        {
+          "name": "Pedestal Tables",
+          "color": "",
+          "material": "Stainless Steel, Wood",
+          "productFolder": "pedestal-tables"
+        }
+      ]
+    },
+    "rectangular-banquet-tables": {
+      "id": "rectangular-banquet-tables",
+      "name": "Rectangular Banquet Tables",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/rectangular-banquet-tables.glb",
+      "fileSize": 6278580,
+      "variants": [
+        {
+          "name": "Rectangular Banquet Tables (30″ – 36″ Wide)",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "rectangular-banquet-tables-30-36-wide"
+        }
+      ]
+    },
+    "rectangular-classroom-tables": {
+      "id": "rectangular-classroom-tables",
+      "name": "Rectangular Classroom Tables",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/rectangular-classroom-tables.glb",
+      "fileSize": 6456572,
+      "variants": [
+        {
+          "name": "Rectangular Classroom Tables (18″ Wide)",
+          "color": "",
+          "material": "Wood",
+          "productFolder": "rectangular-classroom-tables-18-wide"
+        }
+      ]
+    },
+    "sculpted-edge-dining-table": {
+      "id": "sculpted-edge-dining-table",
+      "name": "Sculpted Edge Dining Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "complex",
+      "filePath": "floorplan/tables/sculpted-edge-dining-table.glb",
+      "fileSize": 7533900,
+      "variants": [
+        {
+          "name": "8’x42″ Black Sculpted Edge Dining Table",
+          "color": "",
+          "material": "",
+          "productFolder": "8-x42-black-sculpted-edge-dining-table"
+        },
+        {
+          "name": "8’x48″ White Sculpted Edge Dining Table",
+          "color": "",
+          "material": "",
+          "productFolder": "8-x48-white-sculpted-edge-dining-table"
+        }
+      ]
+    },
+    "sq-gunmetal-table": {
+      "id": "sq-gunmetal-table",
+      "name": "SQ Gunmetal Table",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "simple",
+      "filePath": "floorplan/tables/sq-gunmetal-table.glb",
+      "fileSize": 4996144,
+      "variants": [
+        {
+          "name": "24″x42″ H SQ Gunmetal Table",
+          "color": "",
+          "material": "",
+          "productFolder": "24-x42-h-sq-gunmetal-table"
+        }
+      ]
+    },
+    "sullivan-table-lid": {
+      "id": "sullivan-table-lid",
+      "name": "Sullivan Table Lid",
+      "category": "tables",
+      "catalog": "floorplan",
+      "complexity": "medium",
+      "filePath": "floorplan/tables/sullivan-table-lid.glb",
+      "fileSize": 6544072,
+      "variants": [
+        {
+          "name": "8′ x 42″ Sullivan Warm Brown Table Lid",
+          "color": "Brown",
+          "material": "",
+          "productFolder": "8-x-42-sullivan-warm-brown-table-lid"
+        }
+      ]
+    },
+    "acrylic-marbled-charger": {
+      "id": "acrylic-marbled-charger",
+      "name": "Acrylic Marbled Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/acrylic-marbled-charger.glb",
+      "fileSize": 8088756,
+      "variants": [
+        {
+          "name": "13″ Acrylic Marbled Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-acrylic-marbled-charger"
+        }
+      ]
+    },
+    "bloom-charger": {
+      "id": "bloom-charger",
+      "name": "Bloom Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/bloom-charger.glb",
+      "fileSize": 9078200,
+      "variants": [
+        {
+          "name": "13″ Bloom Copper Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-bloom-copper-charger"
+        }
+      ]
+    },
+    "boca-handwoven-charger": {
+      "id": "boca-handwoven-charger",
+      "name": "Boca Handwoven Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/boca-handwoven-charger.glb",
+      "fileSize": 11914088,
+      "variants": [
+        {
+          "name": "14.9″ Boca Handwoven Grey Charger",
+          "color": "Grey",
+          "material": "",
+          "productFolder": "14-9-boca-handwoven-grey-charger"
+        },
+        {
+          "name": "14.9″ Boca Handwoven Natural Charger",
+          "color": "Brown",
+          "material": "",
+          "productFolder": "14-9-boca-handwoven-natural-charger"
+        }
+      ]
+    },
+    "casale-white-charger": {
+      "id": "casale-white-charger",
+      "name": "Casale White Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/casale-white-charger.glb",
+      "fileSize": 10828368,
+      "variants": [
+        {
+          "name": "12.25″ Casale White Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "12-25-casale-white-charger"
+        }
+      ]
+    },
+    "cheerful-rim-charger": {
+      "id": "cheerful-rim-charger",
+      "name": "Cheerful Rim Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/cheerful-rim-charger.glb",
+      "fileSize": 5916492,
+      "variants": [
+        {
+          "name": "12.5″ Cheerful Black w/Gold Rim Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "12-5-cheerful-black-w-gold-rim-charger"
+        },
+        {
+          "name": "12.5″ Cheerful with Gold Rim Charger",
+          "color": "Gold, White",
+          "material": "",
+          "productFolder": "12-5-cheerful-with-gold-rim-charger"
+        },
+        {
+          "name": "12.5″ Cheerful with Platinum Rim Charger",
+          "color": "Silver, White",
+          "material": "",
+          "productFolder": "12-5-cheerful-with-platinum-rim-charger"
+        }
+      ]
+    },
+    "contessa-rim-charger": {
+      "id": "contessa-rim-charger",
+      "name": "Contessa Rim Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/contessa-rim-charger.glb",
+      "fileSize": 5478476,
+      "variants": [
+        {
+          "name": "12″ Contessa w/Gold Rim Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "12-contessa-w-gold-rim-charger"
+        }
+      ]
+    },
+    "coupe-band-charger": {
+      "id": "coupe-band-charger",
+      "name": "Coupe Band Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/coupe-band-charger.glb",
+      "fileSize": 4947104,
+      "variants": [
+        {
+          "name": "Coupe Fern Band Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "coupe-fern-band-charger"
+        }
+      ]
+    },
+    "elsa-ice-charger": {
+      "id": "elsa-ice-charger",
+      "name": "Elsa Ice Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/elsa-ice-charger.glb",
+      "fileSize": 12406672,
+      "variants": [
+        {
+          "name": "13″ Elsa Ice Charger",
+          "color": "Clear",
+          "material": "",
+          "productFolder": "13-elsa-ice-charger"
+        }
+      ]
+    },
+    "finezza-charger": {
+      "id": "finezza-charger",
+      "name": "Finezza Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/finezza-charger.glb",
+      "fileSize": 10140020,
+      "variants": [
+        {
+          "name": "13″ Finezza Grey Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-finezza-grey-charger"
+        }
+      ]
+    },
+    "florence-charger": {
+      "id": "florence-charger",
+      "name": "Florence Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/florence-charger.glb",
+      "fileSize": 8055868,
+      "variants": [
+        {
+          "name": "13″ Florence Gold/Cream Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-florence-gold-cream-charger"
+        }
+      ]
+    },
+    "glass-beaded-charger": {
+      "id": "glass-beaded-charger",
+      "name": "Glass Beaded Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/glass-beaded-charger.glb",
+      "fileSize": 6941420,
+      "variants": [
+        {
+          "name": "12.5″ Glass Clear Beaded Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "12-5-glass-clear-beaded-charger"
+        },
+        {
+          "name": "12.5″ Glass Gold Beaded Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "12-5-glass-gold-beaded-charger"
+        },
+        {
+          "name": "12.5″ Glass Silver Beaded Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "12-5-glass-silver-beaded-charger"
+        }
+      ]
+    },
+    "glass-pearl-sunray-charger": {
+      "id": "glass-pearl-sunray-charger",
+      "name": "Glass Pearl Sunray Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/glass-pearl-sunray-charger.glb",
+      "fileSize": 7312280,
+      "variants": [
+        {
+          "name": "13″ Glass Pearl Sunray Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-glass-pearl-sunray-charger"
+        }
+      ]
+    },
+    "glass-rim-charger": {
+      "id": "glass-rim-charger",
+      "name": "Glass Rim Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/glass-rim-charger.glb",
+      "fileSize": 9542320,
+      "variants": [
+        {
+          "name": "12.75″ Glass w/Gold Rim Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "12-75-glass-w-gold-rim-charger"
+        },
+        {
+          "name": "12.75″ Glass w/Silver Rim Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "12-75-glass-w-silver-rim-charger"
+        }
+      ]
+    },
+    "glass-sponge-charger": {
+      "id": "glass-sponge-charger",
+      "name": "Glass Sponge Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/glass-sponge-charger.glb",
+      "fileSize": 9860132,
+      "variants": [
+        {
+          "name": "13.75″ Glass Sponge Gold Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-75-glass-sponge-gold-charger"
+        },
+        {
+          "name": "13.75″ Glass Sponge Silver Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-75-glass-sponge-silver-charger"
+        }
+      ]
+    },
+    "heirloom-charger": {
+      "id": "heirloom-charger",
+      "name": "Heirloom Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/heirloom-charger.glb",
+      "fileSize": 8233720,
+      "variants": [
+        {
+          "name": "12″ Heirloom Black Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "12-heirloom-black-charger"
+        }
+      ]
+    },
+    "ice-gold-band-charger": {
+      "id": "ice-gold-band-charger",
+      "name": "Ice Gold Band Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/ice-gold-band-charger.glb",
+      "fileSize": 14667960,
+      "variants": [
+        {
+          "name": "12.75″ Ice Gold Band Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "12-75-ice-gold-band-charger"
+        }
+      ]
+    },
+    "lacquered-charger": {
+      "id": "lacquered-charger",
+      "name": "Lacquered Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/lacquered-charger.glb",
+      "fileSize": 8387060,
+      "variants": [
+        {
+          "name": "13″ Lacquered Gold Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-lacquered-gold-charger"
+        },
+        {
+          "name": "13″ Lacquered Silver Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-lacquered-silver-charger"
+        }
+      ]
+    },
+    "louisa-etched-glass-charger": {
+      "id": "louisa-etched-glass-charger",
+      "name": "Louisa Etched Glass Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "complex",
+      "filePath": "tablescape/charger-set-plates/louisa-etched-glass-charger.glb",
+      "fileSize": 8023448,
+      "variants": [
+        {
+          "name": "13″ Louisa Etched Glass Fern Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-louisa-etched-glass-fern-charger"
+        }
+      ]
+    },
+    "mercury-glass-charger": {
+      "id": "mercury-glass-charger",
+      "name": "Mercury Glass Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/mercury-glass-charger.glb",
+      "fileSize": 8979600,
+      "variants": [
+        {
+          "name": "Mercury Glass Gold Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "mercury-glass-gold-charger"
+        },
+        {
+          "name": "Mercury Glass Silver Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "mercury-glass-silver-charger"
+        }
+      ]
+    },
+    "octagonal-glass-sparkle-charger": {
+      "id": "octagonal-glass-sparkle-charger",
+      "name": "Octagonal Glass Sparkle Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/octagonal-glass-sparkle-charger.glb",
+      "fileSize": 16249524,
+      "variants": [
+        {
+          "name": "Octagonal Glass Sparkle Silver Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "octagonal-glass-sparkle-silver-charger"
+        }
+      ]
+    },
+    "rattan-charger": {
+      "id": "rattan-charger",
+      "name": "Rattan Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/rattan-charger.glb",
+      "fileSize": 11564612,
+      "variants": [
+        {
+          "name": "13″ RD Rattan Light Brown Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-rd-rattan-light-brown-charger"
+        },
+        {
+          "name": "13″ Rattan White Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-rattan-white-charger"
+        }
+      ]
+    },
+    "rustico-charger": {
+      "id": "rustico-charger",
+      "name": "Rustico Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/rustico-charger.glb",
+      "fileSize": 8881136,
+      "variants": [
+        {
+          "name": "13″ Rustico Grey Wood  Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-rustico-grey-wood-charger"
+        }
+      ]
+    },
+    "tondo-charger": {
+      "id": "tondo-charger",
+      "name": "Tondo Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/tondo-charger.glb",
+      "fileSize": 8593424,
+      "variants": [
+        {
+          "name": "12″ Tondo Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "12-tondo-charger"
+        }
+      ]
+    },
+    "valencia-charger": {
+      "id": "valencia-charger",
+      "name": "Valencia Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/valencia-charger.glb",
+      "fileSize": 14392396,
+      "variants": [
+        {
+          "name": "13″ Copper Valencia Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-copper-valencia-charger"
+        },
+        {
+          "name": "13″ Silver Valencia Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "13-silver-valencia-charger"
+        }
+      ]
+    },
+    "waverly-charger": {
+      "id": "waverly-charger",
+      "name": "Waverly Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/waverly-charger.glb",
+      "fileSize": 6675772,
+      "variants": [
+        {
+          "name": "12″ Waverly White & Gold Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "12-waverly-white-gold-charger"
+        }
+      ]
+    },
+    "winnie-charger": {
+      "id": "winnie-charger",
+      "name": "Winnie Charger",
+      "category": "charger-set-plates",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/charger-set-plates/winnie-charger.glb",
+      "fileSize": 11130728,
+      "variants": [
+        {
+          "name": "Winnie Natural Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "winnie-natural-charger"
+        },
+        {
+          "name": "Winnie Whitewashed Charger",
+          "color": "",
+          "material": "",
+          "productFolder": "winnie-whitewashed-charger"
+        }
+      ]
+    },
+    "azalea-blue-china": {
+      "id": "azalea-blue-china",
+      "name": "Azalea Blue China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/azalea-blue-china.glb",
+      "fileSize": 5578268,
+      "variants": [
+        {
+          "name": "Azalea Blue China",
+          "color": "",
+          "material": "",
+          "productFolder": "azalea-blue-china"
+        }
+      ]
+    },
+    "bright-green-china": {
+      "id": "bright-green-china",
+      "name": "Bright Green China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/bright-green-china.glb",
+      "fileSize": 7128516,
+      "variants": [
+        {
+          "name": "Bright Green China",
+          "color": "",
+          "material": "",
+          "productFolder": "bright-green-china"
+        }
+      ]
+    },
+    "calgary-china": {
+      "id": "calgary-china",
+      "name": "Calgary China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/calgary-china.glb",
+      "fileSize": 13098028,
+      "variants": [
+        {
+          "name": "Calgary China",
+          "color": "",
+          "material": "",
+          "productFolder": "calgary-china"
+        }
+      ]
+    },
+    "cheerful-china": {
+      "id": "cheerful-china",
+      "name": "Cheerful China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/cheerful-china.glb",
+      "fileSize": 6437596,
+      "variants": [
+        {
+          "name": "Cheerful China",
+          "color": "",
+          "material": "",
+          "productFolder": "cheerful-china"
+        }
+      ]
+    },
+    "china-white-fluted-ramekin": {
+      "id": "china-white-fluted-ramekin",
+      "name": "China White Fluted Ramekin",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/china-white-fluted-ramekin.glb",
+      "fileSize": 6293080,
+      "variants": [
+        {
+          "name": "2oz China White Fluted Ramekin 2.75″",
+          "color": "",
+          "material": "",
+          "productFolder": "2oz-china-white-fluted-ramekin-2-75"
+        },
+        {
+          "name": "3oz China White Fluted Ramekin 3″",
+          "color": "",
+          "material": "",
+          "productFolder": "3oz-china-white-fluted-ramekin-3"
+        },
+        {
+          "name": "6oz China White Fluted Ramekin 3.5″",
+          "color": "",
+          "material": "",
+          "productFolder": "6oz-china-white-fluted-ramekin-3-5"
+        }
+      ]
+    },
+    "china-white-sugar-bowl": {
+      "id": "china-white-sugar-bowl",
+      "name": "China White Sugar Bowl",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/china-white-sugar-bowl.glb",
+      "fileSize": 5402624,
+      "variants": [
+        {
+          "name": "8OZ China White Sugar Bowl",
+          "color": "",
+          "material": "",
+          "productFolder": "8oz-china-white-sugar-bowl"
+        }
+      ]
+    },
+    "china-white-sugar-packet-holder": {
+      "id": "china-white-sugar-packet-holder",
+      "name": "China White Sugar Packet Holder",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/china-white-sugar-packet-holder.glb",
+      "fileSize": 6035520,
+      "variants": [
+        {
+          "name": "China White Sugar Packet Holder",
+          "color": "",
+          "material": "",
+          "productFolder": "china-white-sugar-packet-holder"
+        }
+      ]
+    },
+    "clear-glass-coffee-mug": {
+      "id": "clear-glass-coffee-mug",
+      "name": "Clear Glass Coffee Mug",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/clear-glass-coffee-mug.glb",
+      "fileSize": 8695876,
+      "variants": [
+        {
+          "name": "10oz Clear Glass Coffee Mug (20/rack)",
+          "color": "",
+          "material": "",
+          "productFolder": "10oz-clear-glass-coffee-mug-20-rack"
+        }
+      ]
+    },
+    "cobalt-blue-china": {
+      "id": "cobalt-blue-china",
+      "name": "Cobalt Blue China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/cobalt-blue-china.glb",
+      "fileSize": 6227364,
+      "variants": [
+        {
+          "name": "Cobalt Blue China",
+          "color": "",
+          "material": "",
+          "productFolder": "cobalt-blue-china"
+        }
+      ]
+    },
+    "cotillion-china": {
+      "id": "cotillion-china",
+      "name": "Cotillion China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/cotillion-china.glb",
+      "fileSize": 11669772,
+      "variants": [
+        {
+          "name": "Cotillion China",
+          "color": "",
+          "material": "",
+          "productFolder": "cotillion-china"
+        }
+      ]
+    },
+    "coupe-gold-band-china": {
+      "id": "coupe-gold-band-china",
+      "name": "Coupe Gold Band China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/coupe-gold-band-china.glb",
+      "fileSize": 5103124,
+      "variants": [
+        {
+          "name": "Coupe Gold Band China",
+          "color": "",
+          "material": "Chinaware",
+          "productFolder": "coupe-gold-band-china"
+        }
+      ]
+    },
+    "daisy-salad-dessert-plate": {
+      "id": "daisy-salad-dessert-plate",
+      "name": "Daisy Salad/Dessert Plate",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "complex",
+      "filePath": "tablescape/china-dishware/daisy-salad-dessert-plate.glb",
+      "fileSize": 12424788,
+      "variants": [
+        {
+          "name": "8″ Daisy Salad/Dessert Plate",
+          "color": "",
+          "material": "",
+          "productFolder": "8-daisy-salad-dessert-plate"
+        }
+      ]
+    },
+    "dottie-china": {
+      "id": "dottie-china",
+      "name": "Dottie China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/dottie-china.glb",
+      "fileSize": 15258736,
+      "variants": [
+        {
+          "name": "Dottie China",
+          "color": "",
+          "material": "",
+          "productFolder": "dottie-china"
+        }
+      ]
+    },
+    "duchess-china": {
+      "id": "duchess-china",
+      "name": "Duchess China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/duchess-china.glb",
+      "fileSize": 8021092,
+      "variants": [
+        {
+          "name": "Duchess China",
+          "color": "",
+          "material": "",
+          "productFolder": "duchess-china"
+        }
+      ]
+    },
+    "festive-collection": {
+      "id": "festive-collection",
+      "name": "Festive Collection",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/festive-collection.glb",
+      "fileSize": 7922448,
+      "variants": [
+        {
+          "name": "Festive Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "festive-collection"
+        }
+      ]
+    },
+    "finezza-china": {
+      "id": "finezza-china",
+      "name": "Finezza China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/finezza-china.glb",
+      "fileSize": 9569384,
+      "variants": [
+        {
+          "name": "Finezza Cream China",
+          "color": "",
+          "material": "",
+          "productFolder": "finezza-cream-china"
+        }
+      ]
+    },
+    "firenze-china": {
+      "id": "firenze-china",
+      "name": "Firenze China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "complex",
+      "filePath": "tablescape/china-dishware/firenze-china.glb",
+      "fileSize": 9727012,
+      "variants": [
+        {
+          "name": "Firenze China",
+          "color": "",
+          "material": "",
+          "productFolder": "firenze-china"
+        }
+      ]
+    },
+    "flora-fern-china": {
+      "id": "flora-fern-china",
+      "name": "Flora Fern China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "complex",
+      "filePath": "tablescape/china-dishware/flora-fern-china.glb",
+      "fileSize": 5723600,
+      "variants": [
+        {
+          "name": "Flora Fern China",
+          "color": "",
+          "material": "",
+          "productFolder": "flora-fern-china"
+        }
+      ]
+    },
+    "florentine-salad-dessert-plate": {
+      "id": "florentine-salad-dessert-plate",
+      "name": "Florentine Salad/Dessert Plate",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/florentine-salad-dessert-plate.glb",
+      "fileSize": 356804,
+      "variants": [
+        {
+          "name": "Florentine Salad/Dessert Plate 8″",
+          "color": "",
+          "material": "",
+          "productFolder": "florentine-salad-dessert-plate-8"
+        }
+      ]
+    },
+    "frances-floral-dinner-plate": {
+      "id": "frances-floral-dinner-plate",
+      "name": "Frances Floral Dinner Plate",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "complex",
+      "filePath": "tablescape/china-dishware/frances-floral-dinner-plate.glb",
+      "fileSize": 7118436,
+      "variants": [
+        {
+          "name": "11.5″ Frances Azure Floral Dinner Plate",
+          "color": "",
+          "material": "",
+          "productFolder": "11-5-frances-azure-floral-dinner-plate"
+        }
+      ]
+    },
+    "gabrielle-china": {
+      "id": "gabrielle-china",
+      "name": "Gabrielle China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/gabrielle-china.glb",
+      "fileSize": 10362292,
+      "variants": [
+        {
+          "name": "Gabrielle China",
+          "color": "",
+          "material": "",
+          "productFolder": "gabrielle-china"
+        }
+      ]
+    },
+    "gatsby-salad-dessert-plate": {
+      "id": "gatsby-salad-dessert-plate",
+      "name": "Gatsby Salad/Dessert Plate",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "complex",
+      "filePath": "tablescape/china-dishware/gatsby-salad-dessert-plate.glb",
+      "fileSize": 6062356,
+      "variants": [
+        {
+          "name": "8″ Gatsby Salad/Dessert Plate",
+          "color": "",
+          "material": "",
+          "productFolder": "8-gatsby-salad-dessert-plate"
+        }
+      ]
+    },
+    "giulietta-floral-dinner-plate": {
+      "id": "giulietta-floral-dinner-plate",
+      "name": "Giulietta Floral Dinner Plate",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "complex",
+      "filePath": "tablescape/china-dishware/giulietta-floral-dinner-plate.glb",
+      "fileSize": 8560544,
+      "variants": [
+        {
+          "name": "11.5″ Giulietta Floral Dinner Plate",
+          "color": "",
+          "material": "",
+          "productFolder": "11-5-giulietta-floral-dinner-plate"
+        }
+      ]
+    },
+    "heirloom-china": {
+      "id": "heirloom-china",
+      "name": "Heirloom China",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/heirloom-china.glb",
+      "fileSize": 5957208,
+      "variants": [
+        {
+          "name": "Heirloom Black China",
+          "color": "",
+          "material": "",
+          "productFolder": "heirloom-black-china"
+        },
+        {
+          "name": "Heirloom Blush China",
+          "color": "",
+          "material": "",
+          "productFolder": "heirloom-blush-china"
+        },
+        {
+          "name": "Heirloom Linen China",
+          "color": "",
+          "material": "",
+          "productFolder": "heirloom-linen-china"
+        },
+        {
+          "name": "Heirloom Smoke China",
+          "color": "",
+          "material": "",
+          "productFolder": "heirloom-smoke-china"
+        }
+      ]
+    },
+    "kaleb-stoneware": {
+      "id": "kaleb-stoneware",
+      "name": "Kaleb Stoneware",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/kaleb-stoneware.glb",
+      "fileSize": 6742684,
+      "variants": [
+        {
+          "name": "Kaleb Black Stoneware",
+          "color": "",
+          "material": "",
+          "productFolder": "kaleb-black-stoneware"
+        },
+        {
+          "name": "Kaleb Cotton Stoneware",
+          "color": "",
+          "material": "",
+          "productFolder": "kaleb-cotton-stoneware"
+        },
+        {
+          "name": "Kaleb Forest Grey Stoneware",
+          "color": "",
+          "material": "",
+          "productFolder": "kaleb-forest-grey-stoneware"
+        }
+      ]
+    },
+    "marbled-dinner-plate": {
+      "id": "marbled-dinner-plate",
+      "name": "Marbled Dinner Plate",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/marbled-dinner-plate.glb",
+      "fileSize": 5275160,
+      "variants": [
+        {
+          "name": "10″ Marbled Dinner Plate",
+          "color": "",
+          "material": "",
+          "productFolder": "10-marbled-dinner-plate"
+        }
+      ]
+    },
+    "myrtle-salad-dessert-plate": {
+      "id": "myrtle-salad-dessert-plate",
+      "name": "Myrtle Salad/Dessert Plate",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "complex",
+      "filePath": "tablescape/china-dishware/myrtle-salad-dessert-plate.glb",
+      "fileSize": 12957068,
+      "variants": [
+        {
+          "name": "8″ Myrtle Salad/Dessert Plate",
+          "color": "",
+          "material": "",
+          "productFolder": "8-myrtle-salad-dessert-plate"
+        }
+      ]
+    },
+    "savannah-coupe-dinner-plate": {
+      "id": "savannah-coupe-dinner-plate",
+      "name": "Savannah Coupe Dinner Plate",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/savannah-coupe-dinner-plate.glb",
+      "fileSize": 8178476,
+      "variants": [
+        {
+          "name": "10.75″ Savannah Coupe Dinner Plate",
+          "color": "",
+          "material": "",
+          "productFolder": "10-75-savannah-coupe-dinner-plate"
+        }
+      ]
+    },
+    "stacking-coffee-cup": {
+      "id": "stacking-coffee-cup",
+      "name": "Stacking Coffee Cup",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/stacking-coffee-cup.glb",
+      "fileSize": 4661436,
+      "variants": [
+        {
+          "name": "8 oz Stacking Coffee Cup",
+          "color": "",
+          "material": "",
+          "productFolder": "8-oz-stacking-coffee-cup"
+        }
+      ]
+    },
+    "white-modern-coffee-creamer": {
+      "id": "white-modern-coffee-creamer",
+      "name": "White Modern Coffee Creamer",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/white-modern-coffee-creamer.glb",
+      "fileSize": 4348916,
+      "variants": [
+        {
+          "name": "8″ 24OZ White Modern Coffee Creamer/Milk Pourer",
+          "color": "",
+          "material": "",
+          "productFolder": "8-24oz-white-modern-coffee-creamer-milk-pourer"
+        }
+      ]
+    },
+    "white-rim-creamer": {
+      "id": "white-rim-creamer",
+      "name": "White Rim Creamer",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/white-rim-creamer.glb",
+      "fileSize": 5537636,
+      "variants": [
+        {
+          "name": "32oz White Rim Creamer",
+          "color": "",
+          "material": "",
+          "productFolder": "32oz-white-rim-creamer"
+        }
+      ]
+    },
+    "white-rim-gravy-boat": {
+      "id": "white-rim-gravy-boat",
+      "name": "White Rim Gravy Boat",
+      "category": "china-dishware",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/china-dishware/white-rim-gravy-boat.glb",
+      "fileSize": 4111648,
+      "variants": [
+        {
+          "name": "16OZ White Rim Gravy Boat",
+          "color": "",
+          "material": "",
+          "productFolder": "16oz-white-rim-gravy-boat"
+        }
+      ]
+    },
+    "antique-ss-flatware": {
+      "id": "antique-ss-flatware",
+      "name": "Antique SS Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/antique-ss-flatware.glb",
+      "fileSize": 6865592,
+      "variants": [
+        {
+          "name": "Antique SS Flatware",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "antique-ss-flatware"
+        }
+      ]
+    },
+    "arezzo-flatware": {
+      "id": "arezzo-flatware",
+      "name": "Arezzo Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/arezzo-flatware.glb",
+      "fileSize": 6134920,
+      "variants": [
+        {
+          "name": "Arezzo Brushed Black Flatware",
+          "color": "",
+          "material": "",
+          "productFolder": "arezzo-brushed-black-flatware"
+        },
+        {
+          "name": "Arezzo Gold Flatware",
+          "color": "",
+          "material": "",
+          "productFolder": "arezzo-gold-flatware"
+        },
+        {
+          "name": "Arezzo Rose Gold Flatware",
+          "color": "",
+          "material": "",
+          "productFolder": "arezzo-rose-gold-flatware"
+        }
+      ]
+    },
+    "capri-ss-flatware": {
+      "id": "capri-ss-flatware",
+      "name": "Capri SS Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/capri-ss-flatware.glb",
+      "fileSize": 5523520,
+      "variants": [
+        {
+          "name": "Capri SS Flatware",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "capri-ss-flatware"
+        }
+      ]
+    },
+    "charleston-flatware": {
+      "id": "charleston-flatware",
+      "name": "Charleston Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/charleston-flatware.glb",
+      "fileSize": 7908820,
+      "variants": [
+        {
+          "name": "Charleston Champagne Flatware",
+          "color": "",
+          "material": "",
+          "productFolder": "charleston-champagne-flatware"
+        }
+      ]
+    },
+    "classic-ss-flatware": {
+      "id": "classic-ss-flatware",
+      "name": "Classic SS Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/classic-ss-flatware.glb",
+      "fileSize": 7509432,
+      "variants": [
+        {
+          "name": "Classic SS Flatware",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "classic-ss-flatware"
+        }
+      ]
+    },
+    "eton-sp-flatware": {
+      "id": "eton-sp-flatware",
+      "name": "Eton SP Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/eton-sp-flatware.glb",
+      "fileSize": 4471708,
+      "variants": [
+        {
+          "name": "Eton SP Flatware",
+          "color": "",
+          "material": "Silver",
+          "productFolder": "eton-sp-flatware"
+        }
+      ]
+    },
+    "fan-ss-flatware": {
+      "id": "fan-ss-flatware",
+      "name": "Fan SS Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/fan-ss-flatware.glb",
+      "fileSize": 5056836,
+      "variants": [
+        {
+          "name": "Fan SS Flatware",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "fan-ss-flatware"
+        }
+      ]
+    },
+    "francois-forged-flatware": {
+      "id": "francois-forged-flatware",
+      "name": "Francois Forged Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/francois-forged-flatware.glb",
+      "fileSize": 5606840,
+      "variants": [
+        {
+          "name": "Francois Gold Forged Flatware",
+          "color": "",
+          "material": "",
+          "productFolder": "francois-gold-forged-flatware"
+        }
+      ]
+    },
+    "hammered-ss-flatware": {
+      "id": "hammered-ss-flatware",
+      "name": "Hammered SS Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/hammered-ss-flatware.glb",
+      "fileSize": 6586476,
+      "variants": [
+        {
+          "name": "Hammered SS Flatware",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "hammered-ss-flatware"
+        }
+      ]
+    },
+    "mikasa-ss-flatware": {
+      "id": "mikasa-ss-flatware",
+      "name": "Mikasa SS Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/mikasa-ss-flatware.glb",
+      "fileSize": 7724032,
+      "variants": [
+        {
+          "name": "Mikasa SS Flatware",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "mikasa-ss-flatware"
+        }
+      ]
+    },
+    "rhodes-burl-flatware": {
+      "id": "rhodes-burl-flatware",
+      "name": "Rhodes Burl Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/rhodes-burl-flatware.glb",
+      "fileSize": 7440988,
+      "variants": [
+        {
+          "name": "Rhodes Burl Flatware",
+          "color": "",
+          "material": "",
+          "productFolder": "rhodes-burl-flatware"
+        }
+      ]
+    },
+    "savoy-flatware": {
+      "id": "savoy-flatware",
+      "name": "Savoy Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/savoy-flatware.glb",
+      "fileSize": 6181512,
+      "variants": [
+        {
+          "name": "Savoy Gold Flatware",
+          "color": "",
+          "material": "",
+          "productFolder": "savoy-gold-flatware"
+        }
+      ]
+    },
+    "scalini-ss-flatware": {
+      "id": "scalini-ss-flatware",
+      "name": "Scalini SS Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/scalini-ss-flatware.glb",
+      "fileSize": 6220008,
+      "variants": [
+        {
+          "name": "Scalini SS Flatware",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "scalini-ss-flatware"
+        }
+      ]
+    },
+    "steak-knives": {
+      "id": "steak-knives",
+      "name": "Steak Knives",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/steak-knives.glb",
+      "fileSize": 11521192,
+      "variants": [
+        {
+          "name": "Steak Knives",
+          "color": "",
+          "material": "Stainless Steel, Wood",
+          "productFolder": "steak-knives"
+        }
+      ]
+    },
+    "stiletto-flatware": {
+      "id": "stiletto-flatware",
+      "name": "Stiletto Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/stiletto-flatware.glb",
+      "fileSize": 5758940,
+      "variants": [
+        {
+          "name": "Stiletto Alabaster Flatware",
+          "color": "",
+          "material": "",
+          "productFolder": "stiletto-alabaster-flatware"
+        },
+        {
+          "name": "Stiletto Flatware",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "stiletto-flatware"
+        }
+      ]
+    },
+    "verona-flatware": {
+      "id": "verona-flatware",
+      "name": "Verona Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/verona-flatware.glb",
+      "fileSize": 2222816,
+      "variants": [
+        {
+          "name": "Verona Black Gold Flatware",
+          "color": "Black, Gold",
+          "material": "",
+          "productFolder": "verona-black-gold-flatware"
+        },
+        {
+          "name": "Verona White Gold Flatware",
+          "color": "Gold, White",
+          "material": "",
+          "productFolder": "verona-white-gold-flatware"
+        }
+      ]
+    },
+    "vibe-ss-flatware": {
+      "id": "vibe-ss-flatware",
+      "name": "Vibe SS Flatware",
+      "category": "flatware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/flatware/vibe-ss-flatware.glb",
+      "fileSize": 9550116,
+      "variants": [
+        {
+          "name": "Vibe SS Flatware",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "vibe-ss-flatware"
+        }
+      ]
+    },
+    "debutante-goblet": {
+      "id": "debutante-goblet",
+      "name": "Debutante Goblet",
+      "category": "glassware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/glassware/debutante-goblet.glb",
+      "fileSize": 9426956,
+      "variants": [
+        {
+          "name": "10oz Debutante Amber Goblet (25/rack)",
+          "color": "",
+          "material": "",
+          "productFolder": "10oz-debutante-amber-goblet-25-rack"
+        },
+        {
+          "name": "10oz Debutante Clear Goblet (25/rack)",
+          "color": "",
+          "material": "",
+          "productFolder": "10oz-debutante-clear-goblet-25-rack"
+        },
+        {
+          "name": "10oz Debutante Purple Goblet (25/rack)",
+          "color": "",
+          "material": "",
+          "productFolder": "10oz-debutante-purple-goblet-25-rack"
+        },
+        {
+          "name": "10oz Debutante Sage Goblet (25/rack)",
+          "color": "",
+          "material": "",
+          "productFolder": "10oz-debutante-sage-goblet-25-rack"
+        }
+      ]
+    },
+    "emma-stemless-glassware": {
+      "id": "emma-stemless-glassware",
+      "name": "Emma Stemless Glassware",
+      "category": "glassware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/glassware/emma-stemless-glassware.glb",
+      "fileSize": 7480828,
+      "variants": [
+        {
+          "name": "Emma Stemless Glassware",
+          "color": "",
+          "material": "",
+          "productFolder": "emma-stemless-glassware"
+        }
+      ]
+    },
+    "hepburn-stemware": {
+      "id": "hepburn-stemware",
+      "name": "Hepburn Stemware",
+      "category": "glassware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/glassware/hepburn-stemware.glb",
+      "fileSize": 6855320,
+      "variants": [
+        {
+          "name": "Hepburn Amber Stemware",
+          "color": "",
+          "material": "",
+          "productFolder": "hepburn-amber-stemware"
+        }
+      ]
+    },
+    "jupiter-old-fashioned": {
+      "id": "jupiter-old-fashioned",
+      "name": "Jupiter Old Fashioned",
+      "category": "glassware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/glassware/jupiter-old-fashioned.glb",
+      "fileSize": 10183288,
+      "variants": [
+        {
+          "name": "10oz Jupiter Blue Old Fashioned (25/rack)",
+          "color": "",
+          "material": "",
+          "productFolder": "10oz-jupiter-blue-old-fashioned-25-rack"
+        },
+        {
+          "name": "10oz Jupiter Clear Old Fashioned (25/rack)",
+          "color": "",
+          "material": "",
+          "productFolder": "10oz-jupiter-clear-old-fashioned-25-rack"
+        }
+      ]
+    },
+    "koda-ribbed-glassware": {
+      "id": "koda-ribbed-glassware",
+      "name": "Koda Ribbed Glassware",
+      "category": "glassware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/glassware/koda-ribbed-glassware.glb",
+      "fileSize": 7711724,
+      "variants": [
+        {
+          "name": "Koda Ribbed Fern Glassware",
+          "color": "Green",
+          "material": "",
+          "productFolder": "koda-ribbed-fern-glassware"
+        },
+        {
+          "name": "Koda Ribbed Glassware Collection",
+          "color": "",
+          "material": "",
+          "productFolder": "koda-ribbed-glassware-collection"
+        }
+      ]
+    },
+    "monroe-glassware": {
+      "id": "monroe-glassware",
+      "name": "Monroe Glassware",
+      "category": "glassware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/glassware/monroe-glassware.glb",
+      "fileSize": 9116564,
+      "variants": [
+        {
+          "name": "*Coming Soon* Monroe Smoked Amber Glassware",
+          "color": "",
+          "material": "",
+          "productFolder": "coming-soon-monroe-smoked-amber-glassware"
+        }
+      ]
+    },
+    "moscow-mule-mug": {
+      "id": "moscow-mule-mug",
+      "name": "Moscow Mule Mug",
+      "category": "glassware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/glassware/moscow-mule-mug.glb",
+      "fileSize": 5963220,
+      "variants": [
+        {
+          "name": "Moscow Mule Mug",
+          "color": "",
+          "material": "",
+          "productFolder": "moscow-mule-mug"
+        }
+      ]
+    },
+    "optical-glassware": {
+      "id": "optical-glassware",
+      "name": "Optical Glassware",
+      "category": "glassware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/glassware/optical-glassware.glb",
+      "fileSize": 8929052,
+      "variants": [
+        {
+          "name": "Optical Glassware",
+          "color": "Clear",
+          "material": "",
+          "productFolder": "optical-glassware"
+        }
+      ]
+    },
+    "pacific-glassware": {
+      "id": "pacific-glassware",
+      "name": "Pacific Glassware",
+      "category": "glassware",
+      "catalog": "tablescape",
+      "complexity": "medium",
+      "filePath": "tablescape/glassware/pacific-glassware.glb",
+      "fileSize": 6586564,
+      "variants": [
+        {
+          "name": "Pacific Glassware",
+          "color": "",
+          "material": "",
+          "productFolder": "pacific-glassware"
+        }
+      ]
+    },
+    "rose-blossom-stemware": {
+      "id": "rose-blossom-stemware",
+      "name": "Rose Blossom Stemware",
+      "category": "glassware",
+      "catalog": "tablescape",
+      "complexity": "complex",
+      "filePath": "tablescape/glassware/rose-blossom-stemware.glb",
+      "fileSize": 6337672,
+      "variants": [
+        {
+          "name": "Rose Blossom Stemware",
+          "color": "Pink",
+          "material": "",
+          "productFolder": "rose-blossom-stemware"
+        }
+      ]
+    },
+    "bengaline-white-tablecloth": {
+      "id": "bengaline-white-tablecloth",
+      "name": "Bengaline White Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/bengaline-white-tablecloth.glb",
+      "fileSize": 11956888,
+      "variants": [
+        {
+          "name": "Bengaline White",
+          "color": "",
+          "material": "",
+          "productFolder": "bengaline-white"
+        }
+      ]
+    },
+    "bohemian-white-linen": {
+      "id": "bohemian-white-linen",
+      "name": "Bohemian White Linen",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/bohemian-white-linen.glb",
+      "fileSize": 7386812,
+      "variants": [
+        {
+          "name": "Bohemian White Linen",
+          "color": "",
+          "material": "",
+          "productFolder": "bohemian-white-linen"
+        }
+      ]
+    },
+    "bonfire-white-linen": {
+      "id": "bonfire-white-linen",
+      "name": "Bonfire White Linen",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/bonfire-white-linen.glb",
+      "fileSize": 15146772,
+      "variants": [
+        {
+          "name": "Bonfire White Linen",
+          "color": "",
+          "material": "",
+          "productFolder": "bonfire-white-linen"
+        }
+      ]
+    },
+    "calusa-white-tablecloth": {
+      "id": "calusa-white-tablecloth",
+      "name": "Calusa White Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/calusa-white-tablecloth.glb",
+      "fileSize": 9015744,
+      "variants": [
+        {
+          "name": "Calusa White",
+          "color": "",
+          "material": "",
+          "productFolder": "calusa-white"
+        }
+      ]
+    },
+    "cecil-white-tablecloth": {
+      "id": "cecil-white-tablecloth",
+      "name": "Cecil White Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/cecil-white-tablecloth.glb",
+      "fileSize": 11605068,
+      "variants": [
+        {
+          "name": "Cecil White",
+          "color": "",
+          "material": "",
+          "productFolder": "cecil-white"
+        }
+      ]
+    },
+    "cotton-white-tablecloth": {
+      "id": "cotton-white-tablecloth",
+      "name": "Cotton White Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/cotton-white-tablecloth.glb",
+      "fileSize": 6395012,
+      "variants": [
+        {
+          "name": "Cotton White",
+          "color": "",
+          "material": "",
+          "productFolder": "cotton-white"
+        }
+      ]
+    },
+    "faux-dupioni-white-tablecloth": {
+      "id": "faux-dupioni-white-tablecloth",
+      "name": "Faux Dupioni White Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/faux-dupioni-white-tablecloth.glb",
+      "fileSize": 7640620,
+      "variants": [
+        {
+          "name": "Faux Dupioni White",
+          "color": "",
+          "material": "",
+          "productFolder": "faux-dupioni-white"
+        }
+      ]
+    },
+    "hemstitch-white-napkin": {
+      "id": "hemstitch-white-napkin",
+      "name": "Hemstitch White Napkin",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/hemstitch-white-napkin.glb",
+      "fileSize": 6440624,
+      "variants": [
+        {
+          "name": "Hemstitch White Napkin",
+          "color": "White",
+          "material": "",
+          "productFolder": "hemstitch-white-napkin"
+        }
+      ]
+    },
+    "kelly-white-sheer-tablecloth": {
+      "id": "kelly-white-sheer-tablecloth",
+      "name": "Kelly White Sheer Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/kelly-white-sheer-tablecloth.glb",
+      "fileSize": 8859768,
+      "variants": [
+        {
+          "name": "Kelly White Sheer",
+          "color": "White",
+          "material": "",
+          "productFolder": "kelly-white-sheer"
+        }
+      ]
+    },
+    "lamour-white-tablecloth": {
+      "id": "lamour-white-tablecloth",
+      "name": "Lamour White Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/lamour-white-tablecloth.glb",
+      "fileSize": 6410800,
+      "variants": [
+        {
+          "name": "Lamour White",
+          "color": "",
+          "material": "",
+          "productFolder": "lamour-white"
+        }
+      ]
+    },
+    "mila-woven-white-tablecloth": {
+      "id": "mila-woven-white-tablecloth",
+      "name": "Mila Woven White Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/mila-woven-white-tablecloth.glb",
+      "fileSize": 16514288,
+      "variants": [
+        {
+          "name": "Mila Woven White",
+          "color": "",
+          "material": "",
+          "productFolder": "mila-woven-white"
+        }
+      ]
+    },
+    "rs-analise-pleated-placemat": {
+      "id": "rs-analise-pleated-placemat",
+      "name": "RS Analise Pleated Placemat",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-analise-pleated-placemat.glb",
+      "fileSize": 5774736,
+      "variants": [
+        {
+          "name": "RS Analise Cornflower Pleated Placemat",
+          "color": "Blue",
+          "material": "",
+          "productFolder": "rs-analise-cornflower-pleated-placemat"
+        }
+      ]
+    },
+    "rs-anderson-placemat": {
+      "id": "rs-anderson-placemat",
+      "name": "RS Anderson Placemat",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-anderson-placemat.glb",
+      "fileSize": 12992108,
+      "variants": [
+        {
+          "name": "RS Anderson Sage Placemat",
+          "color": "Green, White",
+          "material": "",
+          "productFolder": "rs-anderson-sage-placemat"
+        }
+      ]
+    },
+    "rs-callie-napkin": {
+      "id": "rs-callie-napkin",
+      "name": "RS Callie Napkin",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-callie-napkin.glb",
+      "fileSize": 7473372,
+      "variants": [
+        {
+          "name": "RS Callie White Napkin",
+          "color": "White",
+          "material": "",
+          "productFolder": "rs-callie-white-napkin"
+        }
+      ]
+    },
+    "rs-caterina-tablecloth": {
+      "id": "rs-caterina-tablecloth",
+      "name": "RS Caterina Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-caterina-tablecloth.glb",
+      "fileSize": 10150608,
+      "variants": [
+        {
+          "name": "RS Caterina White",
+          "color": "White",
+          "material": "",
+          "productFolder": "rs-caterina-white"
+        }
+      ]
+    },
+    "rs-clara-tablecloth": {
+      "id": "rs-clara-tablecloth",
+      "name": "RS Clara Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-clara-tablecloth.glb",
+      "fileSize": 6275088,
+      "variants": [
+        {
+          "name": "RS Clara Blue",
+          "color": "",
+          "material": "",
+          "productFolder": "rs-clara-blue"
+        }
+      ]
+    },
+    "rs-cora-napkin": {
+      "id": "rs-cora-napkin",
+      "name": "RS Cora Napkin",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-cora-napkin.glb",
+      "fileSize": 8049816,
+      "variants": [
+        {
+          "name": "RS Cora White Napkin",
+          "color": "White",
+          "material": "",
+          "productFolder": "rs-cora-white-napkin"
+        }
+      ]
+    },
+    "rs-florence-sheer-tablecloth": {
+      "id": "rs-florence-sheer-tablecloth",
+      "name": "RS Florence Sheer Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-florence-sheer-tablecloth.glb",
+      "fileSize": 10584200,
+      "variants": [
+        {
+          "name": "RS Florence White Sheer",
+          "color": "Ivory & Beige, White",
+          "material": "",
+          "productFolder": "rs-florence-white-sheer"
+        }
+      ]
+    },
+    "rs-heyward-tablecloth": {
+      "id": "rs-heyward-tablecloth",
+      "name": "RS Heyward Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-heyward-tablecloth.glb",
+      "fileSize": 14583960,
+      "variants": [
+        {
+          "name": "RS Heyward French Grey",
+          "color": "Grey",
+          "material": "",
+          "productFolder": "rs-heyward-french-grey"
+        }
+      ]
+    },
+    "rs-jardin-tablecloth": {
+      "id": "rs-jardin-tablecloth",
+      "name": "RS Jardin Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-jardin-tablecloth.glb",
+      "fileSize": 13870276,
+      "variants": [
+        {
+          "name": "RS Jardin Limone",
+          "color": "Yellow",
+          "material": "",
+          "productFolder": "rs-jardin-limone"
+        }
+      ]
+    },
+    "rs-jasper-flora-tablecloth": {
+      "id": "rs-jasper-flora-tablecloth",
+      "name": "RS Jasper Flora Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-jasper-flora-tablecloth.glb",
+      "fileSize": 10990000,
+      "variants": [
+        {
+          "name": "RS Jasper Flora Celadon",
+          "color": "",
+          "material": "",
+          "productFolder": "rs-jasper-flora-celadon"
+        }
+      ]
+    },
+    "rs-lessing-stitch-napkin": {
+      "id": "rs-lessing-stitch-napkin",
+      "name": "RS Lessing Stitch Napkin",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-lessing-stitch-napkin.glb",
+      "fileSize": 7050124,
+      "variants": [
+        {
+          "name": "RS Lessing White Stitch Napkin",
+          "color": "White",
+          "material": "",
+          "productFolder": "rs-lessing-white-stitch-napkin"
+        }
+      ]
+    },
+    "rs-mari-scallop-woven-placemat": {
+      "id": "rs-mari-scallop-woven-placemat",
+      "name": "RS Mari Scallop Woven Placemat",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-mari-scallop-woven-placemat.glb",
+      "fileSize": 7866488,
+      "variants": [
+        {
+          "name": "RS Mari Scallop Blue Woven Placemat",
+          "color": "Blue",
+          "material": "",
+          "productFolder": "rs-mari-scallop-blue-woven-placemat"
+        },
+        {
+          "name": "RS Mari Scallop Natural Woven Placemat",
+          "color": "Ivory & Beige",
+          "material": "",
+          "productFolder": "rs-mari-scallop-natural-woven-placemat"
+        }
+      ]
+    },
+    "rs-molly-scallop-placemat": {
+      "id": "rs-molly-scallop-placemat",
+      "name": "RS Molly Scallop Placemat",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-molly-scallop-placemat.glb",
+      "fileSize": 9401676,
+      "variants": [
+        {
+          "name": "RS Molly Scallop Sage Placemat",
+          "color": "Green",
+          "material": "",
+          "productFolder": "rs-molly-scallop-sage-placemat"
+        },
+        {
+          "name": "RS Molly Scallop Sky Placemat",
+          "color": "Blue",
+          "material": "",
+          "productFolder": "rs-molly-scallop-sky-placemat"
+        }
+      ]
+    },
+    "rs-nola-tablecloth": {
+      "id": "rs-nola-tablecloth",
+      "name": "RS Nola Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-nola-tablecloth.glb",
+      "fileSize": 16295612,
+      "variants": [
+        {
+          "name": "RS Nola White",
+          "color": "White",
+          "material": "",
+          "productFolder": "rs-nola-white"
+        }
+      ]
+    },
+    "rs-parterre-tablecloth": {
+      "id": "rs-parterre-tablecloth",
+      "name": "RS Parterre Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-parterre-tablecloth.glb",
+      "fileSize": 13833620,
+      "variants": [
+        {
+          "name": "RS Parterre Rain",
+          "color": "Blue",
+          "material": "",
+          "productFolder": "rs-parterre-rain"
+        }
+      ]
+    },
+    "rs-reagan-placemat": {
+      "id": "rs-reagan-placemat",
+      "name": "RS Reagan Placemat",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-reagan-placemat.glb",
+      "fileSize": 10986892,
+      "variants": [
+        {
+          "name": "RS Reagan Moss Placemat",
+          "color": "Green",
+          "material": "",
+          "productFolder": "rs-reagan-moss-placemat"
+        },
+        {
+          "name": "RS Reagan Navy Placemat",
+          "color": "Blue",
+          "material": "",
+          "productFolder": "rs-reagan-navy-placemat"
+        }
+      ]
+    },
+    "rs-riga-tablecloth": {
+      "id": "rs-riga-tablecloth",
+      "name": "RS Riga Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-riga-tablecloth.glb",
+      "fileSize": 8284500,
+      "variants": [
+        {
+          "name": "RS Riga White",
+          "color": "White",
+          "material": "",
+          "productFolder": "rs-riga-white"
+        }
+      ]
+    },
+    "rs-sadie-scalloped-napkin": {
+      "id": "rs-sadie-scalloped-napkin",
+      "name": "RS Sadie Scalloped Napkin",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-sadie-scalloped-napkin.glb",
+      "fileSize": 4613804,
+      "variants": [
+        {
+          "name": "RS Sadie Scalloped White Napkin",
+          "color": "White",
+          "material": "",
+          "productFolder": "rs-sadie-scalloped-white-napkin"
+        }
+      ]
+    },
+    "rs-sarra-tablecloth": {
+      "id": "rs-sarra-tablecloth",
+      "name": "RS Sarra Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-sarra-tablecloth.glb",
+      "fileSize": 16337236,
+      "variants": [
+        {
+          "name": "RS Sarra Aegean",
+          "color": "Blue, Green",
+          "material": "",
+          "productFolder": "rs-sarra-aegean"
+        }
+      ]
+    },
+    "rs-sienna-tablecloth": {
+      "id": "rs-sienna-tablecloth",
+      "name": "RS Sienna Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-sienna-tablecloth.glb",
+      "fileSize": 13595576,
+      "variants": [
+        {
+          "name": "RS Sienna Clay",
+          "color": "",
+          "material": "",
+          "productFolder": "rs-sienna-clay"
+        }
+      ]
+    },
+    "rs-sophia-lace-tablecloth": {
+      "id": "rs-sophia-lace-tablecloth",
+      "name": "RS Sophia Lace Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-sophia-lace-tablecloth.glb",
+      "fileSize": 11350476,
+      "variants": [
+        {
+          "name": "RS Sophia Lace",
+          "color": "White",
+          "material": "",
+          "productFolder": "rs-sophia-lace"
+        }
+      ]
+    },
+    "rs-stonewash-napkin": {
+      "id": "rs-stonewash-napkin",
+      "name": "RS Stonewash Napkin",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-stonewash-napkin.glb",
+      "fileSize": 7810592,
+      "variants": [
+        {
+          "name": "RS Stonewash White Napkin",
+          "color": "White",
+          "material": "",
+          "productFolder": "rs-stonewash-white-napkin"
+        }
+      ]
+    },
+    "rs-valeria-tablecloth": {
+      "id": "rs-valeria-tablecloth",
+      "name": "RS Valeria Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-valeria-tablecloth.glb",
+      "fileSize": 13999720,
+      "variants": [
+        {
+          "name": "RS Valeria Azzuro",
+          "color": "",
+          "material": "",
+          "productFolder": "rs-valeria-azzuro"
+        }
+      ]
+    },
+    "rs-verner-tablecloth": {
+      "id": "rs-verner-tablecloth",
+      "name": "RS Verner Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/rs-verner-tablecloth.glb",
+      "fileSize": 14453056,
+      "variants": [
+        {
+          "name": "RS Verner Leaf",
+          "color": "Blue, Green, Ivory & Beige",
+          "material": "",
+          "productFolder": "rs-verner-leaf"
+        }
+      ]
+    },
+    "sparkling-white-tablecloth": {
+      "id": "sparkling-white-tablecloth",
+      "name": "Sparkling White Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/sparkling-white-tablecloth.glb",
+      "fileSize": 15893412,
+      "variants": [
+        {
+          "name": "Sparkling White",
+          "color": "",
+          "material": "",
+          "productFolder": "sparkling-white"
+        }
+      ]
+    },
+    "supreme-white-tablecloth": {
+      "id": "supreme-white-tablecloth",
+      "name": "Supreme White Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/supreme-white-tablecloth.glb",
+      "fileSize": 20750988,
+      "variants": [
+        {
+          "name": "Supreme White",
+          "color": "",
+          "material": "",
+          "productFolder": "supreme-white"
+        }
+      ]
+    },
+    "tweed-white-tablecloth": {
+      "id": "tweed-white-tablecloth",
+      "name": "Tweed White Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/tweed-white-tablecloth.glb",
+      "fileSize": 18121472,
+      "variants": [
+        {
+          "name": "Tweed White",
+          "color": "",
+          "material": "",
+          "productFolder": "tweed-white"
+        }
+      ]
+    },
+    "twill-cotton-white-tablecloth": {
+      "id": "twill-cotton-white-tablecloth",
+      "name": "Twill Cotton White Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/twill-cotton-white-tablecloth.glb",
+      "fileSize": 10172184,
+      "variants": [
+        {
+          "name": "Twill Cotton White",
+          "color": "",
+          "material": "",
+          "productFolder": "twill-cotton-white"
+        }
+      ]
+    },
+    "velvet-tablecloth": {
+      "id": "velvet-tablecloth",
+      "name": "Velvet Tablecloth",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/velvet-tablecloth.glb",
+      "fileSize": 6194232,
+      "variants": [
+        {
+          "name": "Velvet Hunter Green",
+          "color": "",
+          "material": "",
+          "productFolder": "velvet-hunter-green"
+        }
+      ]
+    },
+    "white-napkin": {
+      "id": "white-napkin",
+      "name": "White Napkin",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/white-napkin.glb",
+      "fileSize": 10655628,
+      "variants": [
+        {
+          "name": "20″ x 20″ Bengaline White Napkin",
+          "color": "White",
+          "material": "",
+          "productFolder": "20-x-20-bengaline-white-napkin"
+        },
+        {
+          "name": "20″ x 20″ Cecil White Napkin",
+          "color": "White",
+          "material": "",
+          "productFolder": "20-x-20-cecil-white-napkin"
+        },
+        {
+          "name": "20″ x 20″ Cotton White Napkin",
+          "color": "White",
+          "material": "",
+          "productFolder": "20-x-20-cotton-white-napkin"
+        },
+        {
+          "name": "20″ x 20″ Faux Dupioni White Napkin",
+          "color": "White",
+          "material": "",
+          "productFolder": "20-x-20-faux-dupioni-white-napkin"
+        },
+        {
+          "name": "20″ x 20″ Lamour White Napkin",
+          "color": "White",
+          "material": "",
+          "productFolder": "20-x-20-lamour-white-napkin"
+        },
+        {
+          "name": "20″ x 20″ Twill Cotton White Napkin",
+          "color": "White",
+          "material": "",
+          "productFolder": "20-x-20-twill-cotton-white-napkin"
+        }
+      ]
+    },
+    "white-tweed-table-runner": {
+      "id": "white-tweed-table-runner",
+      "name": "White Tweed Table Runner",
+      "category": "linens",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/linens/white-tweed-table-runner.glb",
+      "fileSize": 7462276,
+      "variants": [
+        {
+          "name": "12″x120″ White Tweed Table Runner",
+          "color": "",
+          "material": "",
+          "productFolder": "12-x120-white-tweed-table-runner"
+        }
+      ]
+    },
+    "bamboo-tong": {
+      "id": "bamboo-tong",
+      "name": "Bamboo Tong",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/bamboo-tong.glb",
+      "fileSize": 3420220,
+      "variants": [
+        {
+          "name": "11″ Bamboo Tong",
+          "color": "Brown",
+          "material": "",
+          "productFolder": "11-bamboo-tong"
+        }
+      ]
+    },
+    "china-white-bowl": {
+      "id": "china-white-bowl",
+      "name": "China White Bowl",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/china-white-bowl.glb",
+      "fileSize": 5228740,
+      "variants": [
+        {
+          "name": "10″ 64OZ RD China Ultra White Bowl",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "10-64oz-rd-china-ultra-white-bowl"
+        },
+        {
+          "name": "11.75″ 8OZ China White Monocle Bowl",
+          "color": "",
+          "material": "",
+          "productFolder": "11-75-8oz-china-white-monocle-bowl"
+        },
+        {
+          "name": "11″ 40OZ Footed Oval China White Bowl",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "11-40oz-footed-oval-china-white-bowl"
+        },
+        {
+          "name": "12″ 3.5QT China White Bowl w/Lip",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "12-3-5qt-china-white-bowl-w-lip"
+        },
+        {
+          "name": "148OZ 12″x4″ White Deep Cylinder Bowl",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "148oz-12-x4-white-deep-cylinder-bowl"
+        },
+        {
+          "name": "14″ 32OZ  China White Canoe Bowl",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "14-32oz-china-white-canoe-bowl"
+        },
+        {
+          "name": "14″ 48OZ RD Shallow White Coupe Bowl",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "14-48oz-rd-shallow-white-coupe-bowl"
+        },
+        {
+          "name": "15″ 7QT RD China Ultra White Bowl",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "15-7qt-rd-china-ultra-white-bowl"
+        }
+      ]
+    },
+    "china-white-platter": {
+      "id": "china-white-platter",
+      "name": "China White Platter",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/china-white-platter.glb",
+      "fileSize": 6617504,
+      "variants": [
+        {
+          "name": "16″ SQ China White Platter",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "16-sq-china-white-platter"
+        }
+      ]
+    },
+    "china-white-sake-dipping-cup": {
+      "id": "china-white-sake-dipping-cup",
+      "name": "China White Sake/Dipping Cup",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/china-white-sake-dipping-cup.glb",
+      "fileSize": 6596560,
+      "variants": [
+        {
+          "name": "1.5OZ China White Sake/Dipping Cup",
+          "color": "",
+          "material": "",
+          "productFolder": "1-5oz-china-white-sake-dipping-cup"
+        }
+      ]
+    },
+    "classic-ss-serving-utensil": {
+      "id": "classic-ss-serving-utensil",
+      "name": "Classic SS Serving Utensil",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/classic-ss-serving-utensil.glb",
+      "fileSize": 3987204,
+      "variants": [
+        {
+          "name": "11″ Classic SS Serving Spoon Long Handle",
+          "color": "",
+          "material": "",
+          "productFolder": "11-classic-ss-serving-spoon-long-handle"
+        },
+        {
+          "name": "11″ Classic SS Slotted Serving Spoon",
+          "color": "",
+          "material": "",
+          "productFolder": "11-classic-ss-slotted-serving-spoon"
+        },
+        {
+          "name": "12″ Classic SS Serving Fork Long Handle",
+          "color": "",
+          "material": "",
+          "productFolder": "12-classic-ss-serving-fork-long-handle"
+        }
+      ]
+    },
+    "faux-slate-platter": {
+      "id": "faux-slate-platter",
+      "name": "Faux Slate Platter",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/faux-slate-platter.glb",
+      "fileSize": 7633396,
+      "variants": [
+        {
+          "name": "10″x20″ Faux Slate Black Platter",
+          "color": "",
+          "material": "Faux Slate",
+          "productFolder": "10-x20-faux-slate-black-platter"
+        }
+      ]
+    },
+    "melamine-farmhouse-serving-bowl": {
+      "id": "melamine-farmhouse-serving-bowl",
+      "name": "Melamine Farmhouse Serving Bowl",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/melamine-farmhouse-serving-bowl.glb",
+      "fileSize": 6662128,
+      "variants": [
+        {
+          "name": "13″ x 5.5″D Melamine Farmhouse Serving Bowl",
+          "color": "",
+          "material": "",
+          "productFolder": "13-x-5-5-d-melamine-farmhouse-serving-bowl"
+        }
+      ]
+    },
+    "melamine-serving-board": {
+      "id": "melamine-serving-board",
+      "name": "Melamine Serving Board",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/melamine-serving-board.glb",
+      "fileSize": 9843608,
+      "variants": [
+        {
+          "name": "15″ x 7.5″ Rect Melamine Faux Cement Serving Board",
+          "color": "",
+          "material": "",
+          "productFolder": "15-x-7-5-rect-melamine-faux-cement-serving-board"
+        },
+        {
+          "name": "15″ x 7.5″ Rect Melamine Turquoise Stripe Serving Board",
+          "color": "",
+          "material": "",
+          "productFolder": "15-x-7-5-rect-melamine-turquoise-stripe-serving-board"
+        }
+      ]
+    },
+    "oval-china-white-platter": {
+      "id": "oval-china-white-platter",
+      "name": "Oval China White Platter",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/oval-china-white-platter.glb",
+      "fileSize": 4172012,
+      "variants": [
+        {
+          "name": "12″x9″ Oval China White Platter",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "12-x9-oval-china-white-platter"
+        },
+        {
+          "name": "14″x10″ Oval China White Platter",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "14-x10-oval-china-white-platter"
+        }
+      ]
+    },
+    "oval-copper-hammered-platter": {
+      "id": "oval-copper-hammered-platter",
+      "name": "Oval Copper Hammered Platter",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/oval-copper-hammered-platter.glb",
+      "fileSize": 7274584,
+      "variants": [
+        {
+          "name": "10″x8″ Oval Copper Hammered Platter",
+          "color": "",
+          "material": "Copper",
+          "productFolder": "10-x8-oval-copper-hammered-platter"
+        }
+      ]
+    },
+    "oval-melamine-platter": {
+      "id": "oval-melamine-platter",
+      "name": "Oval Melamine Platter",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/oval-melamine-platter.glb",
+      "fileSize": 3756672,
+      "variants": [
+        {
+          "name": "11″x15″ Oval Melamine White Platter",
+          "color": "",
+          "material": "Melamine",
+          "productFolder": "11-x15-oval-melamine-white-platter"
+        },
+        {
+          "name": "13″x9.5″ Oval Melamine White Platter",
+          "color": "",
+          "material": "Melamine",
+          "productFolder": "13-x9-5-oval-melamine-white-platter"
+        }
+      ]
+    },
+    "rd-china-white-platter": {
+      "id": "rd-china-white-platter",
+      "name": "RD China White Platter",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/rd-china-white-platter.glb",
+      "fileSize": 5136704,
+      "variants": [
+        {
+          "name": "14″ RD China White Platter",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "14-rd-china-white-platter"
+        }
+      ]
+    },
+    "rd-ss-tray": {
+      "id": "rd-ss-tray",
+      "name": "RD SS Tray",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/rd-ss-tray.glb",
+      "fileSize": 7233972,
+      "variants": [
+        {
+          "name": "12″ RD SS Tray",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "12-rd-ss-tray"
+        },
+        {
+          "name": "14″ RD SS Tray",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "14-rd-ss-tray"
+        },
+        {
+          "name": "16″ RD SS Tray",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "16-rd-ss-tray"
+        }
+      ]
+    },
+    "rect-china-white-platter": {
+      "id": "rect-china-white-platter",
+      "name": "Rect China White Platter",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/rect-china-white-platter.glb",
+      "fileSize": 5293740,
+      "variants": [
+        {
+          "name": "11″x7″ Rect China White Platter",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "11-x7-rect-china-white-platter"
+        },
+        {
+          "name": "12″x5″ Rect China White Curved Platter",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "12-x5-rect-china-white-curved-platter"
+        },
+        {
+          "name": "12″x5″ Rect China White Platter",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "12-x5-rect-china-white-platter"
+        },
+        {
+          "name": "12″x6″ Rect China White Platter",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "12-x6-rect-china-white-platter"
+        },
+        {
+          "name": "13″x20″ Rect. China White Platter",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "13-x20-rect-china-white-platter"
+        },
+        {
+          "name": "14″x8.5″ Rect China White Platter",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "14-x8-5-rect-china-white-platter"
+        }
+      ]
+    },
+    "resin-bar-tray": {
+      "id": "resin-bar-tray",
+      "name": "Resin Bar Tray",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/resin-bar-tray.glb",
+      "fileSize": 4453384,
+      "variants": [
+        {
+          "name": "14″ RD Resin Bar Tray",
+          "color": "",
+          "material": "Resin",
+          "productFolder": "14-rd-resin-bar-tray"
+        }
+      ]
+    },
+    "ribbed-white-round-bowl": {
+      "id": "ribbed-white-round-bowl",
+      "name": "Ribbed White Round Bowl",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/ribbed-white-round-bowl.glb",
+      "fileSize": 4974048,
+      "variants": [
+        {
+          "name": "14.25″  Ribbed White Round Bowl",
+          "color": "",
+          "material": "Porcelain",
+          "productFolder": "14-25-ribbed-white-round-bowl"
+        }
+      ]
+    },
+    "ss-chase-galley-tray": {
+      "id": "ss-chase-galley-tray",
+      "name": "SS Chase Galley Tray",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/ss-chase-galley-tray.glb",
+      "fileSize": 5624084,
+      "variants": [
+        {
+          "name": "15″ SS Chase Galley Tray",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "15-ss-chase-galley-tray"
+        }
+      ]
+    },
+    "ss-hammered-bowl": {
+      "id": "ss-hammered-bowl",
+      "name": "SS Hammered Bowl",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/ss-hammered-bowl.glb",
+      "fileSize": 7740324,
+      "variants": [
+        {
+          "name": "12″ 7QT SS Hammered Double Wall Bowl",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "12-7qt-ss-hammered-double-wall-bowl"
+        }
+      ]
+    },
+    "ss-hammered-tray": {
+      "id": "ss-hammered-tray",
+      "name": "SS Hammered Tray",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/ss-hammered-tray.glb",
+      "fileSize": 8092656,
+      "variants": [
+        {
+          "name": "15″x8.5″ Rect SS Hammered Tray",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "15-x8-5-rect-ss-hammered-tray"
+        }
+      ]
+    },
+    "ss-paul-revere-bowl": {
+      "id": "ss-paul-revere-bowl",
+      "name": "SS Paul Revere Bowl",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/ss-paul-revere-bowl.glb",
+      "fileSize": 6406180,
+      "variants": [
+        {
+          "name": "10″ 3.5QT SS Paul Revere Bowl",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "10-3-5qt-ss-paul-revere-bowl"
+        }
+      ]
+    },
+    "ss-soup-ladle": {
+      "id": "ss-soup-ladle",
+      "name": "SS Soup Ladle",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/ss-soup-ladle.glb",
+      "fileSize": 3989932,
+      "variants": [
+        {
+          "name": "12″ SS Soup Ladle",
+          "color": "",
+          "material": "",
+          "productFolder": "12-ss-soup-ladle"
+        }
+      ]
+    },
+    "ss-tong": {
+      "id": "ss-tong",
+      "name": "SS Tong",
+      "category": "serving-pieces",
+      "catalog": "tablescape",
+      "complexity": "simple",
+      "filePath": "tablescape/serving-pieces/ss-tong.glb",
+      "fileSize": 3371928,
+      "variants": [
+        {
+          "name": "10″ Medium SS Hammered Buffet Tong",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "10-medium-ss-hammered-buffet-tong"
+        },
+        {
+          "name": "10″ SS Scissor Tong",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "10-ss-scissor-tong"
+        },
+        {
+          "name": "16″ SS Grill Tong",
+          "color": "",
+          "material": "Stainless Steel",
+          "productFolder": "16-ss-grill-tong"
+        }
+      ]
+    }
+  },
+  "categories": {
+    "bars-back-bars": {
+      "count": 32,
+      "catalog": "floorplan"
+    },
+    "room-dividers-stanchions": {
+      "count": 10,
+      "catalog": "floorplan"
+    },
+    "furniture": {
+      "count": 27,
+      "catalog": "floorplan"
+    },
+    "chairs": {
+      "count": 19,
+      "catalog": "floorplan"
+    },
+    "lighting": {
+      "count": 2,
+      "catalog": "floorplan"
+    },
+    "stages-flooring": {
+      "count": 13,
+      "catalog": "floorplan"
+    },
+    "tables": {
+      "count": 26,
+      "catalog": "floorplan"
+    },
+    "charger-set-plates": {
+      "count": 26,
+      "catalog": "tablescape"
+    },
+    "china-dishware": {
+      "count": 32,
+      "catalog": "tablescape"
+    },
+    "flatware": {
+      "count": 17,
+      "catalog": "tablescape"
+    },
+    "glassware": {
+      "count": 10,
+      "catalog": "tablescape"
+    },
+    "linens": {
+      "count": 42,
+      "catalog": "tablescape"
+    },
+    "serving-pieces": {
+      "count": 22,
+      "catalog": "tablescape"
+    }
+  }
+}

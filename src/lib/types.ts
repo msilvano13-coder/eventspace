@@ -102,6 +102,37 @@ export function createDefaultFloorPlans(): FloorPlan[] {
   ];
 }
 
+// ── Tablescape ──
+
+export type TableShape = "round" | "rectangular" | "square";
+
+export interface TablescapeItem {
+  id: string;
+  assetId: string;          // slug from models-manifest.json
+  positionX: number;        // meters, relative to table center
+  positionY: number;        // meters, height above table surface
+  positionZ: number;        // meters, relative to table center
+  rotationY: number;        // Y-axis rotation in radians
+  scale: number;            // uniform scale multiplier (default 1)
+  colorOverride: string | null; // hex color for mat_primary swap
+}
+
+export interface Tablescape {
+  id: string;
+  name: string;
+  tableShape: TableShape;
+  tableWidth: number;       // inches
+  tableDepth: number;       // inches
+  items: TablescapeItem[];
+}
+
+export function createDefaultTablescapes(): Tablescape[] {
+  return [
+    { id: uuid(), name: "Head Table", tableShape: "rectangular", tableWidth: 96, tableDepth: 30, items: [] },
+    { id: uuid(), name: "Guest Table", tableShape: "round", tableWidth: 60, tableDepth: 60, items: [] },
+  ];
+}
+
 export interface Event {
   id: string;
   name: string;
@@ -112,6 +143,7 @@ export interface Event {
   status: "planning" | "confirmed" | "completed";
   floorPlanJSON: string | null;
   floorPlans: FloorPlan[];
+  tablescapes: Tablescape[];
   files: SharedFile[];
   timeline: TimelineItem[];   // to-do checklist items
   schedule: ScheduleItem[];   // day-of timeline
