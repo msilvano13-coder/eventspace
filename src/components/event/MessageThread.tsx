@@ -8,7 +8,7 @@ interface Props {
   messages: Message[];
   senderRole: "planner" | "client";
   senderName: string;
-  onSend: (messages: Message[]) => void;
+  onSend?: (messages: Message[]) => void;
 }
 
 export default function MessageThread({ messages, senderRole, senderName, onSend }: Props) {
@@ -23,7 +23,7 @@ export default function MessageThread({ messages, senderRole, senderName, onSend
 
   function send() {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || !onSend) return;
     const msg: Message = {
       id: crypto.randomUUID(),
       sender: senderRole,
@@ -100,23 +100,25 @@ export default function MessageThread({ messages, senderRole, senderName, onSend
       </div>
 
       {/* Input */}
-      <div className="border-t border-stone-100 px-4 py-3 flex items-center gap-2">
-        <input
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
-          placeholder="Type a message…"
-          className="flex-1 border border-stone-200 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
-        />
-        <button
-          onClick={send}
-          disabled={!text.trim()}
-          className="w-9 h-9 flex items-center justify-center rounded-xl bg-rose-400 text-white hover:bg-rose-500 disabled:opacity-40 transition-colors flex-shrink-0"
-        >
-          <Send size={14} />
-        </button>
-      </div>
+      {onSend && (
+        <div className="border-t border-stone-100 px-4 py-3 flex items-center gap-2">
+          <input
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && send()}
+            placeholder="Type a message…"
+            className="flex-1 border border-stone-200 rounded-xl px-3.5 py-2 text-sm focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white"
+          />
+          <button
+            onClick={send}
+            disabled={!text.trim()}
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-rose-400 text-white hover:bg-rose-500 disabled:opacity-40 transition-colors flex-shrink-0"
+          >
+            <Send size={14} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

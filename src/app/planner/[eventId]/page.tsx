@@ -42,6 +42,7 @@ import MessageThread from "@/components/event/MessageThread";
 import { exportEventPDF } from "@/lib/export-pdf";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import TeamAssignment from "@/components/events/TeamAssignment";
+import { useIsTeamMember } from "@/hooks/useIsTeamMember";
 
 const STATUS_OPTIONS = ["planning", "confirmed", "completed"] as const;
 
@@ -54,6 +55,7 @@ export default function EventDetailPage() {
   const allQuestionnaires = useQuestionnaires();
   const plannerProfile = usePlannerProfile();
   const isDiy = plannerProfile.plan === "diy";
+  const readOnly = useIsTeamMember();
   const router = useRouter();
 
   // ── Event info editing ──
@@ -350,18 +352,20 @@ export default function EventDetailPage() {
               ({new Date(event.archivedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})
             </span>
           </div>
-          <button
-            onClick={() => updateEvent(event.id, { archivedAt: null })}
-            className="flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-800 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg transition-colors"
-          >
-            <RotateCcw size={12} />
-            Restore
-          </button>
+          {!readOnly && (
+            <button
+              onClick={() => updateEvent(event.id, { archivedAt: null })}
+              className="flex items-center gap-1 text-xs font-medium text-amber-700 hover:text-amber-800 hover:bg-amber-100 px-2.5 py-1.5 rounded-lg transition-colors"
+            >
+              <RotateCcw size={12} />
+              Restore
+            </button>
+          )}
         </div>
       )}
 
       {/* ── Event Info ── */}
-      {editingInfo ? (
+      {!readOnly && editingInfo ? (
         <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6">
           <div className="space-y-3">
             <div>
@@ -418,9 +422,11 @@ export default function EventDetailPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl font-heading font-bold text-stone-800">{event.name}</h1>
-              <button onClick={startEditInfo} className="p-1.5 text-stone-300 hover:text-stone-500 hover:bg-stone-100 rounded-lg transition-colors">
-                <Pencil size={14} />
-              </button>
+              {!readOnly && (
+                <button onClick={startEditInfo} className="p-1.5 text-stone-300 hover:text-stone-500 hover:bg-stone-100 rounded-lg transition-colors">
+                  <Pencil size={14} />
+                </button>
+              )}
             </div>
             <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-stone-500">
               <span className="flex items-center gap-1.5">
@@ -450,7 +456,7 @@ export default function EventDetailPage() {
                 <span className="hidden sm:inline">Client Link</span>
               </button>
             )}
-            {!isDiy && <TeamAssignment eventId={event.id} />}
+            {!isDiy && !readOnly && <TeamAssignment eventId={event.id} />}
           </div>
         </div>
       )}
@@ -531,7 +537,7 @@ export default function EventDetailPage() {
       {!isDiy && <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-heading font-semibold text-stone-800">Client Details</h2>
-          {!editingClient && (
+          {!readOnly && !editingClient && (
             <button onClick={startEditClient} className="p-1.5 text-stone-300 hover:text-stone-500 hover:bg-stone-100 rounded-lg transition-colors">
               <Pencil size={14} />
             </button>
@@ -584,7 +590,7 @@ export default function EventDetailPage() {
             <Palette size={16} className="text-rose-400" />
             <h2 className="font-heading font-semibold text-stone-800">Color Palette</h2>
           </div>
-          {!addingColor && (
+          {!readOnly && !addingColor && (
             <button
               onClick={() => setAddingColor(true)}
               className="flex items-center gap-1.5 text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors"
@@ -606,15 +612,17 @@ export default function EventDetailPage() {
                   style={{ backgroundColor: color }}
                   title={color}
                 />
-                <button
-                  onClick={() => {
-                    const updated = (event.colorPalette ?? []).filter((_, idx) => idx !== i);
-                    updateEvent(event.id, { colorPalette: updated });
-                  }}
-                  className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-white border border-stone-200 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                >
-                  <X size={8} className="text-stone-400" />
-                </button>
+                {!readOnly && (
+                  <button
+                    onClick={() => {
+                      const updated = (event.colorPalette ?? []).filter((_, idx) => idx !== i);
+                      updateEvent(event.id, { colorPalette: updated });
+                    }}
+                    className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-white border border-stone-200 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                  >
+                    <X size={8} className="text-stone-400" />
+                  </button>
+                )}
                 <p className="text-[9px] text-stone-400 text-center mt-1 font-mono">{color}</p>
               </div>
             ))}
@@ -666,7 +674,7 @@ export default function EventDetailPage() {
             <CheckSquare size={16} className="text-emerald-400" />
             <h2 className="font-heading font-semibold text-stone-800">To Do List</h2>
           </div>
-          {!addingTodo && (
+          {!readOnly && !addingTodo && (
             <button
               onClick={() => setAddingTodo(true)}
               className="flex items-center gap-1.5 text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors"
@@ -706,7 +714,7 @@ export default function EventDetailPage() {
                 </div>
               ) : (
                 <div key={item.id} className="group flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-stone-50 transition-colors">
-                  <button onClick={() => toggleTodo(item.id)} className="shrink-0 transition-transform active:scale-90">
+                  <button onClick={() => { if (!readOnly) toggleTodo(item.id); }} className={`shrink-0 transition-transform ${readOnly ? "cursor-default" : "active:scale-90"}`}>
                     {item.completed ? (
                       <Check size={16} className="text-emerald-500" />
                     ) : (
@@ -714,8 +722,8 @@ export default function EventDetailPage() {
                     )}
                   </button>
                   <span
-                    className={`text-sm flex-1 cursor-pointer ${item.completed ? "line-through text-stone-400" : "text-stone-700"}`}
-                    onClick={() => toggleTodo(item.id)}
+                    className={`text-sm flex-1 ${readOnly ? "" : "cursor-pointer"} ${item.completed ? "line-through text-stone-400" : "text-stone-700"}`}
+                    onClick={() => { if (!readOnly) toggleTodo(item.id); }}
                   >
                     {item.title}
                   </span>
@@ -724,14 +732,16 @@ export default function EventDetailPage() {
                       {new Date(item.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                     </span>
                   )}
-                  <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
-                    <button onClick={() => startEditTodo(item)} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">
-                      <Pencil size={13} />
-                    </button>
-                    <button onClick={() => setConfirmAction({ type: "todo", id: item.id, label: item.title })} className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
+                  {!readOnly && (
+                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                      <button onClick={() => startEditTodo(item)} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">
+                        <Pencil size={13} />
+                      </button>
+                      <button onClick={() => setConfirmAction({ type: "todo", id: item.id, label: item.title })} className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             )}
@@ -774,7 +784,7 @@ export default function EventDetailPage() {
             <ClipboardList size={16} className="text-indigo-400" />
             <h2 className="font-heading font-semibold text-stone-800">Questionnaires</h2>
           </div>
-          {!showAssignQ && (
+          {!readOnly && !showAssignQ && (
             <button
               onClick={() => setShowAssignQ(true)}
               className="flex items-center gap-1.5 text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors"
@@ -848,14 +858,16 @@ export default function EventDetailPage() {
                       <p className="text-xs text-stone-400 mt-0.5">{answeredCount}/{totalQuestions} answered</p>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
-                    <button
-                      onClick={() => setConfirmAction({ type: "questionnaire", id: assignment.questionnaireId, label: assignment.questionnaireName })}
-                      className="p-1.5 text-stone-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
+                  {!readOnly && (
+                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                      <button
+                        onClick={() => setConfirmAction({ type: "questionnaire", id: assignment.questionnaireId, label: assignment.questionnaireName })}
+                        className="p-1.5 text-stone-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -906,7 +918,7 @@ export default function EventDetailPage() {
               <span className="text-xs text-stone-400 ml-1">({fmt(totalAllocated)})</span>
             )}
           </div>
-          {!addingBudget && !editingBudgetId && (
+          {!readOnly && !addingBudget && !editingBudgetId && (
             <button onClick={startAddBudget} className="flex items-center gap-1 text-xs font-medium text-rose-500 hover:text-rose-600">
               <Plus size={13} /> Add
             </button>
@@ -1001,7 +1013,7 @@ export default function EventDetailPage() {
                 <div
                   key={item.id}
                   className={`px-5 py-3.5 hover:bg-stone-50/50 transition-colors cursor-pointer ${editingBudgetId === item.id ? "bg-rose-50/30" : ""}`}
-                  onClick={() => { if (!addingBudget && !editingBudgetId) startEditBudget(item); }}
+                  onClick={() => { if (!readOnly && !addingBudget && !editingBudgetId) startEditBudget(item); }}
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-sm font-medium text-stone-700">{item.category}</span>
@@ -1058,7 +1070,7 @@ export default function EventDetailPage() {
           messages={event.messages ?? []}
           senderRole="planner"
           senderName="Planner"
-          onSend={(msgs: Message[]) => updateEvent(eventId, { messages: msgs })}
+          onSend={readOnly ? undefined : (msgs: Message[]) => updateEvent(eventId, { messages: msgs })}
         />
       )}
 
@@ -1072,7 +1084,7 @@ export default function EventDetailPage() {
               <span className="text-xs text-stone-400 ml-1">({fmt(totalExpenses)})</span>
             )}
           </div>
-          {!addingExpense && !editingExpenseId && (
+          {!readOnly && !addingExpense && !editingExpenseId && (
             <button
               onClick={startAddExpense}
               className="flex items-center gap-1.5 text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-2.5 py-1.5 rounded-lg transition-colors"
@@ -1176,14 +1188,16 @@ export default function EventDetailPage() {
                     </div>
                   </div>
                   <span className="text-sm font-semibold text-stone-700 shrink-0">{fmt(exp.amount)}</span>
-                  <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
-                    <button onClick={() => startEditExpense(exp)} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">
-                      <Pencil size={13} />
-                    </button>
-                    <button onClick={() => setConfirmAction({ type: "expense", id: exp.id, label: exp.description })} className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
-                      <Trash2 size={13} />
-                    </button>
-                  </div>
+                  {!readOnly && (
+                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                      <button onClick={() => startEditExpense(exp)} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">
+                        <Pencil size={13} />
+                      </button>
+                      <button onClick={() => setConfirmAction({ type: "expense", id: exp.id, label: exp.description })} className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )
             )}
@@ -1192,7 +1206,7 @@ export default function EventDetailPage() {
       </div>
 
       {/* ── Archive / Danger Zone ── */}
-      <div className="mt-20 pt-8 border-t-2 border-dashed border-stone-200 pb-12">
+      {!readOnly && <div className="mt-20 pt-8 border-t-2 border-dashed border-stone-200 pb-12">
         <div className="flex flex-col items-center gap-3">
           {event.archivedAt ? (
             <button
@@ -1220,7 +1234,7 @@ export default function EventDetailPage() {
             Delete Event Permanently
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* ── Generic Confirm Dialog ── */}
       <ConfirmDialog

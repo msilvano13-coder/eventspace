@@ -1,6 +1,7 @@
 "use client";
 
 import { useEvent, useEventSubEntities, useStoreActions, useEventsLoading } from "@/hooks/useStore";
+import { useIsTeamMember } from "@/hooks/useIsTeamMember";
 import EventLoader from "@/components/ui/EventLoader";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { useParams } from "next/navigation";
@@ -35,6 +36,7 @@ export default function InvoicesPage() {
   const loading = useEventsLoading();
   useEventSubEntities(eventId, ["invoices", "vendors"]);
   const { updateEvent } = useStoreActions();
+  const readOnly = useIsTeamMember();
 
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -172,7 +174,7 @@ export default function InvoicesPage() {
           <h1 className="font-heading font-semibold text-stone-800 text-sm sm:text-base truncate">{event.name}</h1>
           <p className="text-xs text-stone-400">Invoices</p>
         </div>
-        {!creating && !editingId && (
+        {!readOnly && !creating && !editingId && (
           <button
             onClick={startCreate}
             className="flex items-center gap-1.5 text-xs font-medium bg-rose-400 hover:bg-rose-500 text-white px-3 py-2 rounded-xl transition-colors"
@@ -203,7 +205,7 @@ export default function InvoicesPage() {
         )}
 
         {/* Invoice form */}
-        {(creating || editingId) && (
+        {!readOnly && (creating || editingId) && (
           <div className="bg-white rounded-2xl border border-rose-200 p-5 shadow-soft mb-6 space-y-4">
             <h2 className="font-heading font-semibold text-stone-800">
               {editingId ? "Edit Invoice" : "New Invoice"}
@@ -339,9 +341,11 @@ export default function InvoicesPage() {
           <div className="bg-white rounded-2xl border border-stone-200 p-12 text-center shadow-soft">
             <Receipt size={40} className="text-stone-300 mx-auto mb-3" />
             <p className="text-sm text-stone-500 mb-3">No invoices yet.</p>
-            <button onClick={startCreate} className="text-sm text-rose-500 hover:text-rose-600 font-medium">
-              + Create your first invoice
-            </button>
+            {!readOnly && (
+              <button onClick={startCreate} className="text-sm text-rose-500 hover:text-rose-600 font-medium">
+                + Create your first invoice
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -407,36 +411,38 @@ export default function InvoicesPage() {
                       )}
 
                       {/* Actions */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {inv.status === "draft" && (
+                      {!readOnly && (
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {inv.status === "draft" && (
+                            <button
+                              onClick={() => updateStatus(inv.id, "sent")}
+                              className="text-xs font-medium text-blue-500 hover:text-blue-600 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                            >
+                              Mark as Sent
+                            </button>
+                          )}
+                          {inv.status === "sent" && (
+                            <button
+                              onClick={() => updateStatus(inv.id, "paid")}
+                              className="text-xs font-medium text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                            >
+                              Mark as Paid
+                            </button>
+                          )}
                           <button
-                            onClick={() => updateStatus(inv.id, "sent")}
-                            className="text-xs font-medium text-blue-500 hover:text-blue-600 hover:bg-blue-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                            onClick={() => startEdit(inv)}
+                            className="text-xs text-stone-400 hover:text-stone-600 hover:bg-stone-100 p-1.5 rounded-lg transition-colors"
                           >
-                            Mark as Sent
+                            <Pencil size={13} />
                           </button>
-                        )}
-                        {inv.status === "sent" && (
                           <button
-                            onClick={() => updateStatus(inv.id, "paid")}
-                            className="text-xs font-medium text-emerald-500 hover:text-emerald-600 hover:bg-emerald-50 px-2.5 py-1.5 rounded-lg transition-colors"
+                            onClick={() => setConfirmDeleteId(inv.id)}
+                            className="text-xs text-stone-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
                           >
-                            Mark as Paid
+                            <Trash2 size={13} />
                           </button>
-                        )}
-                        <button
-                          onClick={() => startEdit(inv)}
-                          className="text-xs text-stone-400 hover:text-stone-600 hover:bg-stone-100 p-1.5 rounded-lg transition-colors"
-                        >
-                          <Pencil size={13} />
-                        </button>
-                        <button
-                          onClick={() => setConfirmDeleteId(inv.id)}
-                          className="text-xs text-stone-400 hover:text-red-500 hover:bg-red-50 p-1.5 rounded-lg transition-colors"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

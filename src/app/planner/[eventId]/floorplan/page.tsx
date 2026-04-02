@@ -14,6 +14,7 @@ import { exportFloorPlanPDF } from "@/lib/floorplan-export-pdf";
 import SeatingPanel from "@/components/floorplan/SeatingPanel";
 import LightingPanel from "@/components/floorplan/LightingPanel";
 import { FloorPlanErrorBoundary } from "@/components/floorplan/FloorPlanErrorBoundary";
+import { useIsTeamMember } from "@/hooks/useIsTeamMember";
 
 const FloorPlanEditor = dynamic(
   () => import("@/components/floorplan/FloorPlanEditor"),
@@ -46,6 +47,7 @@ export default function FloorPlanPage() {
   const coreLoaded = useEventCoreLoaded(eventId);
   useEventSubEntities(eventId, ["guests"]);
   const { updateEvent } = useStoreActions();
+  const readOnly = useIsTeamMember();
   const [activePlanId, setActivePlanId] = useState<string | null>(null);
   const [showAddTab, setShowAddTab] = useState(false);
   const [newTabName, setNewTabName] = useState("");
@@ -288,7 +290,7 @@ export default function FloorPlanPage() {
                 </span>
               )}
             </button>
-            {plans.length > 1 && (
+            {!readOnly && plans.length > 1 && (
               <button
                 onClick={(e) => { e.stopPropagation(); deleteTab(plan.id); }}
                 className="opacity-0 group-hover:opacity-100 -ml-2 mr-1 p-0.5 rounded text-stone-300 hover:text-red-500 hover:bg-red-50 transition-all"
@@ -299,7 +301,7 @@ export default function FloorPlanPage() {
             )}
           </div>
         ))}
-        {showAddTab ? (
+        {!readOnly && (showAddTab ? (
           <div className="flex items-center gap-1 px-2">
             <input
               type="text"
@@ -327,7 +329,7 @@ export default function FloorPlanPage() {
           >
             <Plus size={14} />
           </button>
-        )}
+        ))}
       </div>
 
       {/* Editor + Side Panels */}
@@ -347,21 +349,22 @@ export default function FloorPlanPage() {
                 key={activePlan.id}
                 eventId={eventId}
                 initialJSON={activePlan.json}
-                onSave={handleSave}
+                onSave={readOnly ? undefined : handleSave}
                 lightingZones={lightingZones}
                 lightingEnabled={showLighting}
-                onUpdateZones={handleUpdateLightingZones}
+                onUpdateZones={readOnly ? undefined : handleUpdateLightingZones}
                 selectedZoneId={selectedZoneId}
                 onSelectZone={setSelectedZoneId}
                 onCanvasReady={(getDataURL) => { getCanvasDataURLRef.current = getDataURL; }}
-                onGuestDrop={handleGuestDrop}
+                onGuestDrop={readOnly ? undefined : handleGuestDrop}
+                readOnly={readOnly}
               />
             )
           )}
         </div>
 
         {/* Lighting Panel */}
-        {showLighting && (
+        {showLighting && !readOnly && (
           <>
             {/* Desktop: absolute side panel */}
             <div className="absolute top-0 right-0 bottom-0 z-40 hidden md:block shadow-xl">
@@ -416,7 +419,7 @@ export default function FloorPlanPage() {
         )}
 
         {/* Seating panels */}
-        {showSeating && (
+        {showSeating && !readOnly && (
           <>
             {/* Mobile: full-screen overlay */}
             <div className="absolute inset-0 z-40 md:hidden bg-white overflow-y-auto">

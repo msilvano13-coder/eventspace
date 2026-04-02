@@ -1,6 +1,7 @@
 "use client";
 
 import { useEvent, useEventSubEntities, useStoreActions, useEventsLoading } from "@/hooks/useStore";
+import { useIsTeamMember } from "@/hooks/useIsTeamMember";
 import EventLoader from "@/components/ui/EventLoader";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -51,6 +52,7 @@ export default function GuestsPage() {
   const loading = useEventsLoading();
   useEventSubEntities(eventId, ["guests"]);
   const { updateEvent } = useStoreActions();
+  const readOnly = useIsTeamMember();
 
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | RsvpStatus>("all");
@@ -404,6 +406,7 @@ export default function GuestsPage() {
             {rsvpLinkCopied ? <Check size={13} /> : <Link2 size={13} />}
             <span className="hidden sm:inline">{rsvpLinkCopied ? "Copied!" : "RSVP Link"}</span>
           </button>
+          {!readOnly && (
           <button
             onClick={() => setShowImport(true)}
             className="flex items-center gap-1.5 border border-stone-200 px-3 py-2 rounded-xl text-xs text-stone-500 hover:bg-stone-50 transition-colors"
@@ -411,6 +414,7 @@ export default function GuestsPage() {
             <Upload size={13} />
             <span className="hidden sm:inline">Import CSV</span>
           </button>
+          )}
           <button
             onClick={exportCSV}
             className="flex items-center gap-1.5 border border-stone-200 px-3 py-2 rounded-xl text-xs text-stone-500 hover:bg-stone-50 transition-colors"
@@ -418,6 +422,7 @@ export default function GuestsPage() {
             <Download size={13} />
             <span className="hidden sm:inline">Export CSV</span>
           </button>
+          {!readOnly && (
           <button
             onClick={startAdd}
             className="flex items-center gap-1.5 bg-rose-400 hover:bg-rose-500 text-white px-3 py-2 rounded-xl text-xs font-medium transition-colors"
@@ -425,6 +430,7 @@ export default function GuestsPage() {
             <Plus size={13} />
             Add Guest
           </button>
+          )}
         </div>
       </div>
 
@@ -470,7 +476,7 @@ export default function GuestsPage() {
             </p>
 
             {/* Add relationship form */}
-            <div className="flex flex-col sm:flex-row gap-2 items-end">
+            {!readOnly && <div className="flex flex-col sm:flex-row gap-2 items-end">
               <div className="flex-1 min-w-0">
                 <label className="block text-[10px] font-medium text-stone-400 uppercase tracking-wider mb-1">Guest 1</label>
                 <select
@@ -516,7 +522,7 @@ export default function GuestsPage() {
                 <Plus size={12} />
                 Add
               </button>
-            </div>
+            </div>}
 
             {/* Existing relationships */}
             {relationships.length > 0 && (
@@ -550,12 +556,14 @@ export default function GuestsPage() {
                         {g2?.name ?? "Unknown"}
                       </span>
                       <div className="flex-1" />
+                      {!readOnly && (
                       <button
                         onClick={() => removeRelationship(rel)}
                         className="p-1 text-stone-400 hover:text-red-500 hover:bg-red-100 rounded-lg transition-colors"
                       >
                         <X size={12} />
                       </button>
+                      )}
                     </div>
                   );
                 })}
@@ -770,7 +778,7 @@ export default function GuestsPage() {
       )}
 
       {/* Add / Edit Form */}
-      {(showForm || editingId) && (
+      {!readOnly && (showForm || editingId) && (
         <GuestForm
           form={form}
           onChange={setForm}
@@ -824,6 +832,7 @@ export default function GuestsPage() {
                   </div>
                   <span className="text-xs text-stone-500">{guest.mealChoice || "—"}</span>
                   <span className="text-xs text-stone-500">{guest.tableAssignment || "—"}</span>
+                  {!readOnly && (
                   <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                     <button onClick={() => startEdit(guest)} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">
                       <Pencil size={13} />
@@ -832,6 +841,7 @@ export default function GuestsPage() {
                       <Trash2 size={13} />
                     </button>
                   </div>
+                  )}
                 </div>
               )
             )}

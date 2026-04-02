@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useState, useMemo } from "react";
 import { canCreateEvent } from "@/lib/plan-features";
 import { createDefaultFloorPlans } from "@/lib/types";
+import { useIsTeamMember } from "@/hooks/useIsTeamMember";
 
 const statusColors: Record<string, string> = {
   planning: "bg-amber-50 text-amber-700",
@@ -22,6 +23,7 @@ export default function PlannerDashboard() {
   const events = useEvents();
   const { createEvent, updateEvent } = useStoreActions();
   const profile = usePlannerProfile();
+  const readOnly = useIsTeamMember();
   const [showModal, setShowModal] = useState(false);
   const [tab, setTab] = useState<Tab>("active");
   const [search, setSearch] = useState("");
@@ -90,7 +92,7 @@ export default function PlannerDashboard() {
             {activeEvents.length} active{archivedEvents.length > 0 ? ` · ${archivedEvents.length} archived` : ""}
           </p>
         </div>
-        {canCreateEvent(profile.plan, activeEvents.length) ? (
+        {!readOnly && canCreateEvent(profile.plan, activeEvents.length) ? (
           <button
             onClick={() => setShowModal(true)}
             className="flex items-center gap-2 bg-rose-400 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-soft"
@@ -98,7 +100,7 @@ export default function PlannerDashboard() {
             <Plus size={16} />
             New Event
           </button>
-        ) : profile.plan === "trial" || profile.plan === "pending" ? (
+        ) : !readOnly && (profile.plan === "trial" || profile.plan === "pending") ? (
           <Link
             href="/planner/upgrade"
             className="flex items-center gap-2 bg-stone-200 text-stone-500 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors"
@@ -293,7 +295,7 @@ export default function PlannerDashboard() {
                   {event.timeline.filter((t) => t.completed).length}/{event.timeline.length} to-dos · {(event.schedule ?? []).length} timeline moments
                 </span>
                 <div className="flex items-center gap-1">
-                  {tab === "active" ? (
+                  {!readOnly && (tab === "active" ? (
                     <button
                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); archiveEvent(event.id); }}
                       className="p-1.5 text-stone-300 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-colors sm:opacity-0 sm:group-hover:opacity-100"
@@ -309,7 +311,7 @@ export default function PlannerDashboard() {
                     >
                       <RotateCcw size={14} />
                     </button>
-                  )}
+                  ))}
                   <ChevronRight
                     size={14}
                     className="group-hover:translate-x-1 transition-transform text-stone-300"

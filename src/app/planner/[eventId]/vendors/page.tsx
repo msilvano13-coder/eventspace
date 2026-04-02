@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Vendor, VendorCategory, VendorPaymentItem } from "@/lib/types";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { useIsTeamMember } from "@/hooks/useIsTeamMember";
 
 const CATEGORY_COLORS: Record<string, string> = {
   catering: "bg-orange-50 text-orange-600",
@@ -39,6 +40,7 @@ export default function VendorsPage() {
   const loading = useEventsLoading();
   useEventSubEntities(eventId, ["vendors"]);
   const { updateEvent } = useStoreActions();
+  const readOnly = useIsTeamMember();
 
   const [search, setSearch] = useState("");
   const [filterCategory, setFilterCategory] = useState<"all" | VendorCategory>("all");
@@ -152,9 +154,11 @@ export default function VendorsPage() {
           <h1 className="font-heading font-semibold text-stone-800 truncate">{event.name}</h1>
           <p className="text-xs text-stone-400">Vendors</p>
         </div>
-        <button onClick={startAdd} className="flex items-center gap-1.5 bg-rose-400 hover:bg-rose-500 text-white px-3 py-2 rounded-xl text-xs font-medium transition-colors">
-          <Plus size={13} /> Add Vendor
-        </button>
+        {!readOnly && (
+          <button onClick={startAdd} className="flex items-center gap-1.5 bg-rose-400 hover:bg-rose-500 text-white px-3 py-2 rounded-xl text-xs font-medium transition-colors">
+            <Plus size={13} /> Add Vendor
+          </button>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -203,7 +207,7 @@ export default function VendorsPage() {
       )}
 
       {/* Add / Edit Form */}
-      {(addingVendor || editingId) && (
+      {!readOnly && (addingVendor || editingId) && (
         <div className="bg-white rounded-2xl border border-stone-200 p-5 shadow-soft mb-5">
           <h3 className="font-heading font-semibold text-stone-800 text-sm mb-4">{editingId ? "Edit Vendor" : "Add Vendor"}</h3>
           <div className="grid grid-cols-2 gap-3">
@@ -274,10 +278,12 @@ export default function VendorsPage() {
                       {vendor.notes && <p className="text-xs text-stone-400 mt-1 ml-5 italic">{vendor.notes}</p>}
                       {vendor.mealChoice && <span className="inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 mt-1.5 ml-5">🍽 {vendor.mealChoice}</span>}
                     </div>
-                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
-                      <button onClick={(e) => { e.stopPropagation(); startEdit(vendor); }} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"><Pencil size={13} /></button>
-                      <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(vendor.id); }} className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={13} /></button>
-                    </div>
+                    {!readOnly && (
+                      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                        <button onClick={(e) => { e.stopPropagation(); startEdit(vendor); }} className="p-1.5 text-stone-400 hover:text-stone-600 hover:bg-stone-100 rounded-lg transition-colors"><Pencil size={13} /></button>
+                        <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(vendor.id); }} className="p-1.5 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={13} /></button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Expanded: Payments */}
@@ -288,18 +294,24 @@ export default function VendorsPage() {
                         {(vendor.payments ?? []).length === 0 && addingPaymentFor !== vendor.id && <p className="text-xs text-stone-400 italic">No payments scheduled yet.</p>}
                         {(vendor.payments ?? []).map((payment) => (
                           <div key={payment.id} className="flex items-center gap-3 group/pay">
-                            <button onClick={() => togglePaymentPaid(vendor.id, payment.id)} className={`flex-shrink-0 w-4 h-4 rounded border transition-colors ${payment.paid ? "bg-emerald-400 border-emerald-400 text-white" : "border-stone-300 hover:border-rose-400"}`}>
-                              {payment.paid && <Check size={10} className="mx-auto" />}
-                            </button>
+                            {readOnly ? (
+                              <div className={`flex-shrink-0 w-4 h-4 rounded border ${payment.paid ? "bg-emerald-400 border-emerald-400 text-white" : "border-stone-300"}`}>
+                                {payment.paid && <Check size={10} className="mx-auto" />}
+                              </div>
+                            ) : (
+                              <button onClick={() => togglePaymentPaid(vendor.id, payment.id)} className={`flex-shrink-0 w-4 h-4 rounded border transition-colors ${payment.paid ? "bg-emerald-400 border-emerald-400 text-white" : "border-stone-300 hover:border-rose-400"}`}>
+                                {payment.paid && <Check size={10} className="mx-auto" />}
+                              </button>
+                            )}
                             <div className="flex-1 min-w-0">
                               <span className={`text-xs ${payment.paid ? "text-stone-400 line-through" : "text-stone-700"}`}>{payment.description}</span>
                               {payment.dueDate && <span className={`text-[10px] ml-2 ${payment.paid ? "text-stone-300" : new Date(payment.dueDate) < new Date() && !payment.paid ? "text-red-500 font-semibold" : "text-stone-400"}`}>{payment.paid ? `Paid ${payment.paidDate}` : `Due ${payment.dueDate}`}</span>}
                             </div>
                             <span className={`text-xs font-medium ${payment.paid ? "text-emerald-600" : "text-stone-600"}`}>{fmt(payment.amount)}</span>
-                            <button onClick={() => deletePayment(vendor.id, payment.id)} className="opacity-0 group-hover/pay:opacity-100 text-stone-300 hover:text-red-400 transition-all"><X size={12} /></button>
+                            {!readOnly && <button onClick={() => deletePayment(vendor.id, payment.id)} className="opacity-0 group-hover/pay:opacity-100 text-stone-300 hover:text-red-400 transition-all"><X size={12} /></button>}
                           </div>
                         ))}
-                        {addingPaymentFor === vendor.id ? (
+                        {!readOnly && (addingPaymentFor === vendor.id ? (
                           <div className="pt-2 border-t border-stone-200 space-y-2">
                             <div className="grid grid-cols-3 gap-2">
                               <input value={paymentForm.description} onChange={(e) => setPaymentForm({ ...paymentForm, description: e.target.value })} placeholder="e.g. Deposit" className="text-xs border border-stone-200 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-rose-400/30 focus:border-rose-400 outline-none bg-white" />
@@ -315,7 +327,7 @@ export default function VendorsPage() {
                           <button onClick={() => { setAddingPaymentFor(vendor.id); setPaymentForm({ description: "", amount: "", dueDate: "" }); }} className="text-xs text-rose-500 hover:text-rose-600 font-medium flex items-center gap-1 pt-1">
                             <Plus size={11} /> Add Payment
                           </button>
-                        )}
+                        ))}
                       </div>
                     </div>
                   )}

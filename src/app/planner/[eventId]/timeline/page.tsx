@@ -1,6 +1,7 @@
 "use client";
 
 import { useEvent, useEventSubEntities, useStoreActions, useEventsLoading } from "@/hooks/useStore";
+import { useIsTeamMember } from "@/hooks/useIsTeamMember";
 import EventLoader from "@/components/ui/EventLoader";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -22,6 +23,7 @@ export default function TimelinePage() {
   const loading = useEventsLoading();
   useEventSubEntities(eventId, ["schedule"]);
   const { updateEvent } = useStoreActions();
+  const readOnly = useIsTeamMember();
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTime, setEditTime] = useState("");
@@ -196,7 +198,7 @@ export default function TimelinePage() {
               Export
             </button>
           )}
-          {!adding && (
+          {!readOnly && !adding && (
             <button
               onClick={() => setAdding(true)}
               className="flex items-center gap-1.5 text-xs font-medium bg-rose-400 hover:bg-rose-500 text-white px-3 py-2 rounded-xl transition-colors"
@@ -209,16 +211,18 @@ export default function TimelinePage() {
       </div>
 
       <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
-        {sorted.length > 1 && !editingId && (
+        {!readOnly && sorted.length > 1 && !editingId && (
           <p className="text-[11px] text-stone-400 mb-4 text-center">Drag the <GripVertical size={11} className="inline -mt-0.5" /> handle to reorder</p>
         )}
 
         {sorted.length === 0 && !adding ? (
           <div className="text-center py-16">
             <p className="text-stone-400 text-sm mb-3">No schedule yet.</p>
-            <button onClick={() => setAdding(true)} className="text-sm text-rose-500 hover:text-rose-600 font-medium">
-              + Add the first moment
-            </button>
+            {!readOnly && (
+              <button onClick={() => setAdding(true)} className="text-sm text-rose-500 hover:text-rose-600 font-medium">
+                + Add the first moment
+              </button>
+            )}
           </div>
         ) : (
           <div className="relative">
@@ -227,7 +231,7 @@ export default function TimelinePage() {
             )}
             <div className="space-y-1">
               {sorted.map((item, idx) =>
-                editingId === item.id ? (
+                !readOnly && editingId === item.id ? (
                   <div key={item.id} className="flex gap-4 py-3">
                     <div className="w-5 shrink-0" />
                     <div className="w-20 shrink-0" />
@@ -264,7 +268,7 @@ export default function TimelinePage() {
                     } ${
                       dragOverId === item.id ? "border-t-2 border-rose-400" : ""
                     }`}
-                    draggable={!editingId}
+                    draggable={!readOnly && !editingId}
                     onDragStart={(e) => {
                       setDragId(item.id);
                       e.dataTransfer.effectAllowed = "move";
@@ -284,14 +288,16 @@ export default function TimelinePage() {
                     }}
                   >
                     {/* Drag handle */}
-                    <div
-                      className="shrink-0 flex items-start pt-1 cursor-grab active:cursor-grabbing touch-none"
-                      onTouchStart={(e) => handleTouchStart(item.id, e)}
-                      onTouchMove={handleTouchMove}
-                      onTouchEnd={handleTouchEnd}
-                    >
-                      <GripVertical size={16} className="text-stone-300 hover:text-stone-400 transition-colors" />
-                    </div>
+                    {!readOnly && (
+                      <div
+                        className="shrink-0 flex items-start pt-1 cursor-grab active:cursor-grabbing touch-none"
+                        onTouchStart={(e) => handleTouchStart(item.id, e)}
+                        onTouchMove={handleTouchMove}
+                        onTouchEnd={handleTouchEnd}
+                      >
+                        <GripVertical size={16} className="text-stone-300 hover:text-stone-400 transition-colors" />
+                      </div>
+                    )}
 
                     <div className="w-20 shrink-0 text-right pt-0.5">
                       <span className="text-xs font-semibold text-stone-400 tracking-wide">{fmt12(item.time)}</span>
@@ -306,31 +312,33 @@ export default function TimelinePage() {
                         <p className="text-sm font-semibold text-stone-800 leading-snug">{item.title}</p>
                         {item.notes && <p className="text-xs text-stone-400 mt-1 leading-relaxed">{item.notes}</p>}
                       </div>
-                      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
-                        <button
-                          onClick={() => toggleWeddingVisibility(item.id)}
-                          className={`p-1.5 rounded-lg transition-colors ${
-                            (item.showOnWeddingPage ?? true)
-                              ? "text-rose-400 hover:text-rose-500 hover:bg-rose-50"
-                              : "text-stone-300 hover:text-stone-500 hover:bg-stone-100"
-                          }`}
-                          title={(item.showOnWeddingPage ?? true) ? "Visible on wedding page" : "Hidden from wedding page"}
-                        >
-                          {(item.showOnWeddingPage ?? true) ? <Eye size={13} /> : <EyeOff size={13} />}
-                        </button>
-                        <button onClick={() => startEdit(item)} className="p-1.5 text-stone-300 hover:text-stone-500 hover:bg-stone-100 rounded-lg transition-colors">
-                          <Pencil size={13} />
-                        </button>
-                        <button onClick={() => setConfirmDeleteId(item.id)} className="p-1.5 text-stone-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors">
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
+                      {!readOnly && (
+                        <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
+                          <button
+                            onClick={() => toggleWeddingVisibility(item.id)}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              (item.showOnWeddingPage ?? true)
+                                ? "text-rose-400 hover:text-rose-500 hover:bg-rose-50"
+                                : "text-stone-300 hover:text-stone-500 hover:bg-stone-100"
+                            }`}
+                            title={(item.showOnWeddingPage ?? true) ? "Visible on wedding page" : "Hidden from wedding page"}
+                          >
+                            {(item.showOnWeddingPage ?? true) ? <Eye size={13} /> : <EyeOff size={13} />}
+                          </button>
+                          <button onClick={() => startEdit(item)} className="p-1.5 text-stone-300 hover:text-stone-500 hover:bg-stone-100 rounded-lg transition-colors">
+                            <Pencil size={13} />
+                          </button>
+                          <button onClick={() => setConfirmDeleteId(item.id)} className="p-1.5 text-stone-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-colors">
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
               )}
 
-              {adding && (
+              {!readOnly && adding && (
                 <div className="flex gap-4 py-3">
                   <div className="w-5 shrink-0" />
                   <div className="w-20 shrink-0" />

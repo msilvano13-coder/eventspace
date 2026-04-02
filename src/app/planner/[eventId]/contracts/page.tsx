@@ -1,6 +1,7 @@
 "use client";
 
 import { useEvent, useEventSubEntities, useStoreActions, useContractTemplates, useEventsLoading } from "@/hooks/useStore";
+import { useIsTeamMember } from "@/hooks/useIsTeamMember";
 import EventLoader from "@/components/ui/EventLoader";
 import { useParams } from "next/navigation";
 import Link from "next/link";
@@ -22,6 +23,7 @@ export default function EventContractsPage() {
   const loading = useEventsLoading();
   useEventSubEntities(eventId, ["contracts"]);
   const { updateEvent } = useStoreActions();
+  const readOnly = useIsTeamMember();
   const templates = useContractTemplates();
 
   const [showAssign, setShowAssign] = useState<"planner" | "vendor" | null>(null);
@@ -355,13 +357,15 @@ export default function EventContractsPage() {
             >
               <History size={14} />
             </button>
-            <button
-              onClick={() => setConfirmDeleteId(contract.id)}
-              className="p-1.5 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
-              title="Remove"
-            >
-              <Trash2 size={14} />
-            </button>
+            {!readOnly && (
+              <button
+                onClick={() => setConfirmDeleteId(contract.id)}
+                className="p-1.5 text-stone-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors opacity-0 group-hover:opacity-100"
+                title="Remove"
+              >
+                <Trash2 size={14} />
+              </button>
+            )}
           </div>
         </div>
 
@@ -388,21 +392,25 @@ export default function EventContractsPage() {
                       <Shield size={10} /> Disclosure accepted
                     </span>
                   )}
-                  <button
-                    onClick={() => removePlannerSignature(contract.id)}
-                    className="text-[10px] text-stone-400 hover:text-red-500 mt-1.5 block"
-                  >
-                    Remove signature
-                  </button>
+                  {!readOnly && (
+                    <button
+                      onClick={() => removePlannerSignature(contract.id)}
+                      className="text-[10px] text-stone-400 hover:text-red-500 mt-1.5 block"
+                    >
+                      Remove signature
+                    </button>
+                  )}
                 </div>
               ) : (
-                <button
-                  onClick={() => setSigningContractId(contract.id)}
-                  className="flex items-center gap-1.5 text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-lg transition-colors w-full justify-center border border-dashed border-rose-200"
-                >
-                  <PenTool size={12} />
-                  Sign as Planner
-                </button>
+                !readOnly && (
+                  <button
+                    onClick={() => setSigningContractId(contract.id)}
+                    className="flex items-center gap-1.5 text-xs font-medium text-rose-500 hover:text-rose-600 hover:bg-rose-50 px-3 py-2 rounded-lg transition-colors w-full justify-center border border-dashed border-rose-200"
+                  >
+                    <PenTool size={12} />
+                    Sign as Planner
+                  </button>
+                )
               )}
             </div>
 
@@ -464,25 +472,29 @@ export default function EventContractsPage() {
             <UserCheck size={16} className="text-rose-400" />
             <h2 className="text-sm font-heading font-semibold text-stone-800">Planner Contract</h2>
           </div>
-          <button
-            onClick={() => { setShowAssign("planner"); setSelectedVendorId(""); }}
-            className="flex items-center gap-1.5 text-xs font-medium text-rose-500 hover:text-rose-600 px-3 py-1.5 rounded-xl hover:bg-rose-50 transition-colors"
-          >
-            <Plus size={13} />
-            {plannerContracts.length > 0 ? "Add Another" : "Assign Contract"}
-          </button>
+          {!readOnly && (
+            <button
+              onClick={() => { setShowAssign("planner"); setSelectedVendorId(""); }}
+              className="flex items-center gap-1.5 text-xs font-medium text-rose-500 hover:text-rose-600 px-3 py-1.5 rounded-xl hover:bg-rose-50 transition-colors"
+            >
+              <Plus size={13} />
+              {plannerContracts.length > 0 ? "Add Another" : "Assign Contract"}
+            </button>
+          )}
         </div>
 
         {plannerContracts.length === 0 ? (
           <div className="border-2 border-dashed border-stone-200 rounded-2xl p-8 text-center">
             <FileText size={24} className="text-stone-300 mx-auto mb-2" />
             <p className="text-sm text-stone-400">No planner contract assigned yet</p>
-            <button
-              onClick={() => { setShowAssign("planner"); setSelectedVendorId(""); }}
-              className="text-xs text-rose-500 hover:text-rose-600 mt-2"
-            >
-              Assign from template or upload
-            </button>
+            {!readOnly && (
+              <button
+                onClick={() => { setShowAssign("planner"); setSelectedVendorId(""); }}
+                className="text-xs text-rose-500 hover:text-rose-600 mt-2"
+              >
+                Assign from template or upload
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-3">
@@ -500,7 +512,7 @@ export default function EventContractsPage() {
             <Building2 size={16} className="text-teal-500" />
             <h2 className="text-sm font-heading font-semibold text-stone-800">Vendor Contracts</h2>
           </div>
-          {vendorsWithoutContract.length > 0 && (
+          {!readOnly && vendorsWithoutContract.length > 0 && (
             <button
               onClick={() => { setShowAssign("vendor"); setSelectedVendorId(vendorsWithoutContract[0]?.id || ""); }}
               className="flex items-center gap-1.5 text-xs font-medium text-teal-500 hover:text-teal-600 px-3 py-1.5 rounded-xl hover:bg-teal-50 transition-colors"
@@ -530,13 +542,15 @@ export default function EventContractsPage() {
                       <span className="text-sm font-medium text-stone-800">{vendor.name}</span>
                       <span className="text-[10px] px-2 py-0.5 rounded-full bg-stone-100 text-stone-500 capitalize">{vendor.category}</span>
                     </div>
-                    <button
-                      onClick={() => { setShowAssign("vendor"); setSelectedVendorId(vendor.id); }}
-                      className="flex items-center gap-1 text-[11px] text-teal-500 hover:text-teal-600 px-2 py-1 rounded-lg hover:bg-teal-50 transition-colors"
-                    >
-                      <Plus size={11} />
-                      {vContracts.length > 0 ? "Add" : "Attach"}
-                    </button>
+                    {!readOnly && (
+                      <button
+                        onClick={() => { setShowAssign("vendor"); setSelectedVendorId(vendor.id); }}
+                        className="flex items-center gap-1 text-[11px] text-teal-500 hover:text-teal-600 px-2 py-1 rounded-lg hover:bg-teal-50 transition-colors"
+                      >
+                        <Plus size={11} />
+                        {vContracts.length > 0 ? "Add" : "Attach"}
+                      </button>
+                    )}
                   </div>
                   {vContracts.length === 0 ? (
                     <div className="px-4 py-4 text-center">

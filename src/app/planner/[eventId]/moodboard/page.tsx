@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { ArrowLeft, Plus, X, Image, Pencil, Check, Loader2, ZoomIn } from "lucide-react";
 import { MoodBoardImage } from "@/lib/types";
+import { useIsTeamMember } from "@/hooks/useIsTeamMember";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import { compressImageToBlob } from "@/lib/image-compress";
 import { uploadToStorage, getSignedUrl, deleteFromStorage } from "@/lib/supabase/storage";
@@ -18,6 +19,7 @@ export default function MoodBoardPage() {
   const loading = useEventsLoading();
   useEventSubEntities(eventId, ["moodBoard"]);
   const { updateEvent } = useStoreActions();
+  const readOnly = useIsTeamMember();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editCaption, setEditCaption] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -148,30 +150,33 @@ export default function MoodBoardPage() {
             {images.length} image{images.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <label className={`flex items-center gap-2 bg-rose-400 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-soft cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
-          {uploading ? (
-            <>
-              <Loader2 size={16} className="animate-spin" />
-              {uploadCount}/{uploadTotal}
-            </>
-          ) : (
-            <>
-              <Plus size={16} />
-              Add Images
-            </>
-          )}
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            disabled={uploading}
-            onChange={(e) => {
-              if (e.target.files) addImages(e.target.files);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        {!readOnly && (
+          <label className={`flex items-center gap-2 bg-rose-400 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors shadow-soft cursor-pointer ${uploading ? "opacity-50 pointer-events-none" : ""}`}>
+            {uploading ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                {uploadCount}/{uploadTotal}
+              </>
+            ) : (
+              <>
+                <Plus size={16} />
+                Add Images
+              </>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                if (e.target.files) addImages(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </label>
+        )}
+
       </div>
 
       {images.length === 0 ? (
@@ -184,20 +189,22 @@ export default function MoodBoardPage() {
           <p className="text-xs text-stone-300 mt-1">
             Images are automatically compressed for optimal storage.
           </p>
-          <label className="inline-flex items-center gap-2 mt-6 bg-rose-400 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">
-            <Plus size={16} />
-            Upload Photos
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files) addImages(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </label>
+          {!readOnly && (
+            <label className="inline-flex items-center gap-2 mt-6 bg-rose-400 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors cursor-pointer">
+              <Plus size={16} />
+              Upload Photos
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files) addImages(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+          )}
         </div>
       ) : (
         <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 space-y-4">
@@ -225,17 +232,19 @@ export default function MoodBoardPage() {
                 >
                   <ZoomIn size={12} className="text-stone-500" />
                 </button>
-                <button
-                  onClick={() => setConfirmDeleteId(img.id)}
-                  className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center shadow-sm hover:bg-white"
-                >
-                  <X size={12} className="text-stone-500" />
-                </button>
+                {!readOnly && (
+                  <button
+                    onClick={() => setConfirmDeleteId(img.id)}
+                    className="w-7 h-7 bg-white/90 rounded-full flex items-center justify-center shadow-sm hover:bg-white"
+                  >
+                    <X size={12} className="text-stone-500" />
+                  </button>
+                )}
               </div>
 
               {/* Caption */}
               <div className="absolute bottom-0 left-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity p-3">
-                {editingId === img.id ? (
+                {!readOnly && editingId === img.id ? (
                   <div className="flex items-center gap-1.5">
                     <input
                       autoFocus
@@ -256,15 +265,17 @@ export default function MoodBoardPage() {
                     <p className="flex-1 text-xs text-white font-medium truncate">
                       {img.caption || "No caption"}
                     </p>
-                    <button
-                      onClick={() => {
-                        setEditingId(img.id);
-                        setEditCaption(img.caption);
-                      }}
-                      className="w-5 h-5 bg-white/70 rounded-full flex items-center justify-center shrink-0"
-                    >
-                      <Pencil size={8} className="text-stone-600" />
-                    </button>
+                    {!readOnly && (
+                      <button
+                        onClick={() => {
+                          setEditingId(img.id);
+                          setEditCaption(img.caption);
+                        }}
+                        className="w-5 h-5 bg-white/70 rounded-full flex items-center justify-center shrink-0"
+                      >
+                        <Pencil size={8} className="text-stone-600" />
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

@@ -37,10 +37,10 @@ const SECTION_LABELS: Record<string, string> = {
 
 export interface WeddingEditorProps {
   event: Event;
-  /** Called with partial Event fields when saving */
-  onSave: (fields: Partial<Event>) => Promise<void>;
-  /** Called when hero image is selected — must upload and return the storage path */
-  onHeroUpload: (file: File) => Promise<string>;
+  /** Called with partial Event fields when saving. Omit to make the editor read-only. */
+  onSave?: (fields: Partial<Event>) => Promise<void>;
+  /** Called when hero image is selected — must upload and return the storage path. Omit to disable uploads. */
+  onHeroUpload?: (file: File) => Promise<string>;
   /** Back link destination */
   backHref: string;
   /** Optional extra info notes at the bottom */
@@ -101,11 +101,11 @@ export default function WeddingEditor({ event, onSave, onHeroUpload, backHref, i
   // ── Hero upload ──
   async function handleHeroUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !onHeroUpload) return;
     setHeroError("");
     setUploadingHero(true);
     try {
-      const path = await onHeroUpload(file);
+      const path = await onHeroUpload!(file);
       setHeroPath(path);
       const url = await getSignedUrl("event-files", path);
       setHeroPreviewUrl(url);
@@ -120,6 +120,7 @@ export default function WeddingEditor({ event, onSave, onHeroUpload, backHref, i
 
   // ── Save ──
   async function handleSave() {
+    if (!onSave) return;
     const trimmedSlug = normalizeSlug(slug);
     if (enabled && !trimmedSlug) {
       setSlugError("URL slug is required when the page is enabled.");
@@ -129,7 +130,7 @@ export default function WeddingEditor({ event, onSave, onHeroUpload, backHref, i
     setSaving(true);
 
     try {
-      await onSave({
+      await onSave!({
         weddingPageEnabled: enabled,
         weddingSlug: trimmedSlug || null,
         weddingHeadline: headline,
@@ -185,6 +186,7 @@ export default function WeddingEditor({ event, onSave, onHeroUpload, backHref, i
               </a>
             </>
           )}
+          {onSave && (
           <button
             onClick={handleSave}
             disabled={saving}
@@ -193,6 +195,7 @@ export default function WeddingEditor({ event, onSave, onHeroUpload, backHref, i
             {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <Check size={14} /> : null}
             {saved ? "Saved!" : "Save"}
           </button>
+          )}
         </div>
       </div>
 
@@ -551,6 +554,7 @@ export default function WeddingEditor({ event, onSave, onHeroUpload, backHref, i
         )}
 
         {/* Bottom save */}
+        {onSave && (
         <div className="flex justify-end pb-8">
           <button
             onClick={handleSave}
@@ -561,6 +565,7 @@ export default function WeddingEditor({ event, onSave, onHeroUpload, backHref, i
             {saved ? "Saved!" : "Save Wedding Website"}
           </button>
         </div>
+        )}
       </div>
     </div>
   );

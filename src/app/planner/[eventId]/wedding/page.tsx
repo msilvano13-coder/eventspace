@@ -9,6 +9,7 @@ import { Event } from "@/lib/types";
 import { uploadToStorage } from "@/lib/supabase/storage";
 import { getUserId } from "@/lib/supabase/db";
 import { compressImageToBlob } from "@/lib/image-compress";
+import { useIsTeamMember } from "@/hooks/useIsTeamMember";
 
 export default function WeddingEditorPage() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -16,6 +17,7 @@ export default function WeddingEditorPage() {
   const loading = useEventsLoading();
   useEventSubEntities(eventId, ["schedule", "moodBoard"]);
   const { updateEvent } = useStoreActions();
+  const readOnly = useIsTeamMember();
 
   if (loading) return <EventLoader className="px-4 py-6 sm:px-6 md:px-8 flex items-center justify-center min-h-[200px]" />;
 
@@ -44,8 +46,8 @@ export default function WeddingEditorPage() {
     <div className="px-4 py-6 sm:px-6 md:px-8">
       <WeddingEditor
         event={event}
-        onSave={handleSave}
-        onHeroUpload={handleHeroUpload}
+        onSave={readOnly ? undefined : handleSave}
+        onHeroUpload={readOnly ? undefined : handleHeroUpload}
         backHref={`/planner/${eventId}`}
         infoNotes={
           <>

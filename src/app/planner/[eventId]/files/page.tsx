@@ -2,6 +2,7 @@
 
 import { useParams } from "next/navigation";
 import { useEvent, useEventSubEntities, useStoreActions, useEventsLoading } from "@/hooks/useStore";
+import { useIsTeamMember } from "@/hooks/useIsTeamMember";
 import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
 import { useState } from "react";
@@ -29,6 +30,7 @@ export default function FilesPage() {
   const loading = useEventsLoading();
   useEventSubEntities(eventId, ["files"]);
   const { updateEvent } = useStoreActions();
+  const readOnly = useIsTeamMember();
   const [uploading, setUploading] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
 
@@ -114,23 +116,25 @@ export default function FilesPage() {
 
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-heading font-bold text-stone-800">Shared Files</h1>
-        <button
-          onClick={handleUpload}
-          disabled={uploading}
-          className="flex items-center gap-2 bg-rose-400 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
-        >
-          {uploading ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Uploading...
-            </>
-          ) : (
-            <>
-              <Upload size={14} />
-              Upload
-            </>
-          )}
-        </button>
+        {!readOnly && (
+          <button
+            onClick={handleUpload}
+            disabled={uploading}
+            className="flex items-center gap-2 bg-rose-400 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50"
+          >
+            {uploading ? (
+              <>
+                <Loader2 size={14} className="animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload size={14} />
+                Upload
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {event.files.length === 0 ? (
@@ -168,12 +172,14 @@ export default function FilesPage() {
                       )}
                     </button>
                   )}
-                  <button
-                    onClick={() => handleRemove(file.id)}
-                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-50 transition-colors"
-                  >
-                    <X size={14} className="text-stone-400 hover:text-red-500" />
-                  </button>
+                  {!readOnly && (
+                    <button
+                      onClick={() => handleRemove(file.id)}
+                      className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-red-50 transition-colors"
+                    >
+                      <X size={14} className="text-stone-400 hover:text-red-500" />
+                    </button>
+                  )}
                 </div>
               </div>
             );

@@ -38,7 +38,7 @@ import { LAYOUT_TEMPLATES, LayoutTemplate } from "@/lib/layout-templates";
 interface Props {
   eventId: string;
   initialJSON: string | null;
-  onSave: (json: string) => void;
+  onSave?: (json: string) => void;
   // Lighting integration — zones rendered directly on canvas
   lightingZones?: LightingZone[];
   lightingEnabled?: boolean;
@@ -289,7 +289,7 @@ export default function FloorPlanEditor({
       console.warn("[FloorPlan] doSave: serializeFloorPlan returned null (validation failed)");
       return false;
     }
-    onSaveRef.current(serialized);
+    onSaveRef.current?.(serialized);
     return true;
   }, [getCanvasJSON]);
 
@@ -847,7 +847,7 @@ export default function FloorPlanEditor({
         (rawJSON as any).height = canvas.getHeight();
         const serialized = serializeFloorPlan(rawJSON as Record<string, unknown>);
         if (serialized) {
-          onSaveRef.current(serialized);
+          onSaveRef.current?.(serialized);
         }
       } catch {
         // Canvas may already be partially disposed — best-effort save
