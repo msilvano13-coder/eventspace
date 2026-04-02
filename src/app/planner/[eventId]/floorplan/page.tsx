@@ -101,7 +101,6 @@ export default function FloorPlanPage() {
       const updated = currentPlans.map((fp) =>
         fp.id === currentPlanId ? { ...fp, json } : fp
       );
-      console.log("[FloorPlan] handleSave: saving", updated.length, "plans, active=", currentPlanId, "json length=", json.length);
       updateEvent(eventId, { floorPlans: updated });
     },
     [eventId, updateEvent]

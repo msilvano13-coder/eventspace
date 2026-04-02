@@ -2,7 +2,7 @@
 
 import React, { useMemo, useCallback, useEffect, useState, useRef, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, ContactShadows, MeshReflectorMaterial, RoundedBox, Text } from "@react-three/drei";
+import { OrbitControls, ContactShadows, MeshReflectorMaterial, RoundedBox } from "@react-three/drei";
 import * as THREE from "three";
 import { Color, Vector2, Shape, DoubleSide, ACESFilmicToneMapping } from "three";
 import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
@@ -11,120 +11,253 @@ import { FURNITURE_CATALOG } from "@/lib/constants";
 import { ErrorBoundary } from "./FloorPlan3DErrorBoundary";
 import VenueEnvironment, { VenuePreset, VenuePresetDef, VENUE_PRESETS } from "./VenueEnvironment";
 import ProceduralEnvMap from "./ProceduralEnvMap";
-import { QualityProvider } from "./QualityTier";
-// Post-processing disabled — @react-three/postprocessing v3.0.4 incompatible with Three.js r170
-// import { EffectComposer, SSAO, Vignette } from "@react-three/postprocessing";
-// import { BlendFunction } from "postprocessing";
+import { QualityProvider, useQuality } from "./QualityTier";
+import { EffectComposer, SSAO, Vignette } from "@react-three/postprocessing";
+import { BlendFunction } from "postprocessing";
 
-// ── Procedural floor textures (canvas-generated normal maps) ──
+// ── Procedural floor textures (full PBR: albedo + normal + roughness) ──
 
-/** Generates a canvas-based normal map for floor materials */
-function generateFloorNormalMap(type: string, size: number): THREE.CanvasTexture {
-  const canvas = document.createElement("canvas");
-  canvas.width = size;
-  canvas.height = size;
-  const ctx = canvas.getContext("2d")!;
-
-  // Fill with flat normal (128, 128, 255) as base
-  ctx.fillStyle = "rgb(128, 128, 255)";
-  ctx.fillRect(0, 0, size, size);
-
-  if (type === "hardwood") {
-    // Wood grain lines — horizontal with slight waviness
-    ctx.strokeStyle = "rgb(135, 128, 255)";
-    ctx.lineWidth = 1;
-    for (let y = 0; y < size; y += 4) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      for (let x = 0; x < size; x += 10) {
-        ctx.lineTo(x, y + Math.sin(x * 0.05 + y * 0.02) * 1.5);
-      }
-      ctx.stroke();
-    }
-    // Plank seams — vertical lines at regular intervals
-    ctx.strokeStyle = "rgb(120, 128, 255)";
-    ctx.lineWidth = 2;
-    const plankWidth = size / 4;
-    for (let x = plankWidth; x < size; x += plankWidth) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, size);
-      ctx.stroke();
-    }
-    // Horizontal plank seams (staggered)
-    for (let y = size / 6; y < size; y += size / 3) {
-      for (let x = 0; x < size; x += plankWidth) {
-        const offset = (Math.floor(y / (size / 3)) % 2) * plankWidth * 0.5;
-        ctx.beginPath();
-        ctx.moveTo(x + offset, y);
-        ctx.lineTo(x + offset + plankWidth, y);
-        ctx.stroke();
-      }
-    }
-  } else if (type === "marble") {
-    // Marble veining — organic curved lines
-    ctx.strokeStyle = "rgb(122, 128, 255)";
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i < 8; i++) {
-      const startX = Math.random() * size;
-      const startY = Math.random() * size;
-      ctx.beginPath();
-      ctx.moveTo(startX, startY);
-      let cx = startX, cy = startY;
-      for (let j = 0; j < 20; j++) {
-        cx += (Math.random() - 0.5) * size * 0.15;
-        cy += (Math.random() - 0.3) * size * 0.1;
-        ctx.lineTo(cx, cy);
-      }
-      ctx.stroke();
-    }
-    // Thinner secondary veins
-    ctx.strokeStyle = "rgb(125, 128, 255)";
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < 15; i++) {
-      const startX = Math.random() * size;
-      const startY = Math.random() * size;
-      ctx.beginPath();
-      ctx.moveTo(startX, startY);
-      let cx = startX, cy = startY;
-      for (let j = 0; j < 12; j++) {
-        cx += (Math.random() - 0.5) * size * 0.12;
-        cy += (Math.random() - 0.4) * size * 0.08;
-        ctx.lineTo(cx, cy);
-      }
-      ctx.stroke();
-    }
-  } else if (type === "concrete") {
-    // Concrete surface noise — subtle speckle
-    const imageData = ctx.getImageData(0, 0, size, size);
-    const data = imageData.data;
-    for (let i = 0; i < data.length; i += 4) {
-      const noise = (Math.random() - 0.5) * 8;
-      data[i] = 128 + noise;     // R
-      data[i + 1] = 128 + noise; // G
-      // B stays 255 (pointing up)
-    }
-    ctx.putImageData(imageData, 0, 0);
-  }
-  // carpet: leave as flat normal — fabric roughness is handled via material roughness value
-
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(4, 4);
-  return texture;
+/** Seeded pseudo-random for deterministic texture generation */
+function seededRandom(seed: number) {
+  let s = seed;
+  return () => { s = (s * 16807 + 0) % 2147483647; return (s - 1) / 2147483646; };
 }
 
-/** Cache of generated floor textures by type+size */
-const floorTextureCache = new Map<string, THREE.CanvasTexture>();
-function getFloorNormalMap(type: string, size: number): THREE.CanvasTexture {
-  const key = `${type}-${size}`;
-  let tex = floorTextureCache.get(key);
-  if (!tex) {
-    tex = generateFloorNormalMap(type, size);
-    floorTextureCache.set(key, tex);
+interface FloorTextureSet {
+  albedo: THREE.CanvasTexture;
+  normal: THREE.CanvasTexture;
+  roughness: THREE.CanvasTexture;
+}
+
+function generateFloorTextures(type: string, size: number): FloorTextureSet {
+  // Albedo map
+  const albedoCanvas = document.createElement("canvas");
+  albedoCanvas.width = size;
+  albedoCanvas.height = size;
+  const albedoCtx = albedoCanvas.getContext("2d")!;
+
+  // Normal map
+  const normalCanvas = document.createElement("canvas");
+  normalCanvas.width = size;
+  normalCanvas.height = size;
+  const normalCtx = normalCanvas.getContext("2d")!;
+  normalCtx.fillStyle = "rgb(128, 128, 255)";
+  normalCtx.fillRect(0, 0, size, size);
+
+  // Roughness map (white = rough, black = smooth)
+  const roughCanvas = document.createElement("canvas");
+  roughCanvas.width = size;
+  roughCanvas.height = size;
+  const roughCtx = roughCanvas.getContext("2d")!;
+
+  const rand = seededRandom(42);
+
+  if (type === "hardwood") {
+    const plankW = size / 5;
+    const plankH = size / 3;
+    // Base roughness
+    roughCtx.fillStyle = "rgb(140, 140, 140)";
+    roughCtx.fillRect(0, 0, size, size);
+
+    // Draw individual planks with color variation
+    const baseColors = ["#b8956a", "#a8895e", "#c4a070", "#b09060", "#c0985c", "#a88050"];
+    for (let col = 0; col < 5; col++) {
+      for (let row = 0; row < 4; row++) {
+        const stagger = (row % 2) * plankW * 0.5;
+        const px = col * plankW + stagger;
+        const py = row * plankH;
+        const plankColor = baseColors[Math.floor(rand() * baseColors.length)];
+        // Slight hue/brightness shift per plank
+        albedoCtx.fillStyle = plankColor;
+        albedoCtx.fillRect(px, py, plankW - 1, plankH - 1);
+
+        // Wood grain within plank — subtle horizontal lines
+        for (let gy = 0; gy < plankH; gy += 3) {
+          const grainAlpha = 0.03 + rand() * 0.06;
+          albedoCtx.fillStyle = `rgba(60, 40, 20, ${grainAlpha})`;
+          albedoCtx.fillRect(px + 2, py + gy, plankW - 4, 1.5);
+        }
+
+        // Per-plank roughness variation
+        const roughVal = 130 + Math.floor(rand() * 40);
+        roughCtx.fillStyle = `rgb(${roughVal}, ${roughVal}, ${roughVal})`;
+        roughCtx.fillRect(px, py, plankW - 1, plankH - 1);
+      }
+    }
+
+    // Plank seams in normal map (recessed)
+    normalCtx.strokeStyle = "rgb(115, 128, 255)";
+    normalCtx.lineWidth = 2;
+    for (let col = 1; col < 5; col++) {
+      normalCtx.beginPath();
+      normalCtx.moveTo(col * plankW, 0);
+      normalCtx.lineTo(col * plankW, size);
+      normalCtx.stroke();
+    }
+    for (let row = 0; row < 4; row++) {
+      const stagger = (row % 2) * plankW * 0.5;
+      normalCtx.beginPath();
+      normalCtx.moveTo(stagger, row * plankH);
+      normalCtx.lineTo(stagger + size, row * plankH);
+      normalCtx.stroke();
+    }
+    // Seams are rougher (gaps catch light)
+    roughCtx.strokeStyle = "rgb(200, 200, 200)";
+    roughCtx.lineWidth = 2;
+    for (let col = 1; col < 5; col++) {
+      roughCtx.beginPath(); roughCtx.moveTo(col * plankW, 0); roughCtx.lineTo(col * plankW, size); roughCtx.stroke();
+    }
+    // Wood grain normal detail
+    normalCtx.strokeStyle = "rgb(132, 128, 255)";
+    normalCtx.lineWidth = 0.8;
+    for (let y = 0; y < size; y += 3.5) {
+      normalCtx.beginPath();
+      normalCtx.moveTo(0, y);
+      for (let x = 0; x < size; x += 8) {
+        normalCtx.lineTo(x, y + Math.sin(x * 0.04 + y * 0.015) * 1.2);
+      }
+      normalCtx.stroke();
+    }
+
+  } else if (type === "marble") {
+    // Base: warm white with subtle cloudy variation
+    albedoCtx.fillStyle = "#e8e0d0";
+    albedoCtx.fillRect(0, 0, size, size);
+    // Cloudy base variation
+    for (let i = 0; i < 60; i++) {
+      const cx = rand() * size, cy = rand() * size;
+      const r = 20 + rand() * 60;
+      const grad = albedoCtx.createRadialGradient(cx, cy, 0, cx, cy, r);
+      const tone = rand() > 0.5 ? "rgba(220,215,200," : "rgba(240,235,225,";
+      grad.addColorStop(0, tone + (0.1 + rand() * 0.15) + ")");
+      grad.addColorStop(1, tone + "0)");
+      albedoCtx.fillStyle = grad;
+      albedoCtx.fillRect(0, 0, size, size);
+    }
+    // Base roughness: very smooth
+    roughCtx.fillStyle = "rgb(40, 40, 40)";
+    roughCtx.fillRect(0, 0, size, size);
+    // Primary veins — darker gray with color
+    for (let i = 0; i < 6; i++) {
+      let cx = rand() * size, cy = rand() * size;
+      albedoCtx.strokeStyle = `rgba(${140 + Math.floor(rand() * 30)}, ${130 + Math.floor(rand() * 20)}, ${115 + Math.floor(rand() * 20)}, ${0.25 + rand() * 0.2})`;
+      albedoCtx.lineWidth = 1 + rand() * 2;
+      normalCtx.strokeStyle = "rgb(120, 128, 255)";
+      normalCtx.lineWidth = 1.5;
+      roughCtx.strokeStyle = "rgb(70, 70, 70)";
+      roughCtx.lineWidth = 1.5;
+      albedoCtx.beginPath(); normalCtx.beginPath(); roughCtx.beginPath();
+      albedoCtx.moveTo(cx, cy); normalCtx.moveTo(cx, cy); roughCtx.moveTo(cx, cy);
+      for (let j = 0; j < 25; j++) {
+        cx += (rand() - 0.5) * size * 0.14;
+        cy += (rand() - 0.3) * size * 0.09;
+        albedoCtx.lineTo(cx, cy); normalCtx.lineTo(cx, cy); roughCtx.lineTo(cx, cy);
+      }
+      albedoCtx.stroke(); normalCtx.stroke(); roughCtx.stroke();
+    }
+    // Secondary fine veins
+    for (let i = 0; i < 12; i++) {
+      let cx = rand() * size, cy = rand() * size;
+      albedoCtx.strokeStyle = `rgba(160, 150, 135, ${0.1 + rand() * 0.12})`;
+      albedoCtx.lineWidth = 0.5 + rand();
+      normalCtx.strokeStyle = "rgb(124, 128, 255)";
+      normalCtx.lineWidth = 0.5;
+      albedoCtx.beginPath(); normalCtx.beginPath();
+      albedoCtx.moveTo(cx, cy); normalCtx.moveTo(cx, cy);
+      for (let j = 0; j < 15; j++) {
+        cx += (rand() - 0.5) * size * 0.1;
+        cy += (rand() - 0.4) * size * 0.07;
+        albedoCtx.lineTo(cx, cy); normalCtx.lineTo(cx, cy);
+      }
+      albedoCtx.stroke(); normalCtx.stroke();
+    }
+
+  } else if (type === "concrete") {
+    // Concrete: gray base with aggregate speckle
+    albedoCtx.fillStyle = "#a0a0a0";
+    albedoCtx.fillRect(0, 0, size, size);
+    roughCtx.fillStyle = "rgb(190, 190, 190)";
+    roughCtx.fillRect(0, 0, size, size);
+    // Pixel-level noise for all three maps
+    const albedoData = albedoCtx.getImageData(0, 0, size, size);
+    const normalData = normalCtx.getImageData(0, 0, size, size);
+    const roughData = roughCtx.getImageData(0, 0, size, size);
+    for (let i = 0; i < albedoData.data.length; i += 4) {
+      const noise = (rand() - 0.5) * 30;
+      // Albedo: gray speckle
+      const base = 150 + noise;
+      albedoData.data[i] = base; albedoData.data[i + 1] = base; albedoData.data[i + 2] = base + 5; albedoData.data[i + 3] = 255;
+      // Normal: subtle surface noise
+      normalData.data[i] = 128 + (rand() - 0.5) * 10;
+      normalData.data[i + 1] = 128 + (rand() - 0.5) * 10;
+      // Roughness: mostly rough with some smooth spots
+      roughData.data[i] = 180 + (rand() - 0.5) * 30;
+      roughData.data[i + 1] = roughData.data[i]; roughData.data[i + 2] = roughData.data[i];
+    }
+    albedoCtx.putImageData(albedoData, 0, 0);
+    normalCtx.putImageData(normalData, 0, 0);
+    roughCtx.putImageData(roughData, 0, 0);
+    // Control joints (saw cuts)
+    const jointSpacing = size / 3;
+    albedoCtx.strokeStyle = "rgba(80, 80, 80, 0.4)"; albedoCtx.lineWidth = 1.5;
+    normalCtx.strokeStyle = "rgb(115, 128, 255)"; normalCtx.lineWidth = 2;
+    for (let x = jointSpacing; x < size; x += jointSpacing) {
+      albedoCtx.beginPath(); albedoCtx.moveTo(x, 0); albedoCtx.lineTo(x, size); albedoCtx.stroke();
+      normalCtx.beginPath(); normalCtx.moveTo(x, 0); normalCtx.lineTo(x, size); normalCtx.stroke();
+    }
+    for (let y = jointSpacing; y < size; y += jointSpacing) {
+      albedoCtx.beginPath(); albedoCtx.moveTo(0, y); albedoCtx.lineTo(size, y); albedoCtx.stroke();
+      normalCtx.beginPath(); normalCtx.moveTo(0, y); normalCtx.lineTo(size, y); normalCtx.stroke();
+    }
+
+  } else {
+    // Carpet: solid color, high roughness, no detail
+    albedoCtx.fillStyle = "#8a7b6b";
+    albedoCtx.fillRect(0, 0, size, size);
+    roughCtx.fillStyle = "rgb(240, 240, 240)";
+    roughCtx.fillRect(0, 0, size, size);
+    // Subtle fiber texture in normal map
+    for (let y = 0; y < size; y++) {
+      for (let x = 0; x < size; x += 2) {
+        const nr = 128 + (rand() - 0.5) * 6;
+        const ng = 128 + (rand() - 0.5) * 6;
+        normalCtx.fillStyle = `rgb(${nr}, ${ng}, 255)`;
+        normalCtx.fillRect(x, y, 2, 1);
+      }
+    }
   }
-  return tex;
+
+  const makeTexture = (c: HTMLCanvasElement) => {
+    const t = new THREE.CanvasTexture(c);
+    t.wrapS = THREE.RepeatWrapping;
+    t.wrapT = THREE.RepeatWrapping;
+    t.repeat.set(4, 4);
+    t.minFilter = THREE.LinearMipmapLinearFilter;
+    t.magFilter = THREE.LinearFilter;
+    return t;
+  };
+
+  return {
+    albedo: makeTexture(albedoCanvas),
+    normal: makeTexture(normalCanvas),
+    roughness: makeTexture(roughCanvas),
+  };
+}
+
+/** Cache of generated floor texture sets by type+size */
+const floorTextureCache = new Map<string, FloorTextureSet>();
+function getFloorTextures(type: string, size: number): FloorTextureSet {
+  const key = `${type}-${size}`;
+  let set = floorTextureCache.get(key);
+  if (!set) {
+    set = generateFloorTextures(type, size);
+    floorTextureCache.set(key, set);
+  }
+  return set;
+}
+/** Legacy accessor for normal map only */
+function getFloorNormalMap(type: string, size: number): THREE.CanvasTexture {
+  return getFloorTextures(type, size).normal;
 }
 
 // ── 3D Settings ──
@@ -136,7 +269,13 @@ interface View3DSettings {
   chairStyle: "solid-back" | "chiavari" | "folding" | "ghost";
   linenColor: "ivory" | "white" | "blush" | "navy" | "sage" | "gold";
   floorMaterial: "hardwood" | "marble" | "carpet" | "concrete";
+  floorColor: string | null; // null = use default for material type
   lightingMood: "warm" | "cool" | "neutral" | "dramatic";
+  lightingColorCast: number; // 0 = neutral white, 1 = full mood color
+  chairColor: string | null; // null = use default gold/wood tones
+  linenCustomColor: string | null; // null = use preset linen color
+  wallColor: string | null; // null = use default warm neutrals
+  matchSeatToLinen: boolean; // true = seat cushion uses linen color, false = uses chair color
   showLabels: boolean;
   showShadows: boolean;
   cameraPreset: CameraPreset;
@@ -147,7 +286,13 @@ const DEFAULT_SETTINGS: View3DSettings = {
   chairStyle: "solid-back",
   linenColor: "ivory",
   floorMaterial: "hardwood",
-  lightingMood: "warm",
+  floorColor: null,
+  lightingMood: "neutral",
+  lightingColorCast: 1.0,
+  chairColor: null,
+  linenCustomColor: null,
+  wallColor: null,
+  matchSeatToLinen: false,
   showLabels: true,
   showShadows: true,
   cameraPreset: "default",
@@ -200,6 +345,8 @@ interface ParsedObject {
   stroke: string;
   points?: number[][];
   inTableSet?: boolean;
+  tableSetFurnitureId?: string;
+  tableCenter?: { x: number; y: number };
 }
 
 /** Heights in 3D (in inches, matching the 1px = 1 inch scale) */
@@ -309,6 +456,24 @@ function getCachedColor(hex: string): Color {
   return c;
 }
 
+/** Blend a mood color toward neutral white. cast=0 → pure white, cast=1 → original color */
+function blendToNeutral(hex: string, cast: number): string {
+  const c = new Color(hex);
+  const white = new Color("#ffffff");
+  c.lerp(white, 1 - cast);
+  return "#" + c.getHexString();
+}
+
+/** Darken or lighten a hex color by a factor (-1 to 1) */
+function adjustBrightness(hex: string, factor: number): string {
+  const c = new Color(hex);
+  const hsl = { h: 0, s: 0, l: 0 };
+  c.getHSL(hsl);
+  hsl.l = Math.max(0, Math.min(1, hsl.l + factor));
+  c.setHSL(hsl.h, hsl.s, hsl.l);
+  return "#" + c.getHexString();
+}
+
 /** Parse Fabric.js canvas JSON into 3D-renderable objects */
 function parseCanvasJSON(floorPlanJSON: string | null): {
   objects: ParsedObject[];
@@ -337,11 +502,18 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
     parentScaleX = 1,
     parentScaleY = 1,
     inTableSet = false,
+    tableSetFurnitureId?: string,
+    tableCenter?: { x: number; y: number },
   ) {
     const data = obj.data;
-    // Apply parent scale to child positions within groups
-    const absX = parentX + (obj.left || 0) * parentScaleX;
-    const absY = parentY + (obj.top || 0) * parentScaleY;
+    // Apply parent scale AND rotation to child positions within groups
+    const localX = (obj.left || 0) * parentScaleX;
+    const localY = (obj.top || 0) * parentScaleY;
+    const parentRad = (parentAngle * Math.PI) / 180;
+    const cosP = Math.cos(parentRad);
+    const sinP = Math.sin(parentRad);
+    const absX = parentX + localX * cosP - localY * sinP;
+    const absY = parentY + localX * sinP + localY * cosP;
     const absAngle = parentAngle + (obj.angle || 0);
     // Compound scale: parent scale * own scale
     const ownScaleX = (obj.scaleX || 1) * parentScaleX;
@@ -353,8 +525,9 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
     if (objType === "group" && Array.isArray(obj.objects)) {
       // If this is a table set, recurse into sub-objects to render each piece
       if (data?.isTableSet) {
+        const center = { x: absX, y: absY };
         for (const child of obj.objects) {
-          processObject(child, absX, absY, absAngle, ownScaleX, ownScaleY, true);
+          processObject(child, absX, absY, absAngle, ownScaleX, ownScaleY, true, data.furnitureId, center);
         }
         return;
       }
@@ -382,6 +555,8 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
           fill: catalogItem?.fill || obj.fill || "#f5f0e8",
           stroke: catalogItem?.stroke || obj.stroke || "#c4b5a0",
           inTableSet,
+          tableSetFurnitureId,
+          tableCenter,
         });
         return;
       }
@@ -393,14 +568,16 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
       return;
     }
 
-    // Bare shape (no data) inside a table set group — infer as chair or table from shape properties
+    // Bare shape (no data) — if inside a table set, skip it (the tagged furniture
+    // items in the group are already handled above; bare shapes are just 2D visuals).
+    // Only infer furniture from bare shapes at the top level.
     if (!data) {
+      if (inTableSet) return;
       const shapeType = (obj.type || "").toLowerCase();
       if (shapeType === "circle" || shapeType === "rect" || shapeType === "rectangle") {
         const w = (obj.width || 20) * ownScaleX;
         const h = (obj.height || 20) * ownScaleY;
         const r = obj.radius ? obj.radius * ownScaleX : undefined;
-        // Small items are likely chairs, larger items are tables
         const isSmallItem = w <= 20 && h <= 20;
         const inferredId = isSmallItem ? "chair" : (shapeType === "circle" ? "round-table-60" : "rect-table-6");
         parsed.push({
@@ -416,7 +593,6 @@ function parseCanvasJSON(floorPlanJSON: string | null): {
           angle: absAngle,
           fill: obj.fill || "#f5f0e8",
           stroke: obj.stroke || "#c4b5a0",
-          inTableSet,
         });
       }
       return;
@@ -577,22 +753,55 @@ function getFurnitureCategory(furnitureId: string): FurnitureCategory {
   return "default";
 }
 
-/** Label that floats above every furniture piece */
+/** Label that floats above every furniture piece — uses canvas-texture sprite to avoid CSP/worker issues */
+const labelTextureCache = new Map<string, THREE.CanvasTexture>();
+
 function FurnitureLabel({ label, y }: { label: string; y: number }) {
+  const texture = useMemo(() => {
+    if (!label) return null;
+    const cached = labelTextureCache.get(label);
+    if (cached) return cached;
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d")!;
+    const fontSize = 28;
+    const padding = 8;
+    ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+    const metrics = ctx.measureText(label);
+    const textWidth = metrics.width;
+
+    canvas.width = textWidth + padding * 2;
+    canvas.height = fontSize + padding * 2;
+
+    // Background
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.beginPath();
+    ctx.roundRect(0, 0, canvas.width, canvas.height, 6);
+    ctx.fill();
+
+    // Text
+    ctx.font = `${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif`;
+    ctx.fillStyle = "#4a4540";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(label, canvas.width / 2, canvas.height / 2);
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.minFilter = THREE.LinearFilter;
+    labelTextureCache.set(label, tex);
+    return tex;
+  }, [label]);
+
+  if (!texture) return null;
+
+  const aspect = texture.image.width / texture.image.height;
+  const spriteHeight = 0.18;
+  const spriteWidth = spriteHeight * aspect;
+
   return (
-    <Text
-      font="/fonts/inter-latin-400.woff2"
-      position={[0, y + 0.15, 0]}
-      fontSize={0.12}
-      color="#4a4540"
-      anchorX="center"
-      anchorY="bottom"
-      outlineWidth={0.008}
-      outlineColor="#ffffff"
-      maxWidth={2}
-    >
-      {label}
-    </Text>
+    <sprite position={[0, y + 0.2, 0]} scale={[spriteWidth, spriteHeight, 1]}>
+      <spriteMaterial map={texture} depthTest={false} transparent />
+    </sprite>
   );
 }
 
@@ -642,16 +851,44 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
   // Table-set chairs have pre-set angles facing the table center — compensate
   // for the flipped back panel by adding π so they face inward again
   const category = getFurnitureCategory(obj.furnitureId);
-  const chairTableSetOffset = (category === "chair" && obj.inTableSet) ? Math.PI : 0;
-  const rotY = -(obj.angle * Math.PI) / 180 + chairTableSetOffset;
+  // For table-set chairs, compute rotation so the chair back faces away from the table center
+  // (person sits facing the table, chair back faces outward)
+  let rotY = -(obj.angle * Math.PI) / 180;
+  if (category === "chair" && obj.inTableSet && obj.tableCenter) {
+    // Direction from table center to chair (the "away" direction) in canvas coords
+    // Canvas X → 3D X (same), Canvas Y → 3D Z (same)
+    // Chair back is local +Z; Y-rotation θ maps local +Z to world (sinθ, cosθ) in XZ
+    const awayX = obj.x - obj.tableCenter.x;
+    const awayZ = obj.y - obj.tableCenter.y;
+    rotY = Math.atan2(awayX, awayZ);
+  }
 
-  const fillColor = getCachedColor(obj.fill);
-  const strokeColor = getCachedColor(obj.stroke);
-  const linenColor = getCachedColor(LINEN_COLORS[settings.linenColor]);
+  // Override 2D diagram colors with realistic 3D material colors.
+  // The 2D canvas uses bright category-coded colors (pink, yellow, indigo) for readability;
+  // in 3D these need to look like real materials.
+  const REALISTIC_3D_COLORS: Record<string, { fill: string; stroke: string }> = {
+    "bar": { fill: "#5c4033", stroke: "#3a2820" },            // dark walnut body, espresso countertop
+    "buffet": { fill: "#f5f0e8", stroke: "#8b7355" },         // white linen skirting, wood trim
+    "dessert-station": { fill: "#f5f0e8", stroke: "#8b7355" },
+    "coffee-station": { fill: "#f5f0e8", stroke: "#5c4033" },
+    "photo-booth": { fill: "#2a2a2a", stroke: "#1a1a1a" },    // matte black frame
+    "draping": { fill: "#f0ebe4", stroke: "#d5cfc6" },        // ivory sheer fabric
+    "stage": { fill: "#2c2420", stroke: "#1a1510" },           // dark stained platform
+    "dj-booth": { fill: "#1e1e1e", stroke: "#111111" },        // black DJ equipment
+    "restrooms": { fill: "#e8e4e0", stroke: "#9a9590" },       // neutral gray walls
+    "flower-arrangement": { fill: "#e8d5d0", stroke: "#c4978a" }, // soft blush/rose tones
+    "arch": { fill: "#d4c8b8", stroke: "#a89880" },            // natural wood/greenery
+    "uplighting": { fill: "#f5ecd0", stroke: "#c4a040" },      // warm amber fixture
+  };
+  const colorOverride = REALISTIC_3D_COLORS[obj.furnitureId];
+  const fillColor = getCachedColor(colorOverride?.fill ?? obj.fill);
+  const strokeColor = getCachedColor(colorOverride?.stroke ?? obj.stroke);
+  const linenColor = getCachedColor(settings.linenCustomColor ?? LINEN_COLORS[settings.linenColor]);
   const woodColor = getCachedColor("#8b7355");      // medium wood brown for table legs
-  const chairGold = getCachedColor("#c4a46c");      // Chiavari gold for chair seats
-  const chairBack = getCachedColor("#a8905a");      // darker gold for chair backs — adds depth
-  const chairLeg = getCachedColor("#9a8050");        // chair leg tone
+  // Chair colors: use custom color if set, otherwise default gold/wood tones
+  const chairGold = getCachedColor(settings.chairColor ?? "#c4a46c");
+  const chairBack = getCachedColor(settings.chairColor ? adjustBrightness(settings.chairColor, -0.15) : "#a8905a");
+  const chairLeg = getCachedColor(settings.chairColor ? adjustBrightness(settings.chairColor, -0.2) : "#9a8050");
   const darkColor = getCachedColor("#3a3530");
   const carpetColor = getCachedColor("#4a3f35");
   const ledColor = getCachedColor("#00ccff");
@@ -834,23 +1071,38 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
     const seatThick = 1.2 * S;
     const backTopY = h3d;
     const backH = backTopY - seatY;
-    const legR = 0.5 * S;
-    const legInset = 1.5 * S;
-    const backThick = 1 * S;
+    const legR = 1.0 * S;
+    const legInset = 1.8 * S;
+    const backThick = 1.2 * S;
     return (
       <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
         {/* Legs — style-dependent */}
-        {settings.chairStyle !== "ghost" && ([
-          [-w / 2 + legInset, -d / 2 + legInset],
-          [w / 2 - legInset, -d / 2 + legInset],
-          [-w / 2 + legInset, d / 2 - legInset],
-          [w / 2 - legInset, d / 2 - legInset],
-        ] as [number, number][]).map(([lx, lz], i) => (
-          <mesh key={`leg-${i}`} position={[lx, seatY / 2, lz]} castShadow={settings.showShadows}>
-            <cylinderGeometry args={[settings.chairStyle === "folding" ? legR * 0.5 : legR * 0.7, legR, seatY, 6]} />
-            <meshStandardMaterial color={chairLeg} roughness={0.45} metalness={0.1} />
-          </mesh>
-        ))}
+        {settings.chairStyle === "ghost" ? (
+          /* Ghost chair — transparent acrylic legs */
+          ([
+            [-w / 2 + legInset, -d / 2 + legInset],
+            [w / 2 - legInset, -d / 2 + legInset],
+            [-w / 2 + legInset, d / 2 - legInset],
+            [w / 2 - legInset, d / 2 - legInset],
+          ] as [number, number][]).map(([lx, lz], i) => (
+            <mesh key={`leg-${i}`} position={[lx, seatY / 2, lz]}>
+              <cylinderGeometry args={[legR * 0.7, legR * 0.85, seatY, 8]} />
+              <meshPhysicalMaterial color="#e8f0f8" roughness={0.05} metalness={0} transmission={0.85} thickness={0.5} ior={1.5} transparent opacity={0.5} />
+            </mesh>
+          ))
+        ) : (
+          ([
+            [-w / 2 + legInset, -d / 2 + legInset],
+            [w / 2 - legInset, -d / 2 + legInset],
+            [-w / 2 + legInset, d / 2 - legInset],
+            [w / 2 - legInset, d / 2 - legInset],
+          ] as [number, number][]).map(([lx, lz], i) => (
+            <mesh key={`leg-${i}`} position={[lx, seatY / 2, lz]} castShadow={settings.showShadows}>
+              <cylinderGeometry args={[settings.chairStyle === "folding" ? legR * 0.6 : legR * 0.8, legR, seatY, 8]} />
+              <meshStandardMaterial color={chairLeg} roughness={0.45} metalness={0.1} />
+            </mesh>
+          ))
+        )}
         {/* Folding chair X-brace */}
         {settings.chairStyle === "folding" && (
           <>
@@ -866,13 +1118,11 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         )}
         {/* Seat — rounded edges for polish */}
         <RoundedBox args={[w, settings.chairStyle === "folding" ? seatThick * 0.6 : seatThick, d]} radius={0.015} smoothness={3} position={[0, seatY, 0]} castShadow={settings.showShadows} receiveShadow>
-          <meshStandardMaterial
-            color={chairGold}
-            roughness={settings.chairStyle === "ghost" ? 0.1 : 0.6}
-            metalness={settings.chairStyle === "ghost" ? 0.1 : 0.08}
-            transparent={settings.chairStyle === "ghost"}
-            opacity={settings.chairStyle === "ghost" ? 0.4 : 1}
-          />
+          {settings.chairStyle === "ghost" ? (
+            <meshPhysicalMaterial color="#e8f0f8" roughness={0.05} metalness={0} transmission={0.85} thickness={0.8} ior={1.5} transparent opacity={0.5} />
+          ) : (
+            <meshStandardMaterial color={chairGold} roughness={0.6} metalness={0.08} />
+          )}
         </RoundedBox>
         {/* Chair back — style depends on settings */}
         {settings.chairStyle === "solid-back" && (
@@ -883,13 +1133,22 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         )}
         {settings.chairStyle === "chiavari" && (
           <>
-            {/* 3 vertical slats */}
-            {[-1, 0, 1].map((offset) => (
-              <mesh key={`slat-${offset}`} position={[offset * (w * 0.28), seatY + backH / 2 + seatThick / 2, d / 2 - backThick / 2]} castShadow={settings.showShadows} receiveShadow>
-                <boxGeometry args={[w * 0.12, backH, backThick]} />
-                <meshStandardMaterial color={chairBack} roughness={0.45} metalness={0.1} />
-              </mesh>
-            ))}
+            {/* Vertical slats — evenly spaced edge to edge */}
+            {(() => {
+              const slatCount = 5;
+              const gap = backThick * 0.6; // gap between slats
+              const totalGaps = (slatCount - 1) * gap;
+              const slatW = (w - totalGaps) / slatCount;
+              return Array.from({ length: slatCount }).map((_, i) => {
+                const x = -w / 2 + slatW / 2 + i * (slatW + gap);
+                return (
+                  <mesh key={`slat-${i}`} position={[x, seatY + backH / 2 + seatThick / 2, d / 2 - backThick / 2]} castShadow={settings.showShadows} receiveShadow>
+                    <boxGeometry args={[slatW, backH, backThick]} />
+                    <meshStandardMaterial color={chairBack} roughness={0.45} metalness={0.1} />
+                  </mesh>
+                );
+              });
+            })()}
             {/* Rounded top rail — cylinder rotated horizontal */}
             <mesh position={[0, seatY + backH + seatThick / 2, d / 2 - backThick / 2]} rotation={[0, 0, Math.PI / 2]} castShadow={settings.showShadows} receiveShadow>
               <cylinderGeometry args={[backThick * 0.8, backThick * 0.8, w, 8]} />
@@ -916,7 +1175,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
             {/* Seat cushion pad */}
             <mesh position={[0, seatY + seatThick * 0.7, 0]} receiveShadow>
               <boxGeometry args={[w + 0.3 * S, seatThick * 0.5, d + 0.3 * S]} />
-              <meshStandardMaterial color={linenColor} roughness={0.85} metalness={0} envMapIntensity={0.05} />
+              <meshStandardMaterial color={settings.matchSeatToLinen ? linenColor : chairGold} roughness={0.85} metalness={0} envMapIntensity={0.05} />
             </mesh>
           </>
         )}
@@ -932,7 +1191,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
         {settings.chairStyle === "ghost" && (
           <mesh position={[0, seatY + backH / 2 + seatThick / 2, d / 2 - backThick / 2]} castShadow={false} receiveShadow>
             <boxGeometry args={[w, backH, backThick]} />
-            <meshStandardMaterial color={chairBack} roughness={0.1} metalness={0.1} transparent opacity={0.4} />
+            <meshPhysicalMaterial color="#e8f0f8" roughness={0.05} metalness={0} transmission={0.85} thickness={1.0} ior={1.5} transparent opacity={0.5} />
           </mesh>
         )}
         {settings.showLabels && <FurnitureLabel label={obj.label} y={backTopY + 2 * S} />}
@@ -1609,36 +1868,79 @@ function RoomFloor({ obj, originX, originY, settings, showWalls = true, floorOve
     return segments;
   }, [obj.points, originX, originY]);
 
-  // Generate procedural normal map for non-override floors (must be before early return)
-  const floorNormal = useMemo(() => {
-    if (floorOverride) return null; // venue overrides (grass, sand) don't need normal maps
-    return getFloorNormalMap(settings.floorMaterial, 256);
+  // Generate full PBR texture set for non-override floors (must be before early return)
+  const floorTextures = useMemo(() => {
+    if (floorOverride) return null; // venue overrides (grass, sand) don't need procedural textures
+    return getFloorTextures(settings.floorMaterial, 512);
   }, [settings.floorMaterial, floorOverride]);
+
+  // Compute bounding rect for reflection plane
+  const roomBBox = useMemo(() => {
+    if (!obj.points || obj.points.length < 3) return null;
+    let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (const [x, y] of obj.points) {
+      const wx = (x - originX) * S;
+      const wz = (y - originY) * S;
+      if (wx < minX) minX = wx;
+      if (wx > maxX) maxX = wx;
+      if (wz < minZ) minZ = wz;
+      if (wz > maxZ) maxZ = wz;
+    }
+    return { cx: (minX + maxX) / 2, cz: (minZ + maxZ) / 2, w: maxX - minX, d: maxZ - minZ };
+  }, [obj.points, originX, originY]);
 
   if (!floorShape) return null;
 
   const wallThickness = 0.15;
-  const floorMat = floorOverride ?? FLOOR_MATERIALS[settings.floorMaterial];
+  const baseFloorMat = FLOOR_MATERIALS[settings.floorMaterial];
+  const floorMat = floorOverride ?? (settings.floorColor ? { ...baseFloorMat, color: settings.floorColor } : baseFloorMat);
+  const isReflective = !floorOverride && (settings.floorMaterial === "marble" || settings.floorMaterial === "hardwood");
 
   return (
     <group>
-      {/* Floor — key forces remount when material changes to ensure R3F applies new color */}
-      <mesh key={`floor-${floorMat.color}-${floorMat.roughness}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
-        <meshStandardMaterial
-          color={floorMat.color}
-          side={DoubleSide}
-          roughness={floorMat.roughness}
-          metalness={floorMat.metalness}
-          envMapIntensity={(floorMat as { envMapIntensity?: number }).envMapIntensity ?? 0.3}
-          normalMap={floorNormal}
-          normalScale={floorNormal ? new Vector2(0.3, 0.3) : undefined}
-        />
-      </mesh>
+      {/* Floor — reflective for marble/hardwood, textured for others */}
+      {isReflective && roomBBox ? (
+        <mesh key={`floor-reflect-${floorMat.color}`} rotation={[-Math.PI / 2, 0, 0]} position={[roomBBox.cx, 0.001, roomBBox.cz]} receiveShadow>
+          <planeGeometry args={[roomBBox.w, roomBBox.d]} />
+          <MeshReflectorMaterial
+            mirror={settings.floorMaterial === "marble" ? 0.15 : 0.08}
+            blur={settings.floorMaterial === "marble" ? [600, 300] : [800, 400]}
+            resolution={512}
+            mixBlur={1}
+            mixStrength={settings.floorMaterial === "marble" ? 0.4 : 0.2}
+            roughness={floorMat.roughness}
+            metalness={floorMat.metalness}
+            color={floorMat.color}
+            depthScale={0}
+          />
+        </mesh>
+      ) : (
+        <mesh key={`floor-${floorMat.color}-${floorMat.roughness}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+          <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
+          <meshStandardMaterial
+            color={floorTextures ? (settings.floorColor ?? "#ffffff") : floorMat.color}
+            map={floorTextures?.albedo ?? null}
+            side={DoubleSide}
+            roughness={floorTextures ? 1.0 : floorMat.roughness}
+            roughnessMap={floorTextures?.roughness ?? null}
+            metalness={floorMat.metalness}
+            envMapIntensity={(floorMat as { envMapIntensity?: number }).envMapIntensity ?? 0.3}
+            normalMap={floorTextures?.normal ?? null}
+            normalScale={floorTextures ? new Vector2(0.4, 0.4) : undefined}
+          />
+        </mesh>
+      )}
       {/* Walls, baseboard, crown — only when venue has walls */}
-      {showWalls && (
+      {showWalls && (() => {
+        const wBase = settings.wallColor ?? "#f5f0e8";
+        const wBaseboard = settings.wallColor ? adjustBrightness(wBase, -0.15) : "#cdc5b8";
+        const wWainscot = settings.wallColor ? adjustBrightness(wBase, -0.05) : "#e8e2d8";
+        const wRail = settings.wallColor ? adjustBrightness(wBase, -0.10) : "#d8d0c4";
+        const wUpper = wBase;
+        const wCrown = settings.wallColor ? adjustBrightness(wBase, -0.07) : "#e0d8ce";
+        return (
         <>
-          {/* Baseboard trim along walls */}
+          {/* Baseboard — solid trim at floor level */}
           {wallSegments.map((seg, i) => (
             <mesh
               key={`base-${i}`}
@@ -1646,42 +1948,70 @@ function RoomFloor({ obj, originX, originY, settings, showWalls = true, floorOve
               rotation={[0, -seg.angle, 0]}
             >
               <boxGeometry args={[seg.length, 0.3, wallThickness + 0.06]} />
-              <meshStandardMaterial color="#d5cdc2" roughness={0.6} metalness={0.05} />
+              <meshStandardMaterial color={wBaseboard} roughness={0.5} metalness={0.04} />
             </mesh>
           ))}
-          {/* Walls — subtle translucent with slight warmth */}
+          {/* Lower wall — wainscoting panel */}
           {wallSegments.map((seg, i) => (
             <mesh
-              key={`wall-${i}`}
-              position={[seg.cx, WALL_HEIGHT / 2, seg.cz]}
+              key={`wainscot-${i}`}
+              position={[seg.cx, WALL_HEIGHT * 0.19, seg.cz]}
               rotation={[0, -seg.angle, 0]}
               receiveShadow
-              renderOrder={1}
             >
-              <boxGeometry args={[seg.length, WALL_HEIGHT, wallThickness]} />
+              <boxGeometry args={[seg.length, WALL_HEIGHT * 0.35, wallThickness * 0.85]} />
               <meshStandardMaterial
-                color="#f0ebe4"
-                roughness={0.92}
-                metalness={0}
+                color={wWainscot}
+                roughness={0.75}
+                metalness={0.02}
                 transparent
-                opacity={0.2}
-                depthWrite={false}
+                opacity={0.85}
               />
             </mesh>
           ))}
-          {/* Crown molding at wall top */}
+          {/* Chair rail — horizontal trim between wainscoting and upper wall */}
+          {wallSegments.map((seg, i) => (
+            <mesh
+              key={`rail-${i}`}
+              position={[seg.cx, WALL_HEIGHT * 0.38, seg.cz]}
+              rotation={[0, -seg.angle, 0]}
+            >
+              <boxGeometry args={[seg.length, 0.08, wallThickness + 0.03]} />
+              <meshStandardMaterial color={wRail} roughness={0.45} metalness={0.06} />
+            </mesh>
+          ))}
+          {/* Upper wall — solid coverage */}
+          {wallSegments.map((seg, i) => (
+            <mesh
+              key={`wall-${i}`}
+              position={[seg.cx, WALL_HEIGHT * 0.68, seg.cz]}
+              rotation={[0, -seg.angle, 0]}
+              receiveShadow
+            >
+              <boxGeometry args={[seg.length, WALL_HEIGHT * 0.6, wallThickness]} />
+              <meshStandardMaterial
+                color={wUpper}
+                roughness={0.92}
+                metalness={0}
+                transparent
+                opacity={0.75}
+              />
+            </mesh>
+          ))}
+          {/* Crown molding — deeper profile at ceiling */}
           {wallSegments.map((seg, i) => (
             <mesh
               key={`crown-${i}`}
-              position={[seg.cx, WALL_HEIGHT - 0.08, seg.cz]}
+              position={[seg.cx, WALL_HEIGHT - 0.1, seg.cz]}
               rotation={[0, -seg.angle, 0]}
             >
-              <boxGeometry args={[seg.length, 0.16, wallThickness + 0.04]} />
-              <meshStandardMaterial color="#e0d8ce" roughness={0.5} metalness={0.06} />
+              <boxGeometry args={[seg.length, 0.2, wallThickness + 0.06]} />
+              <meshStandardMaterial color={wCrown} roughness={0.45} metalness={0.06} />
             </mesh>
           ))}
         </>
-      )}
+        );
+      })()}
     </group>
   );
 }
@@ -2031,7 +2361,8 @@ function FloorPlan3DScene({
   const activePreset: VenuePresetDef | null = settings.venuePreset !== "none"
     ? VENUE_PRESETS[settings.venuePreset]
     : null;
-  const effectiveFloor = activePreset?.floorOverride ?? FLOOR_MATERIALS[settings.floorMaterial];
+  const baseFloor = FLOOR_MATERIALS[settings.floorMaterial];
+  const effectiveFloor = activePreset?.floorOverride ?? (settings.floorColor ? { ...baseFloor, color: settings.floorColor } : baseFloor);
   const fogColor = activePreset?.fogColor ?? "#f0ece6";
   const showWalls = activePreset?.showWalls ?? true;
 
@@ -2047,13 +2378,13 @@ function FloorPlan3DScene({
         activePreset?.showWalls ? maxDim * 3.5 : maxDim * 6,
       ]} />
 
-      {/* Scene lighting — mood-driven key + fill for dimension */}
-      <ambientLight intensity={lightingEnabled ? LIGHTING_MOODS[settings.lightingMood].ambientIntensity * 0.4 : LIGHTING_MOODS[settings.lightingMood].ambientIntensity} color={LIGHTING_MOODS[settings.lightingMood].ambientColor} />
+      {/* Scene lighting — mood-driven key + fill, color cast blended toward neutral */}
+      <ambientLight intensity={lightingEnabled ? LIGHTING_MOODS[settings.lightingMood].ambientIntensity * 0.4 : LIGHTING_MOODS[settings.lightingMood].ambientIntensity} color={blendToNeutral(LIGHTING_MOODS[settings.lightingMood].ambientColor, settings.lightingColorCast)} />
       {/* Key light — directional from upper-right */}
       <directionalLight
         position={[cx + maxDim * 0.4, maxDim * 0.6, cz + maxDim * 0.3]}
         intensity={lightingEnabled ? LIGHTING_MOODS[settings.lightingMood].keyIntensity * 0.4 : LIGHTING_MOODS[settings.lightingMood].keyIntensity}
-        color={LIGHTING_MOODS[settings.lightingMood].keyColor}
+        color={blendToNeutral(LIGHTING_MOODS[settings.lightingMood].keyColor, settings.lightingColorCast)}
         castShadow={settings.showShadows}
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -2068,17 +2399,17 @@ function FloorPlan3DScene({
       <directionalLight
         position={[cx - maxDim * 0.3, maxDim * 0.4, cz - maxDim * 0.3]}
         intensity={lightingEnabled ? LIGHTING_MOODS[settings.lightingMood].fillIntensity * 0.3 : LIGHTING_MOODS[settings.lightingMood].fillIntensity}
-        color={LIGHTING_MOODS[settings.lightingMood].fillColor}
+        color={blendToNeutral(LIGHTING_MOODS[settings.lightingMood].fillColor, settings.lightingColorCast)}
       />
       {/* Rim light for edge separation — softer when user lighting is on */}
       <directionalLight
         position={[cx, maxDim * 0.3, cz - maxDim * 0.5]}
         intensity={lightingEnabled ? 0.06 : 0.12}
-        color="#f0ece6"
+        color={blendToNeutral("#f0ece6", settings.lightingColorCast)}
       />
       {/* Bounce light from below — simulates floor reflection */}
       <hemisphereLight
-        args={["#faf7f0", "#d4c8b8", lightingEnabled ? 0.08 : 0.15]}
+        args={[blendToNeutral("#faf7f0", settings.lightingColorCast), blendToNeutral("#d4c8b8", settings.lightingColorCast), lightingEnabled ? 0.08 : 0.15]}
       />
 
       {/* Ground plane (fallback if no room) — reflective for marble/hardwood, flat for carpet/concrete */}
@@ -2149,35 +2480,138 @@ function FloorPlan3DScene({
           />
         ))}
 
-      {/* Subtle ground grid — sized to room bounds */}
-      <gridHelper
-        args={[roomBounds.span * 1.5, Math.ceil(roomBounds.span * 1.5 / (20 * S)), "#ddd8d0", "#ebe6de"]}
-        position={[roomBounds.cx, -0.004, roomBounds.cz]}
-      />
+      {/* Infinite-feel ground plane — dark neutral surface fading to environment */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[roomBounds.cx, -0.02, roomBounds.cz]} receiveShadow>
+        <planeGeometry args={[roomBounds.span * 4, roomBounds.span * 4]} />
+        <meshStandardMaterial
+          color="#ffffff"
+          roughness={0.95}
+          metalness={0}
+          envMapIntensity={0.05}
+        />
+      </mesh>
 
-      <OrbitControls
-        makeDefault
-        enablePan
-        enableZoom
-        enableRotate
-        enableDamping
-        dampingFactor={0.06}
-        rotateSpeed={0.7}
-        zoomSpeed={0.8}
-        panSpeed={0.6}
-        target={[cx, 0, cz]}
-        maxPolarAngle={Math.PI / 2 - 0.05}
-        minDistance={1}
-        maxDistance={maxDim * 3}
-      />
-
-      {/* Smooth camera transitions between presets */}
-      <CameraAnimator preset={settings.cameraPreset} cx={cx} cz={cz} span={roomBounds.span} />
+      {settings.cameraPreset === "walkthrough" ? (
+        <WalkthroughControls cx={cx} cz={cz} span={roomBounds.span} />
+      ) : (
+        <>
+          <OrbitControls
+            makeDefault
+            enablePan
+            enableZoom
+            enableRotate
+            enableDamping
+            dampingFactor={0.06}
+            rotateSpeed={0.7}
+            zoomSpeed={0.8}
+            panSpeed={0.6}
+            target={[cx, 0, cz]}
+            maxPolarAngle={Math.PI / 2 - 0.05}
+            minDistance={1}
+            maxDistance={maxDim * 3}
+          />
+          {/* Smooth camera transitions between presets */}
+          <CameraAnimator preset={settings.cameraPreset} cx={cx} cz={cz} span={roomBounds.span} />
+        </>
+      )}
 
       {/* Post-processing — SSAO for depth + vignette for polish, quality-gated */}
       <PostProcessingEffects mood={settings.lightingMood} />
     </>
   );
+}
+
+/** First-person walkthrough controls: WASD to move, mouse-drag to look around */
+function WalkthroughControls({ cx, cz, span }: { cx: number; cz: number; span: number }) {
+  const { camera, gl } = useThree();
+  const keys = useRef<Set<string>>(new Set());
+  const yaw = useRef(0);
+  const pitch = useRef(-0.1);
+  const dragging = useRef(false);
+  const lastMouse = useRef({ x: 0, y: 0 });
+  const initialized = useRef(false);
+
+  // 66 inches (5'6" eye level) × S (1/12) × H_MULT (1.8) = 9.9 world units
+  const EYE_HEIGHT = 66 * (1 / 12) * 1.8;
+  const MOVE_SPEED = 5.0;
+  const LOOK_SENSITIVITY = 0.003;
+
+  // Initialize camera position on mount
+  useEffect(() => {
+    if (!initialized.current) {
+      const dist = Math.max(span * 0.3, 4);
+      camera.position.set(cx + dist, EYE_HEIGHT, cz + dist);
+      yaw.current = Math.atan2(-(cx - camera.position.x), -(cz - camera.position.z));
+      initialized.current = true;
+    }
+  }, [camera, cx, cz, span]);
+
+  // Keyboard listeners
+  useEffect(() => {
+    const onDown = (e: KeyboardEvent) => { keys.current.add(e.code); };
+    const onUp = (e: KeyboardEvent) => { keys.current.delete(e.code); };
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    return () => {
+      window.removeEventListener("keydown", onDown);
+      window.removeEventListener("keyup", onUp);
+    };
+  }, []);
+
+  // Mouse-drag look
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button === 0) {
+        dragging.current = true;
+        lastMouse.current = { x: e.clientX, y: e.clientY };
+      }
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragging.current) return;
+      const dx = e.clientX - lastMouse.current.x;
+      const dy = e.clientY - lastMouse.current.y;
+      lastMouse.current = { x: e.clientX, y: e.clientY };
+      yaw.current -= dx * LOOK_SENSITIVITY;
+      pitch.current = Math.max(-Math.PI / 2 + 0.1, Math.min(Math.PI / 2 - 0.1, pitch.current - dy * LOOK_SENSITIVITY));
+    };
+    const onMouseUp = () => { dragging.current = false; };
+    canvas.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      canvas.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [gl]);
+
+  useFrame((_, delta) => {
+    const dt = Math.min(delta, 0.05);
+    const speed = MOVE_SPEED * dt;
+
+    // Direction vectors from yaw
+    const forward = new THREE.Vector3(-Math.sin(yaw.current), 0, -Math.cos(yaw.current));
+    const right = new THREE.Vector3(forward.z, 0, -forward.x);
+
+    if (keys.current.has("KeyW") || keys.current.has("ArrowUp")) camera.position.addScaledVector(forward, speed);
+    if (keys.current.has("KeyS") || keys.current.has("ArrowDown")) camera.position.addScaledVector(forward, -speed);
+    if (keys.current.has("KeyA") || keys.current.has("ArrowLeft")) camera.position.addScaledVector(right, speed);
+    if (keys.current.has("KeyD") || keys.current.has("ArrowRight")) camera.position.addScaledVector(right, -speed);
+
+    // Lock to eye height
+    camera.position.y = EYE_HEIGHT;
+
+    // Apply look direction
+    const lookTarget = new THREE.Vector3(
+      camera.position.x - Math.sin(yaw.current) * Math.cos(pitch.current),
+      camera.position.y + Math.sin(pitch.current),
+      camera.position.z - Math.cos(yaw.current) * Math.cos(pitch.current),
+    );
+    camera.lookAt(lookTarget);
+  });
+
+  return null;
 }
 
 /** Smoothly animates camera to preset positions using spring-damped interpolation */
@@ -2212,7 +2646,7 @@ function CameraAnimator({
         targetPos.current.set(cx, dist * 1.2, cz + 0.01);
         break;
       case "eye-level":
-        targetPos.current.set(cx + dist * 0.7, 1.5, cz + dist * 0.7);
+        targetPos.current.set(cx + dist * 0.7, 66 * (1 / 12) * 1.8, cz + dist * 0.7);
         break;
       case "presentation":
         targetPos.current.set(cx + dist * 0.35, dist * 0.25, cz + dist * 0.5);
@@ -2255,23 +2689,33 @@ function CameraAnimator({
   return null;
 }
 
-/**
- * Post-processing effects — disabled until @react-three/postprocessing
- * is updated for Three.js r170 compatibility.
- * When re-enabled: SSAO for depth cues + vignette for polish, quality-gated.
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+/** Post-processing effects — SSAO for depth cues + vignette for polish */
 function PostProcessingEffects({ mood }: { mood: string }) {
-  // const quality = useQuality();
-  // if (!quality.usePostProcessing) return null;
-  // const isDramatic = _mood === "dramatic";
-  // return (
-  //   <EffectComposer multisampling={0}>
-  //     <SSAO samples={isDramatic ? 24 : 16} radius={0.12} intensity={isDramatic ? 28 : 18} ... />
-  //     <Vignette offset={isDramatic ? 0.35 : 0.45} darkness={isDramatic ? 0.6 : 0.35} />
-  //   </EffectComposer>
-  // );
-  return null;
+  const quality = useQuality();
+  if (!quality.usePostProcessing) return null;
+  const isDramatic = mood === "dramatic";
+  return (
+    <Suspense fallback={null}>
+      <EffectComposer multisampling={0} enableNormalPass>
+        <SSAO
+          samples={isDramatic ? 32 : 20}
+          rings={isDramatic ? 6 : 5}
+          radius={0.5}
+          intensity={isDramatic ? 35 : 22}
+          luminanceInfluence={0.5}
+          worldDistanceThreshold={4.0}
+          worldDistanceFalloff={1.5}
+          worldProximityThreshold={1.0}
+          worldProximityFalloff={0.8}
+        />
+        <Vignette
+          offset={isDramatic ? 0.35 : 0.45}
+          darkness={isDramatic ? 0.6 : 0.35}
+          blendFunction={BlendFunction.NORMAL}
+        />
+      </EffectComposer>
+    </Suspense>
+  );
 }
 
 function Settings3DPanel({
@@ -2364,6 +2808,32 @@ function Settings3DPanel({
                 </button>
               ))}
             </div>
+            <div className="flex items-center gap-2 mt-2">
+              <label className="text-xs text-stone-400">Color</label>
+              <input
+                type="color"
+                value={settings.chairColor ?? "#c4a46c"}
+                onChange={(e) => update("chairColor", e.target.value)}
+                className="w-7 h-7 rounded border border-stone-200 cursor-pointer p-0"
+              />
+              {settings.chairColor && (
+                <button
+                  onClick={() => update("chairColor", null)}
+                  className="text-xs text-stone-400 hover:text-stone-600"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={settings.matchSeatToLinen}
+                onChange={(e) => update("matchSeatToLinen", e.target.checked)}
+                className="w-3.5 h-3.5 accent-indigo-500 rounded"
+              />
+              <span className="text-xs text-stone-400">Match seat cushion to linen</span>
+            </label>
           </div>
 
           {/* Linen Color */}
@@ -2373,7 +2843,7 @@ function Settings3DPanel({
               {(["ivory", "white", "blush", "navy", "sage", "gold"] as const).map((color) => (
                 <button
                   key={color}
-                  onClick={() => update("linenColor", color)}
+                  onClick={() => onChange({ ...settings, linenColor: color, linenCustomColor: null })}
                   className={`px-2.5 py-1 text-xs rounded-full transition-colors flex items-center gap-1.5 ${
                     settings.linenColor === color
                       ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
@@ -2385,6 +2855,23 @@ function Settings3DPanel({
                 </button>
               ))}
             </div>
+            <div className="flex items-center gap-2 mt-2">
+              <label className="text-xs text-stone-400">Custom</label>
+              <input
+                type="color"
+                value={settings.linenCustomColor ?? LINEN_COLORS[settings.linenColor]}
+                onChange={(e) => update("linenCustomColor", e.target.value)}
+                className="w-7 h-7 rounded border border-stone-200 cursor-pointer p-0"
+              />
+              {settings.linenCustomColor && (
+                <button
+                  onClick={() => update("linenCustomColor", null)}
+                  className="text-xs text-stone-400 hover:text-stone-600"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Floor Material */}
@@ -2394,7 +2881,7 @@ function Settings3DPanel({
               {(["hardwood", "marble", "carpet", "concrete"] as const).map((mat) => (
                 <button
                   key={mat}
-                  onClick={() => update("floorMaterial", mat)}
+                  onClick={() => onChange({ ...settings, floorMaterial: mat, floorColor: null })}
                   className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
                     settings.floorMaterial === mat
                       ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
@@ -2404,6 +2891,45 @@ function Settings3DPanel({
                   {mat.charAt(0).toUpperCase() + mat.slice(1)}
                 </button>
               ))}
+            </div>
+            <div className="flex items-center gap-2 mt-2">
+              <label className="text-xs text-stone-400">Color</label>
+              <input
+                type="color"
+                value={settings.floorColor ?? FLOOR_MATERIALS[settings.floorMaterial].color}
+                onChange={(e) => update("floorColor", e.target.value)}
+                className="w-7 h-7 rounded border border-stone-200 cursor-pointer p-0"
+              />
+              {settings.floorColor && (
+                <button
+                  onClick={() => update("floorColor", null)}
+                  className="text-xs text-stone-400 hover:text-stone-600"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Wall Color */}
+          <div>
+            <label className="text-xs font-medium text-stone-500 mb-1.5 block">Wall Color</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={settings.wallColor ?? "#f5f0e8"}
+                onChange={(e) => update("wallColor", e.target.value)}
+                className="w-7 h-7 rounded border border-stone-200 cursor-pointer p-0"
+              />
+              <span className="text-xs text-stone-400">{settings.wallColor ? "Custom" : "Default"}</span>
+              {settings.wallColor && (
+                <button
+                  onClick={() => update("wallColor", null)}
+                  className="text-xs text-stone-400 hover:text-stone-600"
+                >
+                  Reset
+                </button>
+              )}
             </div>
           </div>
 
@@ -2425,6 +2951,19 @@ function Settings3DPanel({
                 </button>
               ))}
             </div>
+            <div className="flex items-center gap-2 mt-2">
+              <label className="text-xs text-stone-400 whitespace-nowrap">Color Cast</label>
+              <input
+                type="range"
+                min={0}
+                max={1.0}
+                step={0.05}
+                value={settings.lightingColorCast}
+                onChange={(e) => update("lightingColorCast", parseFloat(e.target.value))}
+                className="flex-1 h-1.5 accent-indigo-500"
+              />
+              <span className="text-xs text-stone-400 w-10 text-right">{Math.round(settings.lightingColorCast * 100)}%</span>
+            </div>
           </div>
 
           {/* Camera Preset */}
@@ -2436,6 +2975,7 @@ function Settings3DPanel({
                 { key: "birds-eye", label: "Bird's Eye" },
                 { key: "eye-level", label: "Eye Level" },
                 { key: "presentation", label: "Presentation" },
+                { key: "walkthrough", label: "Walk Through" },
               ] as const).map(({ key, label }) => (
                 <button
                   key={key}
@@ -2581,6 +3121,11 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
           open={showSettings}
           onToggle={() => setShowSettings(!showSettings)}
         />
+        {settings.cameraPreset === "walkthrough" && (
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm pointer-events-none">
+            WASD to move &middot; Click + drag to look around
+          </div>
+        )}
       </div>
     </ErrorBoundary>
   );

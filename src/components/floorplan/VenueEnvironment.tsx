@@ -37,7 +37,7 @@ export const VENUE_PRESETS: Record<VenuePreset, VenuePresetDef | null> = {
     showWalls: true,
     environmentPreset: "studio",
     fogColor: "#f0ece6",
-    elements: ["chandeliers"],
+    elements: [],
   },
   tent: {
     label: "Tent",
@@ -46,7 +46,7 @@ export const VENUE_PRESETS: Record<VenuePreset, VenuePresetDef | null> = {
     showWalls: false,
     environmentPreset: "sunset",
     fogColor: "#e8e4d8",
-    elements: ["tent-structure", "grass-floor", "string-lights"],
+    elements: ["tent-structure", "grass-floor"],
   },
   "outdoor-garden": {
     label: "Garden",
@@ -56,7 +56,7 @@ export const VENUE_PRESETS: Record<VenuePreset, VenuePresetDef | null> = {
     showWalls: false,
     environmentPreset: "park",
     fogColor: "#d8e4d0",
-    elements: ["grass-floor", "sky-dome", "string-lights"],
+    elements: ["grass-floor", "sky-dome"],
   },
   rooftop: {
     label: "Rooftop",
@@ -65,7 +65,7 @@ export const VENUE_PRESETS: Record<VenuePreset, VenuePresetDef | null> = {
     showWalls: false,
     environmentPreset: "city",
     fogColor: "#d0d4e0",
-    elements: ["low-railing", "sky-dome", "string-lights"],
+    elements: ["low-railing", "sky-dome"],
   },
   barn: {
     label: "Barn",
@@ -74,7 +74,7 @@ export const VENUE_PRESETS: Record<VenuePreset, VenuePresetDef | null> = {
     showWalls: true,
     environmentPreset: "dawn",
     fogColor: "#e8dcd0",
-    elements: ["exposed-beams", "string-lights"],
+    elements: ["exposed-beams"],
   },
   beach: {
     label: "Beach",
@@ -90,8 +90,8 @@ export const VENUE_PRESETS: Record<VenuePreset, VenuePresetDef | null> = {
 
 // ── Procedural Venue Components ──
 
-const TENT_PEAK = 20; // peak height in world units
-const TENT_EDGE = 14; // edge height — tall enough to see inside easily
+const TENT_PEAK = 28; // peak height in world units
+const TENT_EDGE = 18; // edge height — tall enough to walk under comfortably
 const POLE_RADIUS = 0.08;
 
 function TentStructure({ cx, cz, span }: { cx: number; cz: number; span: number }) {
@@ -228,7 +228,7 @@ function TentStructure({ cx, cz, span }: { cx: number; cz: number; span: number 
 
 function GrassFloor({ cx, cz, span }: { cx: number; cz: number; span: number }) {
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.02, cz]} receiveShadow>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.01, cz]} receiveShadow>
       <planeGeometry args={[span * 2.5, span * 2.5]} />
       <meshStandardMaterial color="#6b8f4e" roughness={0.95} metalness={0.0} />
     </mesh>
@@ -237,7 +237,7 @@ function GrassFloor({ cx, cz, span }: { cx: number; cz: number; span: number }) 
 
 function SandFloor({ cx, cz, span }: { cx: number; cz: number; span: number }) {
   return (
-    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.02, cz]} receiveShadow>
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.01, cz]} receiveShadow>
       <planeGeometry args={[span * 2.5, span * 2.5]} />
       <meshStandardMaterial color="#e8dcc8" roughness={0.98} metalness={0.0} />
     </mesh>
@@ -309,7 +309,7 @@ function StringLights({ cx, cz, span }: { cx: number; cz: number; span: number }
 }
 
 function ExposedBeams({ cx, cz, span }: { cx: number; cz: number; span: number }) {
-  const beamHeight = 12;
+  const beamHeight = 20;
   const beamCount = Math.max(3, Math.floor(span / 4));
   const beamWidth = 0.3;
   const beamDepth = 0.5;
@@ -319,7 +319,7 @@ function ExposedBeams({ cx, cz, span }: { cx: number; cz: number; span: number }
   return (
     <group>
       {/* Main ridge beam along Z */}
-      <mesh position={[cx, beamHeight, cz]} castShadow>
+      <mesh position={[cx, beamHeight, cz]} >
         <boxGeometry args={[beamWidth, beamDepth, span * 1.1]} />
         <meshStandardMaterial color={beamColor} roughness={0.8} metalness={0.0} />
       </mesh>
@@ -327,7 +327,7 @@ function ExposedBeams({ cx, cz, span }: { cx: number; cz: number; span: number }
       {Array.from({ length: beamCount }).map((_, i) => {
         const z = cz - half + (i + 0.5) * (span / beamCount);
         return (
-          <mesh key={`beam-${i}`} position={[cx, beamHeight - beamDepth, z]} castShadow>
+          <mesh key={`beam-${i}`} position={[cx, beamHeight - beamDepth, z]}>
             <boxGeometry args={[span * 1.1, beamDepth * 0.8, beamWidth]} />
             <meshStandardMaterial color={beamColor} roughness={0.8} metalness={0.0} />
           </mesh>

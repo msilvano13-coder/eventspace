@@ -12,9 +12,10 @@ import {
   Gradient,
   Shadow,
   ActiveSelection,
+  Line,
   util,
 } from "fabric";
-import { GRID_SIZE, ROOM_PRESETS, FURNITURE_GROUPS, FurnitureGroup } from "@/lib/constants";
+import { GRID_SIZE, ROOM_PRESETS, FURNITURE_GROUPS, FurnitureGroup, pxToFeetInches } from "@/lib/constants";
 import {
   unwrapCanvasJSON,
   serializeFloorPlan,
@@ -196,6 +197,8 @@ export default function FloorPlanEditor({
   const [showMobilePalette, setShowMobilePalette] = useState(false);
   const [showRoomPicker, setShowRoomPicker] = useState(false);
   const [showLayoutPicker, setShowLayoutPicker] = useState(false);
+  const [customRoomWidth, setCustomRoomWidth] = useState("50");
+  const [customRoomHeight, setCustomRoomHeight] = useState("30");
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLoadingRef = useRef(false);
@@ -203,9 +206,14 @@ export default function FloorPlanEditor({
   const lightingOverlayRef = useRef<Rect | null>(null);
   const lightingObjectsRef = useRef<Map<string, Group>>(new Map());
   const clipboardRef = useRef<any[]>([]);
+  const clipboardLightingRef = useRef<LightingZone[]>([]);
   const [canPaste, setCanPaste] = useState(false);
   const angleGuideRef = useRef<{ line: FabricObject; text: FabricText } | null>(null);
   const isDraggingLightRef = useRef(false);
+  const [measureMode, setMeasureMode] = useState(false);
+  const measureModeRef = useRef(false);
+  const measurePointRef = useRef<{ x: number; y: number } | null>(null);
+  const measureObjectsRef = useRef<FabricObject[]>([]);
 
   // ── Refs for latest values (used in closures) ──
   const onSaveRef = useRef(onSave);
@@ -227,7 +235,26 @@ export default function FloorPlanEditor({
     readOnlyRef.current = readOnly;
     snapEnabledRef.current = snapEnabled;
     rotationSnapRef.current = rotationSnap;
+    measureModeRef.current = measureMode;
   });
+
+  // ── Measure mode: disable selection, change cursor ──
+  useEffect(() => {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    if (measureMode) {
+      canvas.selection = false;
+      canvas.defaultCursor = "crosshair";
+      canvas.hoverCursor = "crosshair";
+      canvas.discardActiveObject();
+      canvas.requestRenderAll();
+    } else {
+      canvas.selection = true;
+      canvas.defaultCursor = "default";
+      canvas.hoverCursor = "move";
+      clearMeasureObjects();
+    }
+  }, [measureMode]);
 
   // ── Serialize canvas excluding lighting objects ──
   const getCanvasJSON = useCallback(() => {
@@ -237,10 +264,12 @@ export default function FloorPlanEditor({
     // Temporarily remove non-content objects so they don't get serialized
     const lightingObjs = canvas.getObjects().filter((o: any) => o.data?.isLighting);
     const guideObjs = canvas.getObjects().filter((o: any) => o.data?.isGuide);
+    const measureObjs = canvas.getObjects().filter((o: any) => o.data?.isMeasure);
     const gridObjs = gridObjectsRef.current.filter((o) => canvas.getObjects().includes(o));
     const overlayObj = lightingOverlayRef.current;
     lightingObjs.forEach((o) => canvas.remove(o));
     guideObjs.forEach((o) => canvas.remove(o));
+    measureObjs.forEach((o) => canvas.remove(o));
     gridObjs.forEach((o) => canvas.remove(o));
     if (overlayObj) canvas.remove(overlayObj);
 
@@ -254,6 +283,7 @@ export default function FloorPlanEditor({
     gridObjs.forEach((o) => { canvas.add(o); canvas.sendObjectToBack(o); });
     if (overlayObj && lightingEnabledRef.current) canvas.add(overlayObj);
     lightingObjs.forEach((o) => canvas.add(o));
+    measureObjs.forEach((o) => canvas.add(o));
 
     return rawJSON;
   }, []);
@@ -589,6 +619,11 @@ export default function FloorPlanEditor({
       clearAngleGuide();
       isDraggingLightRef.current = false;
     });
+    canvas.on("mouse:down", (e) => {
+      if (!measureModeRef.current) return;
+      const pointer = canvas.getScenePoint(e.e);
+      handleMeasureClick(pointer.x, pointer.y);
+    });
 
     const updateSelection = () => {
       const active = canvas.getActiveObject();
@@ -723,7 +758,21 @@ export default function FloorPlanEditor({
       // ── Copy ──
       if ((e.ctrlKey || e.metaKey) && e.key === "c") {
         const active = canvas.getActiveObject();
-        if (!active || active.data?.isGrid || active.data?.isLighting || active.data?.isLightingOverlay) return;
+        if (!active || active.data?.isGrid || active.data?.isLightingOverlay) return;
+
+        // Handle lighting objects — store zone data for duplication
+        if (active.data?.isLighting) {
+          const zoneId = active.data.zoneId;
+          const zone = lightingZonesRef.current.find((z) => z.id === zoneId);
+          if (zone) {
+            clipboardLightingRef.current = [zone];
+            clipboardRef.current = [];
+            setCanPaste(true);
+          }
+          return;
+        }
+
+        clipboardLightingRef.current = [];
         if (active instanceof ActiveSelection) {
           clipboardRef.current = active.getObjects()
             .filter((o) => !o.data?.isGrid && !o.data?.isLighting && !o.data?.isLightingOverlay && !o.data?.isRoom)
@@ -735,8 +784,22 @@ export default function FloorPlanEditor({
       }
 
       // ── Paste ──
-      if ((e.ctrlKey || e.metaKey) && e.key === "v" && clipboardRef.current.length > 0) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "v" && (clipboardRef.current.length > 0 || clipboardLightingRef.current.length > 0)) {
         e.preventDefault();
+
+        // Paste lighting zones — duplicate with new ID and offset position
+        if (clipboardLightingRef.current.length > 0 && onUpdateZonesRef.current && lightingZonesRef.current) {
+          const newZones = clipboardLightingRef.current.map((zone) => ({
+            ...zone,
+            id: crypto.randomUUID(),
+            name: zone.name + " (copy)",
+            x: Math.min(zone.x + 5, 95),
+            y: Math.min(zone.y + 5, 95),
+          }));
+          onUpdateZonesRef.current([...lightingZonesRef.current, ...newZones]);
+          return;
+        }
+
         util.enlivenObjects(clipboardRef.current).then((objects: any[]) => {
           objects.forEach((obj) => {
             obj.set({ left: (obj.left || 0) + 20, top: (obj.top || 0) + 20 });
@@ -833,24 +896,34 @@ export default function FloorPlanEditor({
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
       if (undoDebounceRef.current) clearTimeout(undoDebounceRef.current);
       // Flush save — persist current canvas state before disposing
-      try {
-        const lightingObjs = canvas.getObjects().filter((o: any) => o.data?.isLighting);
-        const guideObjs = canvas.getObjects().filter((o: any) => o.data?.isGuide);
-        const gridObjs = gridObjectsRef.current.filter((o) => canvas.getObjects().includes(o));
-        const overlayObj = lightingOverlayRef.current;
-        lightingObjs.forEach((o) => canvas.remove(o));
-        guideObjs.forEach((o) => canvas.remove(o));
-        gridObjs.forEach((o) => canvas.remove(o));
-        if (overlayObj) canvas.remove(overlayObj);
-        const rawJSON = canvas.toJSON();
-        (rawJSON as any).width = canvas.getWidth();
-        (rawJSON as any).height = canvas.getHeight();
-        const serialized = serializeFloorPlan(rawJSON as Record<string, unknown>);
-        if (serialized) {
-          onSaveRef.current?.(serialized);
+      // Skip if canvas is still loading (loadFromJSON hasn't resolved yet) —
+      // saving here would serialize an empty canvas and overwrite real data.
+      if (!isLoadingRef.current) {
+        try {
+          const allObjs = canvas.getObjects();
+          const lightingObjs = allObjs.filter((o: any) => o.data?.isLighting);
+          const guideObjs = allObjs.filter((o: any) => o.data?.isGuide);
+          const gridObjs = gridObjectsRef.current.filter((o) => allObjs.includes(o));
+          const overlayObj = lightingOverlayRef.current;
+          // Count user objects (exclude grid, lighting, guides, room backdrop)
+          const userObjCount = allObjs.length - lightingObjs.length - guideObjs.length - gridObjs.length - (overlayObj && allObjs.includes(overlayObj) ? 1 : 0);
+          // Only save if there are actual user objects — prevents overwriting real data with empty canvas
+          if (userObjCount > 0) {
+            lightingObjs.forEach((o) => canvas.remove(o));
+            guideObjs.forEach((o) => canvas.remove(o));
+            gridObjs.forEach((o) => canvas.remove(o));
+            if (overlayObj) canvas.remove(overlayObj);
+            const rawJSON = canvas.toJSON();
+            (rawJSON as any).width = canvas.getWidth();
+            (rawJSON as any).height = canvas.getHeight();
+            const serialized = serializeFloorPlan(rawJSON as Record<string, unknown>);
+            if (serialized) {
+              onSaveRef.current?.(serialized);
+            }
+          }
+        } catch {
+          // Canvas may already be partially disposed — best-effort save
         }
-      } catch {
-        // Canvas may already be partially disposed — best-effort save
       }
       canvas.dispose();
     };
@@ -900,6 +973,22 @@ export default function FloorPlanEditor({
       triggerAutoSave();
       setShowRoomPicker(false);
     }
+  }
+
+  function applyCustomRoom() {
+    const wFeet = parseFloat(customRoomWidth);
+    const hFeet = parseFloat(customRoomHeight);
+    if (!wFeet || !hFeet || wFeet < 5 || hFeet < 5) return;
+    const wPx = Math.round(wFeet * 12); // 1px = 1 inch
+    const hPx = Math.round(hFeet * 12);
+    const preset: RoomPreset = {
+      id: "custom",
+      name: `Custom ${wFeet}' × ${hFeet}'`,
+      width: wPx,
+      height: hPx,
+      points: [[0, 0], [wPx, 0], [wPx, hPx], [0, hPx]],
+    };
+    applyRoomPreset(preset);
   }
 
   function applyLayoutTemplate(template: LayoutTemplate) {
@@ -1292,7 +1381,21 @@ export default function FloorPlanEditor({
     const canvas = fabricRef.current;
     if (!canvas) return;
     const active = canvas.getActiveObject();
-    if (!active || active.data?.isGrid || active.data?.isLighting || active.data?.isLightingOverlay) return;
+    if (!active || active.data?.isGrid || active.data?.isLightingOverlay) return;
+
+    // Handle lighting objects
+    if (active.data?.isLighting) {
+      const zoneId = active.data.zoneId;
+      const zone = lightingZonesRef.current.find((z) => z.id === zoneId);
+      if (zone) {
+        clipboardLightingRef.current = [zone];
+        clipboardRef.current = [];
+        setCanPaste(true);
+      }
+      return;
+    }
+
+    clipboardLightingRef.current = [];
     if (active instanceof ActiveSelection) {
       clipboardRef.current = active.getObjects()
         .filter((o) => !o.data?.isGrid && !o.data?.isLighting && !o.data?.isLightingOverlay && !o.data?.isRoom)
@@ -1305,7 +1408,22 @@ export default function FloorPlanEditor({
 
   function handlePaste() {
     const canvas = fabricRef.current;
-    if (!canvas || clipboardRef.current.length === 0) return;
+    if (!canvas) return;
+
+    // Paste lighting zones
+    if (clipboardLightingRef.current.length > 0 && onUpdateZonesRef.current && lightingZonesRef.current) {
+      const newZones = clipboardLightingRef.current.map((zone) => ({
+        ...zone,
+        id: crypto.randomUUID(),
+        name: zone.name + " (copy)",
+        x: Math.min(zone.x + 5, 95),
+        y: Math.min(zone.y + 5, 95),
+      }));
+      onUpdateZonesRef.current([...lightingZonesRef.current, ...newZones]);
+      return;
+    }
+
+    if (clipboardRef.current.length === 0) return;
     util.enlivenObjects(clipboardRef.current).then((objects: any[]) => {
       objects.forEach((obj) => {
         obj.set({ left: (obj.left || 0) + 20, top: (obj.top || 0) + 20 });
@@ -1317,6 +1435,99 @@ export default function FloorPlanEditor({
     }).catch((err) => {
       console.error("[FloorPlan] Paste failed:", err);
     });
+  }
+
+  function clearMeasureObjects() {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+    for (const obj of measureObjectsRef.current) {
+      canvas.remove(obj);
+    }
+    measureObjectsRef.current = [];
+    measurePointRef.current = null;
+    canvas.requestRenderAll();
+  }
+
+  function handleMeasureClick(x: number, y: number) {
+    const canvas = fabricRef.current;
+    if (!canvas) return;
+
+    if (!measurePointRef.current) {
+      // First click — store the point and show a dot
+      measurePointRef.current = { x, y };
+      const dot = new Circle({
+        left: x,
+        top: y,
+        radius: 4,
+        fill: "#ef4444",
+        originX: "center",
+        originY: "center",
+        selectable: false,
+        evented: false,
+        data: { isMeasure: true },
+      });
+      canvas.add(dot);
+      measureObjectsRef.current.push(dot);
+      canvas.requestRenderAll();
+    } else {
+      // Second click — draw line and label
+      const p1 = measurePointRef.current;
+      const p2 = { x, y };
+      const dx = p2.x - p1.x;
+      const dy = p2.y - p1.y;
+      const distPx = Math.sqrt(dx * dx + dy * dy);
+      const label = pxToFeetInches(distPx);
+
+      const line = new Line([p1.x, p1.y, p2.x, p2.y], {
+        stroke: "#ef4444",
+        strokeWidth: 2,
+        strokeDashArray: [6, 4],
+        selectable: false,
+        evented: false,
+        data: { isMeasure: true },
+      });
+
+      const dot2 = new Circle({
+        left: p2.x,
+        top: p2.y,
+        radius: 4,
+        fill: "#ef4444",
+        originX: "center",
+        originY: "center",
+        selectable: false,
+        evented: false,
+        data: { isMeasure: true },
+      });
+
+      const midX = (p1.x + p2.x) / 2;
+      const midY = (p1.y + p2.y) / 2;
+      const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+      // Offset label perpendicular to the line
+      const perpX = -Math.sin(angle * Math.PI / 180) * 14;
+      const perpY = Math.cos(angle * Math.PI / 180) * 14;
+
+      const text = new FabricText(label, {
+        left: midX + perpX,
+        top: midY + perpY,
+        fontSize: 14,
+        fontFamily: "sans-serif",
+        fontWeight: "700",
+        fill: "#ef4444",
+        backgroundColor: "rgba(255,255,255,0.85)",
+        originX: "center",
+        originY: "center",
+        selectable: false,
+        evented: false,
+        data: { isMeasure: true },
+      });
+
+      canvas.add(line, dot2, text);
+      measureObjectsRef.current.push(line, dot2, text);
+      canvas.requestRenderAll();
+
+      // Reset for next measurement (keep previous measurements visible)
+      measurePointRef.current = null;
+    }
   }
 
   function addFurnitureGroup(group: FurnitureGroup, x?: number, y?: number, skipSave = false): FabricObject | null {
@@ -1502,6 +1713,8 @@ export default function FloorPlanEditor({
         canPaste={canPaste}
         onManualSave={handleManualSave}
         saveStatus={saveStatus}
+        measureMode={measureMode}
+        onToggleMeasure={() => setMeasureMode((m) => !m)}
       />
       <div className="flex flex-1 overflow-hidden relative">
         {/* Desktop side panels — height bounded so palette scrolls */}
@@ -1666,6 +1879,48 @@ export default function FloorPlanEditor({
                       </span>
                     </button>
                   ))}
+                </div>
+                {/* Custom Room Size */}
+                <div className="mt-4 pt-4 border-t border-stone-100">
+                  <h3 className="text-xs font-semibold text-stone-500 uppercase tracking-wide mb-3">Custom Dimensions</h3>
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="text-xs text-stone-400 mb-1 block">Width (ft)</label>
+                      <input
+                        type="number"
+                        min={5}
+                        max={200}
+                        value={customRoomWidth}
+                        onChange={(e) => setCustomRoomWidth(e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300"
+                        placeholder="50"
+                      />
+                    </div>
+                    <span className="text-stone-300 pb-1.5 text-sm">×</span>
+                    <div className="flex-1">
+                      <label className="text-xs text-stone-400 mb-1 block">Depth (ft)</label>
+                      <input
+                        type="number"
+                        min={5}
+                        max={200}
+                        value={customRoomHeight}
+                        onChange={(e) => setCustomRoomHeight(e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-300"
+                        placeholder="30"
+                      />
+                    </div>
+                    <button
+                      onClick={applyCustomRoom}
+                      className="px-4 py-1.5 text-sm font-medium text-white bg-rose-500 hover:bg-rose-600 rounded-lg transition-colors shrink-0"
+                    >
+                      Apply
+                    </button>
+                  </div>
+                  <p className="text-xs text-stone-400 mt-2">
+                    {customRoomWidth && customRoomHeight
+                      ? `${parseFloat(customRoomWidth) * parseFloat(customRoomHeight)} sq ft — ${parseFloat(customRoomWidth) * 12}" × ${parseFloat(customRoomHeight) * 12}"`
+                      : "Enter dimensions in feet"}
+                  </p>
                 </div>
                 <button
                   onClick={clearRoomShape}

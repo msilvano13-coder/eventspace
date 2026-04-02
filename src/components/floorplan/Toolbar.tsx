@@ -16,6 +16,7 @@ import {
   Save,
   Check,
   AlertCircle,
+  Ruler,
 } from "lucide-react";
 
 /** Rotation snap angles the user can cycle through */
@@ -45,6 +46,8 @@ interface Props {
   canPaste: boolean;
   onManualSave: () => void;
   saveStatus: "idle" | "saving" | "saved" | "error";
+  measureMode: boolean;
+  onToggleMeasure: () => void;
 }
 
 export default function Toolbar({
@@ -70,6 +73,8 @@ export default function Toolbar({
   canPaste,
   onManualSave,
   saveStatus,
+  measureMode,
+  onToggleMeasure,
 }: Props) {
   return (
     <div className="h-11 bg-white border-b border-stone-200 flex items-center px-3 gap-1 overflow-x-auto flex-nowrap">
@@ -87,6 +92,12 @@ export default function Toolbar({
         onClick={onToggleSnap}
         active={snapEnabled}
         tooltip="Snap to Grid"
+      />
+      <ToolButton
+        icon={Ruler}
+        onClick={onToggleMeasure}
+        active={measureMode}
+        tooltip="Measure Distance (click two points)"
       />
       <Divider />
       <button
