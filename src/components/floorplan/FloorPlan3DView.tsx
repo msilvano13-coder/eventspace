@@ -255,10 +255,6 @@ function getFloorTextures(type: string, size: number): FloorTextureSet {
   }
   return set;
 }
-/** Legacy accessor for normal map only */
-function getFloorNormalMap(type: string, size: number): THREE.CanvasTexture {
-  return getFloorTextures(type, size).normal;
-}
 
 // ── 3D Settings ──
 
