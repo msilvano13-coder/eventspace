@@ -40,3 +40,4 @@ ADMIN_MANUAL.md
 *.pdf
 generate_*.py
 EventSpace_Sales_Brochure.py
+.env.rodin

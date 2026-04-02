@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useCallback, useEffect, useState, Suspense } from "react";
-import { Canvas } from "@react-three/fiber";
-import { OrbitControls, ContactShadows } from "@react-three/drei";
+import React, { useMemo, useCallback, useEffect, useState, useRef, Suspense } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { OrbitControls, ContactShadows, MeshReflectorMaterial, RoundedBox } from "@react-three/drei";
+import * as THREE from "three";
 import { Color, Vector2, Shape, DoubleSide, ACESFilmicToneMapping } from "three";
 import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
 import { LightingZone } from "@/lib/types";
@@ -10,9 +11,128 @@ import { FURNITURE_CATALOG } from "@/lib/constants";
 import { ErrorBoundary } from "./FloorPlan3DErrorBoundary";
 import VenueEnvironment, { VenuePreset, VenuePresetDef, VENUE_PRESETS } from "./VenueEnvironment";
 import ProceduralEnvMap from "./ProceduralEnvMap";
-import { QualityProvider } from "./QualityTier";
+import { QualityProvider, useQuality } from "./QualityTier";
+// Post-processing disabled: @react-three/postprocessing v3.0.4 has a runtime
+// compatibility issue with Three.js r170 ("Cannot read properties of undefined
+// reading 'length'" in EffectComposer init). Re-enable after upgrading to a
+// compatible version pair.
+// import { EffectComposer, SSAO, Vignette } from "@react-three/postprocessing";
+// import { BlendFunction } from "postprocessing";
+
+// ── Procedural floor textures (canvas-generated normal maps) ──
+
+/** Generates a canvas-based normal map for floor materials */
+function generateFloorNormalMap(type: string, size: number): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+
+  // Fill with flat normal (128, 128, 255) as base
+  ctx.fillStyle = "rgb(128, 128, 255)";
+  ctx.fillRect(0, 0, size, size);
+
+  if (type === "hardwood") {
+    // Wood grain lines — horizontal with slight waviness
+    ctx.strokeStyle = "rgb(135, 128, 255)";
+    ctx.lineWidth = 1;
+    for (let y = 0; y < size; y += 4) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      for (let x = 0; x < size; x += 10) {
+        ctx.lineTo(x, y + Math.sin(x * 0.05 + y * 0.02) * 1.5);
+      }
+      ctx.stroke();
+    }
+    // Plank seams — vertical lines at regular intervals
+    ctx.strokeStyle = "rgb(120, 128, 255)";
+    ctx.lineWidth = 2;
+    const plankWidth = size / 4;
+    for (let x = plankWidth; x < size; x += plankWidth) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, size);
+      ctx.stroke();
+    }
+    // Horizontal plank seams (staggered)
+    for (let y = size / 6; y < size; y += size / 3) {
+      for (let x = 0; x < size; x += plankWidth) {
+        const offset = (Math.floor(y / (size / 3)) % 2) * plankWidth * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(x + offset, y);
+        ctx.lineTo(x + offset + plankWidth, y);
+        ctx.stroke();
+      }
+    }
+  } else if (type === "marble") {
+    // Marble veining — organic curved lines
+    ctx.strokeStyle = "rgb(122, 128, 255)";
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 8; i++) {
+      const startX = Math.random() * size;
+      const startY = Math.random() * size;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      let cx = startX, cy = startY;
+      for (let j = 0; j < 20; j++) {
+        cx += (Math.random() - 0.5) * size * 0.15;
+        cy += (Math.random() - 0.3) * size * 0.1;
+        ctx.lineTo(cx, cy);
+      }
+      ctx.stroke();
+    }
+    // Thinner secondary veins
+    ctx.strokeStyle = "rgb(125, 128, 255)";
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 15; i++) {
+      const startX = Math.random() * size;
+      const startY = Math.random() * size;
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+      let cx = startX, cy = startY;
+      for (let j = 0; j < 12; j++) {
+        cx += (Math.random() - 0.5) * size * 0.12;
+        cy += (Math.random() - 0.4) * size * 0.08;
+        ctx.lineTo(cx, cy);
+      }
+      ctx.stroke();
+    }
+  } else if (type === "concrete") {
+    // Concrete surface noise — subtle speckle
+    const imageData = ctx.getImageData(0, 0, size, size);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const noise = (Math.random() - 0.5) * 8;
+      data[i] = 128 + noise;     // R
+      data[i + 1] = 128 + noise; // G
+      // B stays 255 (pointing up)
+    }
+    ctx.putImageData(imageData, 0, 0);
+  }
+  // carpet: leave as flat normal — fabric roughness is handled via material roughness value
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.RepeatWrapping;
+  texture.repeat.set(4, 4);
+  return texture;
+}
+
+/** Cache of generated floor textures by type+size */
+const floorTextureCache = new Map<string, THREE.CanvasTexture>();
+function getFloorNormalMap(type: string, size: number): THREE.CanvasTexture {
+  const key = `${type}-${size}`;
+  let tex = floorTextureCache.get(key);
+  if (!tex) {
+    tex = generateFloorNormalMap(type, size);
+    floorTextureCache.set(key, tex);
+  }
+  return tex;
+}
 
 // ── 3D Settings ──
+
+type CameraPreset = "default" | "birds-eye" | "eye-level" | "presentation";
 
 interface View3DSettings {
   venuePreset: VenuePreset;
@@ -22,6 +142,7 @@ interface View3DSettings {
   lightingMood: "warm" | "cool" | "neutral" | "dramatic";
   showLabels: boolean;
   showShadows: boolean;
+  cameraPreset: CameraPreset;
 }
 
 const DEFAULT_SETTINGS: View3DSettings = {
@@ -32,6 +153,7 @@ const DEFAULT_SETTINGS: View3DSettings = {
   lightingMood: "warm",
   showLabels: true,
   showShadows: true,
+  cameraPreset: "default",
 };
 
 const LINEN_COLORS: Record<View3DSettings["linenColor"], string> = {
@@ -466,6 +588,42 @@ function FurnitureLabel(_props: { label: string; y: number }) {
   return null;
 }
 
+/** Wrapper that adds hover highlight to all child meshes via emissive boost */
+function InteractiveFurniture({ children, enabled }: { children: React.ReactNode; enabled: boolean }) {
+  const groupRef = useRef<THREE.Group>(null);
+  const [hovered, setHovered] = useState(false);
+
+  useFrame(() => {
+    if (!groupRef.current || !enabled) return;
+    groupRef.current.traverse((child) => {
+      if ((child as THREE.Mesh).isMesh) {
+        const mat = (child as THREE.Mesh).material;
+        if (mat && "emissiveIntensity" in mat && !("userData" in mat && (mat as any).userData?.isGlow)) {
+          const target = hovered ? 0.15 : 0;
+          const current = (mat as THREE.MeshStandardMaterial).emissiveIntensity;
+          (mat as THREE.MeshStandardMaterial).emissiveIntensity = current + (target - current) * 0.15;
+          if (hovered && (mat as THREE.MeshStandardMaterial).emissive.r === 0 && (mat as THREE.MeshStandardMaterial).emissive.g === 0 && (mat as THREE.MeshStandardMaterial).emissive.b === 0) {
+            (mat as THREE.MeshStandardMaterial).emissive.setHex(0x8090ff);
+          }
+          if (!hovered && current < 0.01) {
+            (mat as THREE.MeshStandardMaterial).emissive.setHex(0x000000);
+          }
+        }
+      }
+    });
+  });
+
+  return (
+    <group
+      ref={groupRef}
+      onPointerOver={enabled ? (e) => { e.stopPropagation(); setHovered(true); document.body.style.cursor = "pointer"; } : undefined}
+      onPointerOut={enabled ? () => { setHovered(false); document.body.style.cursor = "auto"; } : undefined}
+    >
+      {children}
+    </group>
+  );
+}
+
 function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject; originX: number; originY: number; settings: View3DSettings }) {
   const h3d = getHeight(obj.furnitureId) * S;
   const pbr = getPBR(obj.furnitureId);
@@ -614,11 +772,10 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
             <meshStandardMaterial color={woodColor} roughness={0.5} metalness={0.08} />
           </mesh>
         ))}
-        {/* Table surface */}
-        <mesh position={[0, tableTopY - topThick / 2, 0]} castShadow receiveShadow>
-          <boxGeometry args={[w, topThick, d]} />
+        {/* Table surface — beveled edges */}
+        <RoundedBox args={[w, topThick, d]} radius={0.03} smoothness={4} position={[0, tableTopY - topThick / 2, 0]} castShadow receiveShadow>
           <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
-        </mesh>
+        </RoundedBox>
         {/* Table apron — front/back */}
         {[-1, 1].map((side) => (
           <mesh key={`apron-fb-${side}`} position={[0, tableTopY - topThick - 1.5 * S, side * (d / 2 - legInset)]}>
@@ -699,9 +856,8 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
             </mesh>
           </>
         )}
-        {/* Seat */}
-        <mesh position={[0, seatY, 0]} castShadow={settings.showShadows} receiveShadow>
-          <boxGeometry args={[w, settings.chairStyle === "folding" ? seatThick * 0.6 : seatThick, d]} />
+        {/* Seat — rounded edges for polish */}
+        <RoundedBox args={[w, settings.chairStyle === "folding" ? seatThick * 0.6 : seatThick, d]} radius={0.015} smoothness={3} position={[0, seatY, 0]} castShadow={settings.showShadows} receiveShadow>
           <meshStandardMaterial
             color={chairGold}
             roughness={settings.chairStyle === "ghost" ? 0.1 : 0.6}
@@ -709,7 +865,7 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
             transparent={settings.chairStyle === "ghost"}
             opacity={settings.chairStyle === "ghost" ? 0.4 : 1}
           />
-        </mesh>
+        </RoundedBox>
         {/* Chair back — style depends on settings */}
         {settings.chairStyle === "solid-back" && (
           <mesh position={[0, seatY + backH / 2 + seatThick / 2, d / 2 - backThick / 2]} castShadow={settings.showShadows} receiveShadow>
@@ -836,15 +992,14 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
           <boxGeometry args={[w, counterH - topThick, d]} />
           <meshStandardMaterial color={fillColor} roughness={pbr.roughness} metalness={pbr.metalness} envMapIntensity={pbr.envMapIntensity} />
         </mesh>
-        {/* Countertop with overhang — polished surface */}
-        <mesh position={[0, counterH - topThick / 2, overhang / 2]} castShadow receiveShadow>
-          <boxGeometry args={[w + overhang, topThick, d + overhang]} />
+        {/* Countertop with overhang — polished surface with beveled edges */}
+        <RoundedBox args={[w + overhang, topThick, d + overhang]} radius={0.04} smoothness={4} position={[0, counterH - topThick / 2, overhang / 2]} castShadow receiveShadow>
           {isBar ? (
             <meshPhysicalMaterial color={strokeColor} roughness={0.35} metalness={0.15} envMapIntensity={0.9} clearcoat={0.4} clearcoatRoughness={0.15} />
           ) : (
             <meshStandardMaterial color={strokeColor} roughness={0.4} metalness={0.12} envMapIntensity={0.5} />
           )}
-        </mesh>
+        </RoundedBox>
         {/* Front decorative panel inset */}
         <mesh position={[0, (counterH - topThick) / 2, d / 2 + 0.05]}>
           <boxGeometry args={[w - panelInset * 2, counterH - topThick - panelInset * 2, 0.1]} />
@@ -917,12 +1072,13 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
             <meshStandardMaterial color={strokeColor} roughness={0.5} metalness={0.1} />
           </mesh>
         )}
-        {/* Dance floor checkerboard — dark tiles only (light is the base) */}
+        {/* Dance floor checkerboard — dark tiles + visible grout lines */}
         {isDanceFloor && (() => {
           const tileSizeW = Math.max(w / 5, 2);
           const tileSizeD = Math.max(d / 5, 2);
           const cols = Math.floor(w / tileSizeW);
           const rows = Math.floor(d / tileSizeD);
+          const gap = 0.02;
           const tiles: JSX.Element[] = [];
           for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
@@ -931,12 +1087,32 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
                 const tz = -d / 2 + tileSizeD / 2 + r * tileSizeD;
                 tiles.push(
                   <mesh key={`tile-${r}-${c}`} position={[tx, floorH + 0.04, tz]}>
-                    <boxGeometry args={[tileSizeW - 0.03, 0.04, tileSizeD - 0.03]} />
+                    <boxGeometry args={[tileSizeW - gap * 2, 0.04, tileSizeD - gap * 2]} />
                     <meshStandardMaterial color={tileDark} roughness={0.15} metalness={0.08} />
                   </mesh>
                 );
               }
             }
+          }
+          // Grout / gap lines between tile rows and columns
+          const groutColor = getCachedColor("#8a8070");
+          for (let r = 1; r < rows; r++) {
+            const gz = -d / 2 + r * tileSizeD;
+            tiles.push(
+              <mesh key={`grout-h-${r}`} position={[0, floorH + 0.02, gz]}>
+                <boxGeometry args={[w, 0.01, gap]} />
+                <meshStandardMaterial color={groutColor} roughness={0.8} metalness={0} />
+              </mesh>
+            );
+          }
+          for (let c = 1; c < cols; c++) {
+            const gx = -w / 2 + c * tileSizeW;
+            tiles.push(
+              <mesh key={`grout-v-${c}`} position={[gx, floorH + 0.02, 0]}>
+                <boxGeometry args={[gap, 0.01, d]} />
+                <meshStandardMaterial color={groutColor} roughness={0.8} metalness={0} />
+              </mesh>
+            );
           }
           return tiles;
         })()}
@@ -968,10 +1144,14 @@ function FurnitureMesh({ obj, originX, originY, settings }: { obj: ParsedObject;
           <boxGeometry args={[w - 2 * S, 0.02, d - 2 * S]} />
           <meshStandardMaterial color={getCachedColor("#5a4f45")} roughness={0.9} metalness={0} />
         </mesh>
-        {/* Front edge trim */}
-        <mesh position={[0, h3d - trimH / 2, d / 2 + 0.1]}>
-          <boxGeometry args={[w + 0.2, trimH, 0.2]} />
-          <meshStandardMaterial color={strokeColor} roughness={0.6} metalness={0.05} />
+        {/* Front edge trim — polished accent strip */}
+        <RoundedBox args={[w + 0.2, trimH, 0.2]} radius={0.02} smoothness={3} position={[0, h3d - trimH / 2, d / 2 + 0.1]}>
+          <meshPhysicalMaterial color={strokeColor} roughness={0.3} metalness={0.1} envMapIntensity={0.5} clearcoat={0.2} clearcoatRoughness={0.1} />
+        </RoundedBox>
+        {/* LED accent line at front base */}
+        <mesh position={[0, 0.08, d / 2 + 0.15]}>
+          <boxGeometry args={[w, 0.06, 0.08]} />
+          <meshStandardMaterial color={getCachedColor("#e8e0d0")} emissive={getCachedColor("#fff5e6")} emissiveIntensity={0.3} roughness={0.1} metalness={0} />
         </mesh>
         {/* Side edge trims */}
         {[-1, 1].map((side) => (
@@ -1421,6 +1601,12 @@ function RoomFloor({ obj, originX, originY, settings, showWalls = true, floorOve
     return segments;
   }, [obj.points, originX, originY]);
 
+  // Generate procedural normal map for non-override floors (must be before early return)
+  const floorNormal = useMemo(() => {
+    if (floorOverride) return null; // venue overrides (grass, sand) don't need normal maps
+    return getFloorNormalMap(settings.floorMaterial, 256);
+  }, [settings.floorMaterial, floorOverride]);
+
   if (!floorShape) return null;
 
   const wallThickness = 0.15;
@@ -1431,7 +1617,15 @@ function RoomFloor({ obj, originX, originY, settings, showWalls = true, floorOve
       {/* Floor — key forces remount when material changes to ensure R3F applies new color */}
       <mesh key={`floor-${floorMat.color}-${floorMat.roughness}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
-        <meshStandardMaterial color={floorMat.color} side={DoubleSide} roughness={floorMat.roughness} metalness={floorMat.metalness} envMapIntensity={(floorMat as { envMapIntensity?: number }).envMapIntensity ?? 0.3} />
+        <meshStandardMaterial
+          color={floorMat.color}
+          side={DoubleSide}
+          roughness={floorMat.roughness}
+          metalness={floorMat.metalness}
+          envMapIntensity={(floorMat as { envMapIntensity?: number }).envMapIntensity ?? 0.3}
+          normalMap={floorNormal}
+          normalScale={floorNormal ? new Vector2(0.3, 0.3) : undefined}
+        />
       </mesh>
       {/* Walls, baseboard, crown — only when venue has walls */}
       {showWalls && (
@@ -1480,6 +1674,56 @@ function RoomFloor({ obj, originX, originY, settings, showWalls = true, floorOve
           ))}
         </>
       )}
+    </group>
+  );
+}
+
+/** Candle light with warm flicker animation */
+function CandleLight({ posX, posY, posZ, color, intensity, lightDistance, castShadow }: {
+  posX: number; posY: number; posZ: number; color: Color;
+  intensity: number; lightDistance: number; castShadow: boolean;
+}) {
+  const lightRef = useRef<THREE.PointLight>(null);
+  const flameRef = useRef<THREE.Mesh>(null);
+  const baseIntensity = intensity * 0.6;
+
+  useFrame(({ clock }) => {
+    if (!lightRef.current) return;
+    // Organic flicker: layered sine waves at different frequencies
+    const t = clock.getElapsedTime();
+    const flicker = 1 + Math.sin(t * 8.3) * 0.12 + Math.sin(t * 13.7) * 0.08 + Math.sin(t * 21.1) * 0.05;
+    lightRef.current.intensity = baseIntensity * flicker;
+    if (flameRef.current) {
+      flameRef.current.scale.y = 0.8 + flicker * 0.25;
+    }
+  });
+
+  return (
+    <group position={[posX, posY, posZ]}>
+      <pointLight
+        ref={lightRef}
+        color={color}
+        intensity={baseIntensity}
+        distance={lightDistance}
+        castShadow={castShadow}
+        shadow-mapSize-width={castShadow ? 512 : undefined}
+        shadow-mapSize-height={castShadow ? 512 : undefined}
+      />
+      {/* Candle body */}
+      <mesh position={[0, 0.12, 0]}>
+        <cylinderGeometry args={[0.03, 0.035, 0.24, 6]} />
+        <meshStandardMaterial color="#f5f0e0" roughness={0.9} metalness={0} />
+      </mesh>
+      {/* Flame */}
+      <mesh ref={flameRef} position={[0, 0.28, 0]}>
+        <sphereGeometry args={[0.025, 6, 6]} />
+        <meshBasicMaterial color="#ffe080" transparent opacity={0.9} />
+      </mesh>
+      {/* Warm ground glow */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.01, 0]}>
+        <circleGeometry args={[0.5, 16]} />
+        <meshBasicMaterial color={color} transparent opacity={0.06} depthWrite={false} />
+      </mesh>
     </group>
   );
 }
@@ -1676,7 +1920,23 @@ function LightingZone3D({
     );
   }
 
-  // ── Other types (string lights, candles, etc.): point light + ground pool ──
+  // ── Candles: warm flickering point lights ──
+  if (zone.type === "candles") {
+    const baseY = snapElevation > 0 ? snapElevation : 0;
+    return (
+      <CandleLight
+        posX={posX}
+        posY={baseY}
+        posZ={posZ}
+        color={color}
+        intensity={intensity}
+        lightDistance={lightDistance}
+        castShadow={castShadow}
+      />
+    );
+  }
+
+  // ── Other types (string lights, etc.): point light + ground pool ──
   // If snapped to furniture, place on top of it; otherwise use mountHeight
   const baseY = snapElevation > 0 ? snapElevation : mountHeight;
   return (
@@ -1772,8 +2032,12 @@ function FloorPlan3DScene({
       {/* Procedural environment map — gives PBR materials something to reflect */}
       <ProceduralEnvMap mood={settings.lightingMood} />
 
-      {/* Fog for depth */}
-      <fog attach="fog" args={[fogColor, maxDim * 2, maxDim * 5]} />
+      {/* Fog for depth — tighter for indoor venues, looser for outdoor */}
+      <fog attach="fog" args={[
+        fogColor,
+        activePreset?.showWalls ? maxDim * 1.5 : maxDim * 2.5,
+        activePreset?.showWalls ? maxDim * 3.5 : maxDim * 6,
+      ]} />
 
       {/* Scene lighting — mood-driven key + fill for dimension */}
       <ambientLight intensity={lightingEnabled ? LIGHTING_MOODS[settings.lightingMood].ambientIntensity * 0.4 : LIGHTING_MOODS[settings.lightingMood].ambientIntensity} color={LIGHTING_MOODS[settings.lightingMood].ambientColor} />
@@ -1792,41 +2056,58 @@ function FloorPlan3DScene({
         shadow-bias={-0.0002}
         shadow-normalBias={0.02}
       />
-      {/* Fill light — from opposite side */}
+      {/* Fill light — from opposite side, dims when user lighting takes over */}
       <directionalLight
         position={[cx - maxDim * 0.3, maxDim * 0.4, cz - maxDim * 0.3]}
-        intensity={LIGHTING_MOODS[settings.lightingMood].fillIntensity}
+        intensity={lightingEnabled ? LIGHTING_MOODS[settings.lightingMood].fillIntensity * 0.3 : LIGHTING_MOODS[settings.lightingMood].fillIntensity}
         color={LIGHTING_MOODS[settings.lightingMood].fillColor}
       />
-      {/* Rim light for edge separation */}
+      {/* Rim light for edge separation — softer when user lighting is on */}
       <directionalLight
         position={[cx, maxDim * 0.3, cz - maxDim * 0.5]}
-        intensity={0.12}
+        intensity={lightingEnabled ? 0.06 : 0.12}
         color="#f0ece6"
       />
       {/* Bounce light from below — simulates floor reflection */}
       <hemisphereLight
-        args={["#faf7f0", "#d4c8b8", 0.15]}
+        args={["#faf7f0", "#d4c8b8", lightingEnabled ? 0.08 : 0.15]}
       />
 
-      {/* Ground plane (fallback if no room) — uses venue floor override when active */}
+      {/* Ground plane (fallback if no room) — reflective for marble/hardwood, flat for carpet/concrete */}
       {rooms.length === 0 && (
-        <mesh key={`ground-${effectiveFloor.color}`} rotation={[-Math.PI / 2, 0, 0]} position={[roomBounds.cx, -0.01, roomBounds.cz]} receiveShadow>
-          <planeGeometry args={[roomBounds.span * 1.5, roomBounds.span * 1.5]} />
-          <meshStandardMaterial color={effectiveFloor.color} roughness={effectiveFloor.roughness} metalness={effectiveFloor.metalness} envMapIntensity={(effectiveFloor as { envMapIntensity?: number }).envMapIntensity ?? 0.3} />
-        </mesh>
+        effectiveFloor.roughness < 0.5 ? (
+          <mesh key={`ground-reflect-${effectiveFloor.color}`} rotation={[-Math.PI / 2, 0, 0]} position={[roomBounds.cx, -0.01, roomBounds.cz]} receiveShadow>
+            <planeGeometry args={[roomBounds.span * 1.5, roomBounds.span * 1.5]} />
+            <MeshReflectorMaterial
+              mirror={0.35}
+              blur={[300, 100]}
+              resolution={512}
+              mixBlur={1}
+              mixStrength={0.6}
+              roughness={effectiveFloor.roughness}
+              metalness={effectiveFloor.metalness}
+              color={effectiveFloor.color}
+              depthScale={0}
+            />
+          </mesh>
+        ) : (
+          <mesh key={`ground-${effectiveFloor.color}`} rotation={[-Math.PI / 2, 0, 0]} position={[roomBounds.cx, -0.01, roomBounds.cz]} receiveShadow>
+            <planeGeometry args={[roomBounds.span * 1.5, roomBounds.span * 1.5]} />
+            <meshStandardMaterial color={effectiveFloor.color} roughness={effectiveFloor.roughness} metalness={effectiveFloor.metalness} envMapIntensity={(effectiveFloor as { envMapIntensity?: number }).envMapIntensity ?? 0.3} />
+          </mesh>
+        )
       )}
 
-      {/* Contact shadows — sized to room */}
+      {/* Contact shadows — sized to room, mood-tinted */}
       {settings.showShadows && (
         <ContactShadows
           position={[roomBounds.cx, -0.005, roomBounds.cz]}
-          opacity={0.3}
+          opacity={settings.lightingMood === "dramatic" ? 0.45 : 0.35}
           scale={roomBounds.span * 1.5}
-          blur={3}
+          blur={5}
           far={roomBounds.span}
           resolution={512}
-          color="#7a6e60"
+          color={settings.lightingMood === "warm" ? "#6b5e4e" : settings.lightingMood === "cool" ? "#5a6070" : settings.lightingMood === "dramatic" ? "#3a3028" : "#6a6a6a"}
         />
       )}
 
@@ -1840,7 +2121,9 @@ function FloorPlan3DScene({
 
       {/* Furniture */}
       {furniture.map((obj, i) => (
-        <FurnitureMesh key={`f-${i}`} obj={obj} originX={originX} originY={originY} settings={settings} />
+        <InteractiveFurniture key={`f-${i}`} enabled>
+          <FurnitureMesh obj={obj} originX={originX} originY={originY} settings={settings} />
+        </InteractiveFurniture>
       ))}
 
       {/* Lighting zones — cap shadow-casting to MAX_SHADOW_LIGHTS */}
@@ -1870,14 +2153,84 @@ function FloorPlan3DScene({
         enableZoom
         enableRotate
         enableDamping
-        dampingFactor={0.08}
+        dampingFactor={0.06}
+        rotateSpeed={0.7}
+        zoomSpeed={0.8}
+        panSpeed={0.6}
         target={[cx, 0, cz]}
         maxPolarAngle={Math.PI / 2 - 0.05}
         minDistance={1}
         maxDistance={maxDim * 3}
       />
+
+      {/* Smooth camera transitions between presets */}
+      <CameraAnimator preset={settings.cameraPreset} cx={cx} cz={cz} span={roomBounds.span} />
+
+      {/* Post-processing — SSAO for depth + vignette for polish, quality-gated */}
+      <PostProcessingEffects mood={settings.lightingMood} />
     </>
   );
+}
+
+/** Smoothly animates camera to preset positions */
+function CameraAnimator({
+  preset,
+  cx,
+  cz,
+  span,
+}: {
+  preset: CameraPreset;
+  cx: number;
+  cz: number;
+  span: number;
+}) {
+  const { camera } = useThree();
+  const targetPos = useRef(new THREE.Vector3());
+  const animating = useRef(false);
+  const prevPreset = useRef(preset);
+
+  useEffect(() => {
+    if (preset === prevPreset.current) return;
+    prevPreset.current = preset;
+
+    const dist = Math.max(span * 0.75, 8);
+    switch (preset) {
+      case "birds-eye":
+        targetPos.current.set(cx, dist * 1.2, cz + 0.01);
+        break;
+      case "eye-level":
+        targetPos.current.set(cx + dist * 0.7, 1.5, cz + dist * 0.7);
+        break;
+      case "presentation":
+        targetPos.current.set(cx + dist * 0.35, dist * 0.25, cz + dist * 0.5);
+        break;
+      default:
+        targetPos.current.set(cx + dist * 0.5, dist * 0.45, cz + dist * 0.7);
+        break;
+    }
+    animating.current = true;
+  }, [preset, cx, cz, span, camera]);
+
+  useFrame(() => {
+    if (!animating.current) return;
+    camera.position.lerp(targetPos.current, 0.06);
+    const dist = camera.position.distanceTo(targetPos.current);
+    if (dist < 0.05) {
+      camera.position.copy(targetPos.current);
+      animating.current = false;
+    }
+  });
+
+  return null;
+}
+
+/** Post-processing effects — disabled until postprocessing package is updated.
+ *  All other visual improvements (contact shadows, PBR env map, floor reflections,
+ *  hover highlights, dynamic lighting) still work. Re-enable when upgrading
+ *  @react-three/postprocessing to a version compatible with Three.js r170. */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function PostProcessingEffects({ mood }: { mood: string }) {
+  return null;
 }
 
 function Settings3DPanel({
@@ -2028,6 +2381,31 @@ function Settings3DPanel({
                   }`}
                 >
                   {mood.charAt(0).toUpperCase() + mood.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Camera Preset */}
+          <div>
+            <label className="text-xs font-medium text-stone-500 mb-1.5 block">Camera</label>
+            <div className="flex flex-wrap gap-1.5">
+              {([
+                { key: "default", label: "Default" },
+                { key: "birds-eye", label: "Bird's Eye" },
+                { key: "eye-level", label: "Eye Level" },
+                { key: "presentation", label: "Presentation" },
+              ] as const).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => update("cameraPreset", key)}
+                  className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+                    settings.cameraPreset === key
+                      ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
+                      : "bg-stone-50 text-stone-500 border border-stone-200 hover:bg-stone-100"
+                  }`}
+                >
+                  {label}
                 </button>
               ))}
             </div>

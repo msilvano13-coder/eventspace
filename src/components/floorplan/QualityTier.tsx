@@ -27,6 +27,8 @@ export interface QualitySettings {
   useBevels: boolean;
   /** Whether to load GLTF models (Phase 5) */
   useGLTF: boolean;
+  /** Whether to enable post-processing effects (SSAO, vignette) */
+  usePostProcessing: boolean;
 }
 
 const TIER_SETTINGS: Record<QualityTier, QualitySettings> = {
@@ -42,6 +44,7 @@ const TIER_SETTINGS: Record<QualityTier, QualitySettings> = {
     textureSize: 0,
     useBevels: false,
     useGLTF: false,
+    usePostProcessing: false,
   },
   medium: {
     tier: "medium",
@@ -55,6 +58,7 @@ const TIER_SETTINGS: Record<QualityTier, QualitySettings> = {
     textureSize: 128,
     useBevels: true,
     useGLTF: true,
+    usePostProcessing: true,
   },
   high: {
     tier: "high",
@@ -68,6 +72,7 @@ const TIER_SETTINGS: Record<QualityTier, QualitySettings> = {
     textureSize: 256,
     useBevels: true,
     useGLTF: true,
+    usePostProcessing: true,
   },
 };
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { DoubleSide, Vector3, QuadraticBezierCurve3, TubeGeometry, Color, BackSide } from "three";
+import { DoubleSide, Vector3, QuadraticBezierCurve3, TubeGeometry, Color, BackSide, BufferGeometry, Float32BufferAttribute } from "three";
 
 // ── Types ──
 
@@ -10,6 +10,7 @@ export type VenuePreset = "none" | "indoor-ballroom" | "tent" | "outdoor-garden"
 export type VenueElement =
   | "tent-structure"
   | "grass-floor"
+  | "sand-floor"
   | "sky-dome"
   | "string-lights"
   | "exposed-beams"
@@ -83,14 +84,14 @@ export const VENUE_PRESETS: Record<VenuePreset, VenuePresetDef | null> = {
     showWalls: false,
     environmentPreset: "sunset",
     fogColor: "#e0dcd4",
-    elements: ["sky-dome", "grass-floor"],
+    elements: ["sky-dome", "sand-floor"],
   },
 };
 
 // ── Procedural Venue Components ──
 
-const TENT_PEAK = 14; // peak height in world units
-const TENT_EDGE = 8; // edge height
+const TENT_PEAK = 20; // peak height in world units
+const TENT_EDGE = 14; // edge height — tall enough to see inside easily
 const POLE_RADIUS = 0.08;
 
 function TentStructure({ cx, cz, span }: { cx: number; cz: number; span: number }) {
@@ -104,6 +105,50 @@ function TentStructure({ cx, cz, span }: { cx: number; cz: number; span: number 
     [cx + half, cz + half],
     [cx - half, cz + half],
   ];
+
+  // Build a single unified canopy mesh with proper triangle geometry
+  // Peak at center top, 4 triangular faces sloping down to each edge
+  const canopyGeometry = useMemo(() => {
+    const geo = new BufferGeometry();
+
+    // Vertices: center peak + 4 corners
+    // Add a slight droop at edge midpoints for a more natural catenary look
+    const edgeSag = (TENT_PEAK - TENT_EDGE) * 0.15; // subtle sag at midpoints
+    const peak: [number, number, number] = [cx, TENT_PEAK, cz];
+    const c0: [number, number, number] = [cx - half, TENT_EDGE, cz - half];
+    const c1: [number, number, number] = [cx + half, TENT_EDGE, cz - half];
+    const c2: [number, number, number] = [cx + half, TENT_EDGE, cz + half];
+    const c3: [number, number, number] = [cx - half, TENT_EDGE, cz + half];
+    // Edge midpoints (between adjacent corners) with slight sag for natural drape
+    const m01: [number, number, number] = [(c0[0] + c1[0]) / 2, TENT_EDGE - edgeSag, (c0[2] + c1[2]) / 2];
+    const m12: [number, number, number] = [(c1[0] + c2[0]) / 2, TENT_EDGE - edgeSag, (c1[2] + c2[2]) / 2];
+    const m23: [number, number, number] = [(c2[0] + c3[0]) / 2, TENT_EDGE - edgeSag, (c2[2] + c3[2]) / 2];
+    const m30: [number, number, number] = [(c3[0] + c0[0]) / 2, TENT_EDGE - edgeSag, (c3[2] + c0[2]) / 2];
+
+    // Each face (peak to edge) is subdivided into 2 triangles via the edge midpoint
+    // Face 0: peak → c0 → m01, peak → m01 → c1
+    // Face 1: peak → c1 → m12, peak → m12 → c2
+    // Face 2: peak → c2 → m23, peak → m23 → c3
+    // Face 3: peak → c3 → m30, peak → m30 → c0
+    const verts = new Float32Array([
+      // Face 0 — front
+      ...peak, ...c0, ...m01,
+      ...peak, ...m01, ...c1,
+      // Face 1 — right
+      ...peak, ...c1, ...m12,
+      ...peak, ...m12, ...c2,
+      // Face 2 — back
+      ...peak, ...c2, ...m23,
+      ...peak, ...m23, ...c3,
+      // Face 3 — left
+      ...peak, ...c3, ...m30,
+      ...peak, ...m30, ...c0,
+    ]);
+
+    geo.setAttribute("position", new Float32BufferAttribute(verts, 3));
+    geo.computeVertexNormals();
+    return geo;
+  }, [cx, cz, half]);
 
   return (
     <group>
@@ -121,42 +166,17 @@ function TentStructure({ cx, cz, span }: { cx: number; cz: number; span: number 
         </mesh>
       ))}
 
-      {/* Canopy — 4 triangular fabric panels from peak to each edge */}
-      {corners.map(([px, pz], i) => {
-        const next = corners[(i + 1) % 4];
-        const midX = (px + next[0]) / 2;
-        const midZ = (pz + next[1]) / 2;
-        // Each panel is a tilted plane from peak to midpoint of edge
-        const edgeMidY = TENT_EDGE;
-        const panelCenterX = (cx + midX) / 2;
-        const panelCenterZ = (cz + midZ) / 2;
-        const panelCenterY = (TENT_PEAK + edgeMidY) / 2;
-        const dx = midX - cx;
-        const dz = midZ - cz;
-        const dist = Math.sqrt(dx * dx + dz * dz);
-        const angle = Math.atan2(dz, dx);
-        const rise = TENT_PEAK - edgeMidY;
-        const tilt = Math.atan2(rise, dist);
-
-        return (
-          <mesh
-            key={`canopy-${i}`}
-            position={[panelCenterX, panelCenterY, panelCenterZ]}
-            rotation={[tilt, -angle, 0]}
-            receiveShadow
-          >
-            <planeGeometry args={[dist * 1.05, span * 0.58]} />
-            <meshStandardMaterial
-              color={canopyColor}
-              roughness={0.95}
-              metalness={0}
-              side={DoubleSide}
-              transparent
-              opacity={0.92}
-            />
-          </mesh>
-        );
-      })}
+      {/* Canopy — unified triangulated mesh from peak to corners */}
+      <mesh geometry={canopyGeometry} receiveShadow>
+        <meshStandardMaterial
+          color={canopyColor}
+          roughness={0.95}
+          metalness={0}
+          side={DoubleSide}
+          transparent
+          opacity={0.92}
+        />
+      </mesh>
 
       {/* Valance / edge trim along bottom of canopy */}
       {corners.map(([px, pz], i) => {
@@ -176,6 +196,32 @@ function TentStructure({ cx, cz, span }: { cx: number; cz: number; span: number 
           </mesh>
         );
       })}
+
+      {/* Ridge lines — thin beams from peak to each corner for structural detail */}
+      {corners.map(([px, pz], i) => {
+        const dx = px - cx;
+        const dz = pz - cz;
+        const dy = TENT_EDGE - TENT_PEAK;
+        const ridgeLen = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        const midX = (cx + px) / 2;
+        const midY = (TENT_PEAK + TENT_EDGE) / 2;
+        const midZ = (cz + pz) / 2;
+        // Rotation: point cylinder from peak toward corner
+        const horizDist = Math.sqrt(dx * dx + dz * dz);
+        const pitch = Math.atan2(-dy, horizDist); // tilt down from peak
+        const yaw = Math.atan2(dx, dz); // direction in XZ plane
+
+        return (
+          <mesh
+            key={`ridge-${i}`}
+            position={[midX, midY, midZ]}
+            rotation={[pitch, yaw, 0]}
+          >
+            <cylinderGeometry args={[POLE_RADIUS * 0.6, POLE_RADIUS * 0.6, ridgeLen, 6]} />
+            <meshStandardMaterial color={poleColor} roughness={0.5} metalness={0.15} />
+          </mesh>
+        );
+      })}
     </group>
   );
 }
@@ -185,6 +231,15 @@ function GrassFloor({ cx, cz, span }: { cx: number; cz: number; span: number }) 
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.02, cz]} receiveShadow>
       <planeGeometry args={[span * 2.5, span * 2.5]} />
       <meshStandardMaterial color="#6b8f4e" roughness={0.95} metalness={0.0} />
+    </mesh>
+  );
+}
+
+function SandFloor({ cx, cz, span }: { cx: number; cz: number; span: number }) {
+  return (
+    <mesh rotation={[-Math.PI / 2, 0, 0]} position={[cx, -0.02, cz]} receiveShadow>
+      <planeGeometry args={[span * 2.5, span * 2.5]} />
+      <meshStandardMaterial color="#e8dcc8" roughness={0.98} metalness={0.0} />
     </mesh>
   );
 }
@@ -431,6 +486,9 @@ export default function VenueEnvironment({ preset, cx, cz, maxDim }: VenueEnviro
       )}
       {elements.includes("grass-floor") && (
         <GrassFloor cx={cx} cz={cz} span={maxDim} />
+      )}
+      {elements.includes("sand-floor") && (
+        <SandFloor cx={cx} cz={cz} span={maxDim} />
       )}
       {elements.includes("sky-dome") && (
         <SkyDome cx={cx} cz={cz} span={maxDim} />
