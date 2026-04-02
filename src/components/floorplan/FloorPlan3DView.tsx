@@ -2,7 +2,7 @@
 
 import React, { useMemo, useCallback, useEffect, useState, useRef, Suspense } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { OrbitControls, ContactShadows, MeshReflectorMaterial, RoundedBox } from "@react-three/drei";
+import { OrbitControls, ContactShadows, MeshReflectorMaterial, RoundedBox, Text } from "@react-three/drei";
 import * as THREE from "three";
 import { Color, Vector2, Shape, DoubleSide, ACESFilmicToneMapping } from "three";
 import { unwrapCanvasJSON } from "@/lib/floorplan-schema";
@@ -11,11 +11,8 @@ import { FURNITURE_CATALOG } from "@/lib/constants";
 import { ErrorBoundary } from "./FloorPlan3DErrorBoundary";
 import VenueEnvironment, { VenuePreset, VenuePresetDef, VENUE_PRESETS } from "./VenueEnvironment";
 import ProceduralEnvMap from "./ProceduralEnvMap";
-import { QualityProvider, useQuality } from "./QualityTier";
-// Post-processing disabled: @react-three/postprocessing v3.0.4 has a runtime
-// compatibility issue with Three.js r170 ("Cannot read properties of undefined
-// reading 'length'" in EffectComposer init). Re-enable after upgrading to a
-// compatible version pair.
+import { QualityProvider } from "./QualityTier";
+// Post-processing disabled — @react-three/postprocessing v3.0.4 incompatible with Three.js r170
 // import { EffectComposer, SSAO, Vignette } from "@react-three/postprocessing";
 // import { BlendFunction } from "postprocessing";
 
@@ -132,7 +129,7 @@ function getFloorNormalMap(type: string, size: number): THREE.CanvasTexture {
 
 // ── 3D Settings ──
 
-type CameraPreset = "default" | "birds-eye" | "eye-level" | "presentation";
+type CameraPreset = "default" | "birds-eye" | "eye-level" | "presentation" | "walkthrough";
 
 interface View3DSettings {
   venuePreset: VenuePreset;
@@ -581,11 +578,22 @@ function getFurnitureCategory(furnitureId: string): FurnitureCategory {
 }
 
 /** Label that floats above every furniture piece */
-// Text component from drei fetches a font from CDN which is blocked by CSP,
-// causing Suspense to hang indefinitely. Labels disabled until a local font is bundled.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function FurnitureLabel(_props: { label: string; y: number }) {
-  return null;
+function FurnitureLabel({ label, y }: { label: string; y: number }) {
+  return (
+    <Text
+      font="/fonts/inter-latin-400.woff2"
+      position={[0, y + 0.15, 0]}
+      fontSize={0.12}
+      color="#4a4540"
+      anchorX="center"
+      anchorY="bottom"
+      outlineWidth={0.008}
+      outlineColor="#ffffff"
+      maxWidth={2}
+    >
+      {label}
+    </Text>
+  );
 }
 
 /** Wrapper that adds hover highlight to all child meshes via emissive boost */
@@ -2172,7 +2180,7 @@ function FloorPlan3DScene({
   );
 }
 
-/** Smoothly animates camera to preset positions */
+/** Smoothly animates camera to preset positions using spring-damped interpolation */
 function CameraAnimator({
   preset,
   cx,
@@ -2186,8 +2194,13 @@ function CameraAnimator({
 }) {
   const { camera } = useThree();
   const targetPos = useRef(new THREE.Vector3());
+  const velocity = useRef(new THREE.Vector3(0, 0, 0));
   const animating = useRef(false);
   const prevPreset = useRef(preset);
+
+  // Spring parameters: stiffness controls snap, damping controls overshoot
+  const STIFFNESS = 4.0;
+  const DAMPING = 5.0;
 
   useEffect(() => {
     if (preset === prevPreset.current) return;
@@ -2208,15 +2221,33 @@ function CameraAnimator({
         targetPos.current.set(cx + dist * 0.5, dist * 0.45, cz + dist * 0.7);
         break;
     }
+    velocity.current.set(0, 0, 0);
     animating.current = true;
   }, [preset, cx, cz, span, camera]);
 
-  useFrame(() => {
+  useFrame((_, delta) => {
     if (!animating.current) return;
-    camera.position.lerp(targetPos.current, 0.06);
+    // Clamp delta to avoid instability on tab-switch or lag spikes
+    const dt = Math.min(delta, 0.05);
+
+    // Spring force: F = -stiffness * displacement - damping * velocity
+    const dx = camera.position.x - targetPos.current.x;
+    const dy = camera.position.y - targetPos.current.y;
+    const dz = camera.position.z - targetPos.current.z;
+
+    velocity.current.x += (-STIFFNESS * dx - DAMPING * velocity.current.x) * dt;
+    velocity.current.y += (-STIFFNESS * dy - DAMPING * velocity.current.y) * dt;
+    velocity.current.z += (-STIFFNESS * dz - DAMPING * velocity.current.z) * dt;
+
+    camera.position.x += velocity.current.x * dt;
+    camera.position.y += velocity.current.y * dt;
+    camera.position.z += velocity.current.z * dt;
+
     const dist = camera.position.distanceTo(targetPos.current);
-    if (dist < 0.05) {
+    const speed = velocity.current.length();
+    if (dist < 0.02 && speed < 0.01) {
       camera.position.copy(targetPos.current);
+      velocity.current.set(0, 0, 0);
       animating.current = false;
     }
   });
@@ -2224,12 +2255,22 @@ function CameraAnimator({
   return null;
 }
 
-/** Post-processing effects — disabled until postprocessing package is updated.
- *  All other visual improvements (contact shadows, PBR env map, floor reflections,
- *  hover highlights, dynamic lighting) still work. Re-enable when upgrading
- *  @react-three/postprocessing to a version compatible with Three.js r170. */
+/**
+ * Post-processing effects — disabled until @react-three/postprocessing
+ * is updated for Three.js r170 compatibility.
+ * When re-enabled: SSAO for depth cues + vignette for polish, quality-gated.
+ */
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function PostProcessingEffects({ mood }: { mood: string }) {
+  // const quality = useQuality();
+  // if (!quality.usePostProcessing) return null;
+  // const isDramatic = _mood === "dramatic";
+  // return (
+  //   <EffectComposer multisampling={0}>
+  //     <SSAO samples={isDramatic ? 24 : 16} radius={0.12} intensity={isDramatic ? 28 : 18} ... />
+  //     <Vignette offset={isDramatic ? 0.35 : 0.45} darkness={isDramatic ? 0.6 : 0.35} />
+  //   </EffectComposer>
+  // );
   return null;
 }
 
