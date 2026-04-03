@@ -835,9 +835,20 @@ export default function FloorPlanEditor({
       }
     };
 
-    canvas.on("selection:created", updateSelection);
+    canvas.on("selection:created", () => {
+      // Clear any lingering drag visuals when a new selection starts
+      clearGuides();
+      clearDistanceIndicators();
+      resetCollisionTracking(canvas);
+      canvas.requestRenderAll();
+      updateSelection();
+    });
     canvas.on("selection:updated", updateSelection);
     canvas.on("selection:cleared", () => {
+      clearGuides();
+      clearDistanceIndicators();
+      resetCollisionTracking(canvas);
+      canvas.requestRenderAll();
       setSelectedInfo(null);
       if (onSelectZoneRef.current) {
         onSelectZoneRef.current(null);
