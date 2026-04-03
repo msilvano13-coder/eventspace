@@ -855,8 +855,10 @@ export default function FloorPlanEditor({
       const newZoom = delta > 0
         ? Math.max(currentZoom / 1.08, 0.3)
         : Math.min(currentZoom * 1.08, 3);
-      const point = canvas.getScenePoint(e);
-      canvas.zoomToPoint(point, newZoom);
+      // Fabric v6: zoomToPoint expects a fabric Point
+      const pointer = canvas.getViewportPoint(e);
+      canvas.zoomToPoint(pointer, newZoom);
+      canvas.requestRenderAll();
       setZoom(newZoom);
     });
 
@@ -1049,6 +1051,7 @@ export default function FloorPlanEditor({
         return canvas.loadFromJSON(canvasJSON);
       }).then(() => {
         ensureAllObjectIds(canvas);
+        createGrid(canvas, canvas.getWidth(), canvas.getHeight());
         canvas.requestRenderAll();
         isLoadingRef.current = false;
         const rawJSON = canvas.toJSON();
@@ -1061,6 +1064,7 @@ export default function FloorPlanEditor({
           const canvasJSON = unwrapCanvasJSON(initialJSON);
           canvas.loadFromJSON(canvasJSON).then(() => {
             ensureAllObjectIds(canvas);
+            createGrid(canvas, canvas.getWidth(), canvas.getHeight());
             canvas.requestRenderAll();
             isLoadingRef.current = false;
             lastSnapshotRef.current = JSON.stringify(canvas.toJSON());
@@ -1080,6 +1084,7 @@ export default function FloorPlanEditor({
       const canvasJSON = unwrapCanvasJSON(initialJSON);
       canvas.loadFromJSON(canvasJSON).then(() => {
         ensureAllObjectIds(canvas);
+        createGrid(canvas, canvas.getWidth(), canvas.getHeight());
         canvas.requestRenderAll();
         isLoadingRef.current = false;
         const rawJSON = canvas.toJSON();
@@ -1585,16 +1590,20 @@ export default function FloorPlanEditor({
   function handleZoomIn() {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const newZoom = Math.min(zoom * 1.2, 3);
+    const currentZoom = canvas.getZoom();
+    const newZoom = Math.min(currentZoom * 1.2, 3);
     canvas.setZoom(newZoom);
+    canvas.requestRenderAll();
     setZoom(newZoom);
   }
 
   function handleZoomOut() {
     const canvas = fabricRef.current;
     if (!canvas) return;
-    const newZoom = Math.max(zoom / 1.2, 0.3);
+    const currentZoom = canvas.getZoom();
+    const newZoom = Math.max(currentZoom / 1.2, 0.3);
     canvas.setZoom(newZoom);
+    canvas.requestRenderAll();
     setZoom(newZoom);
   }
 
