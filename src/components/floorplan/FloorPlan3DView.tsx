@@ -2434,6 +2434,9 @@ interface FloorPlan3DViewProps {
   lightingZones: LightingZone[];
   lightingEnabled: boolean;
   tablescapes?: Tablescape[];
+  presentationMode?: boolean;
+  initialSettings?: View3DSettings | null;
+  onSettingsChange?: (settings: View3DSettings) => void;
 }
 
 function FloorPlan3DScene({
@@ -3150,8 +3153,13 @@ function Settings3DPanel({
 
 export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
   const { floorPlanJSON } = props;
-  const [settings, setSettings] = useState<View3DSettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<View3DSettings>(props.initialSettings ?? DEFAULT_SETTINGS);
   const [showSettings, setShowSettings] = useState(false);
+
+  const handleSettingsChange = useCallback((newSettings: View3DSettings) => {
+    setSettings(newSettings);
+    props.onSettingsChange?.(newSettings);
+  }, [props.onSettingsChange]);
 
   // Compute camera position + centroid to frame the actual furniture
   const { camConfig, centerX, centerZ } = useMemo(() => {
@@ -3238,12 +3246,14 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
             </Suspense>
           </QualityProvider>
         </Canvas>
-        <Settings3DPanel
-          settings={settings}
-          onChange={setSettings}
-          open={showSettings}
-          onToggle={() => setShowSettings(!showSettings)}
-        />
+        {!props.presentationMode && (
+          <Settings3DPanel
+            settings={settings}
+            onChange={handleSettingsChange}
+            open={showSettings}
+            onToggle={() => setShowSettings(!showSettings)}
+          />
+        )}
         {settings.cameraPreset === "walkthrough" && (
           <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-black/60 text-white text-xs px-3 py-1.5 rounded-full backdrop-blur-sm pointer-events-none">
             WASD to move &middot; Click + drag to look around

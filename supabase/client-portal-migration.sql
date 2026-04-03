@@ -60,9 +60,17 @@ BEGIN
     'floor_plans', COALESCE((
       SELECT jsonb_agg(
         row_to_json(fp)::jsonb || jsonb_build_object(
-          'lighting_zones', COALESCE((SELECT jsonb_agg(row_to_json(lz)) FROM lighting_zones lz WHERE lz.floor_plan_id = fp.id), '[]'::jsonb)
+          'lighting_zones', COALESCE((SELECT jsonb_agg(row_to_json(lz)) FROM lighting_zones lz WHERE lz.floor_plan_id = fp.id), '[]'::jsonb),
+          'layout_objects', COALESCE((SELECT jsonb_agg(row_to_json(lo)) FROM layout_objects lo WHERE lo.floor_plan_id = fp.id), '[]'::jsonb)
         )
       ) FROM floor_plans fp WHERE fp.event_id = v_event_id
+    ), '[]'::jsonb),
+    'tablescapes', COALESCE((
+      SELECT jsonb_agg(
+        row_to_json(ts)::jsonb || jsonb_build_object(
+          'tablescape_items', COALESCE((SELECT jsonb_agg(row_to_json(ti)) FROM tablescape_items ti WHERE ti.tablescape_id = ts.id), '[]'::jsonb)
+        )
+      ) FROM tablescapes ts WHERE ts.event_id = v_event_id
     ), '[]'::jsonb),
     'invoices', COALESCE((
       SELECT jsonb_agg(

@@ -86,6 +86,23 @@ export interface LightingZone {
   snappedToFurnitureId?: string;  // canvas object data.label when snapped to furniture
 }
 
+export interface View3DSettings {
+  venuePreset: "none" | "indoor-ballroom" | "tent" | "outdoor-garden" | "rooftop" | "barn" | "beach";
+  chairStyle: "solid-back" | "chiavari" | "folding" | "ghost";
+  linenColor: "ivory" | "white" | "blush" | "navy" | "sage" | "gold";
+  floorMaterial: "hardwood" | "marble" | "carpet" | "concrete";
+  floorColor: string | null;
+  lightingMood: "warm" | "cool" | "neutral" | "dramatic";
+  lightingColorCast: number;
+  chairColor: string | null;
+  linenCustomColor: string | null;
+  wallColor: string | null;
+  matchSeatToLinen: boolean;
+  showLabels: boolean;
+  showShadows: boolean;
+  cameraPreset: "default" | "birds-eye" | "eye-level" | "presentation" | "walkthrough";
+}
+
 export interface FloorPlan {
   id: string;
   name: string;
@@ -95,6 +112,7 @@ export interface FloorPlan {
   roomShape: RoomShape | null;
   canvasWidth: number;
   canvasHeight: number;
+  view3dSettings?: View3DSettings | null;
 }
 
 export function createDefaultFloorPlans(): FloorPlan[] {
@@ -178,6 +196,10 @@ export interface Event {
   weddingFaq: WeddingFaqItem[];
   weddingRegistryLinks: WeddingRegistryLink[];
   weddingSectionsOrder: string[];
+  // Layout approval (client presentation flow)
+  layoutApprovalStatus?: "pending" | "approved" | "changes_requested" | null;
+  layoutApprovalAt?: string | null;
+  layoutApprovalNote?: string | null;
 }
 
 export interface WeddingVenueDetails {

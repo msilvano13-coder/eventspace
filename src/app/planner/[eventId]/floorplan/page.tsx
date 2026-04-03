@@ -2,12 +2,12 @@
 
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
-import { useEvent, useEventSubEntities, useEventCoreLoaded, useStoreActions, useEventsLoading } from "@/hooks/useStore";
+import { useEvent, useEventSubEntities, useEventCoreLoaded, useStoreActions, useEventsLoading, usePlannerProfile } from "@/hooks/useStore";
 import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
-import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown, FileDown, Box, X } from "lucide-react";
+import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown, FileDown, Box, X, Share2, Check } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FloorPlan, Guest, GuestRelationship, LayoutObject, LightingZone, RoomShape, createDefaultFloorPlans } from "@/lib/types";
+import { FloorPlan, Guest, GuestRelationship, LayoutObject, LightingZone, RoomShape, View3DSettings, createDefaultFloorPlans } from "@/lib/types";
 import { replaceLayoutObjects } from "@/lib/floorplan/layout-objects";
 import { v4 as uuid } from "uuid";
 import { fetchGuestRelationships } from "@/lib/supabase/db";
@@ -49,6 +49,7 @@ export default function FloorPlanPage() {
   useEventSubEntities(eventId, ["guests", "tablescapes"]);
   const { updateEvent } = useStoreActions();
   const readOnly = useIsTeamMember();
+  const isDiy = usePlannerProfile().plan === "diy";
   const [activePlanId, setActivePlanId] = useState<string | null>(null);
   const [showAddTab, setShowAddTab] = useState(false);
   const [newTabName, setNewTabName] = useState("");
@@ -58,6 +59,8 @@ export default function FloorPlanPage() {
   const [mobileLightingExpanded, setMobileLightingExpanded] = useState(true);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [guestRelationships, setGuestRelationships] = useState<GuestRelationship[]>([]);
+  const [shareCopied, setShareCopied] = useState(false);
+  const [showApprovalNote, setShowApprovalNote] = useState(event?.layoutApprovalStatus === "changes_requested");
   const getCanvasDataURLRef = useRef<(() => string | null) | null>(null);
   const autoCreatedRef = useRef(false);
   // Refs for latest values — prevents stale closure in flush-save on editor unmount
@@ -119,6 +122,19 @@ export default function FloorPlanPage() {
     []
   );
 
+  const handleSettingsChange = useCallback(
+    (newSettings: View3DSettings) => {
+      const currentPlans = validPlansRef.current;
+      const currentPlanId = resolvedPlanIdRef.current;
+      if (!currentPlanId || currentPlans.length === 0) return;
+      const updated = currentPlans.map((fp) =>
+        fp.id === currentPlanId ? { ...fp, view3dSettings: newSettings } : fp
+      );
+      updateEvent(eventId, { floorPlans: updated });
+    },
+    [eventId, updateEvent]
+  );
+
   // Auto-create default floor plans if none valid exist (wait for core data from DB)
   useEffect(() => {
     if (autoCreatedRef.current || !event || !coreLoaded) return;
@@ -171,6 +187,14 @@ export default function FloorPlanPage() {
       canvasWidth: 800,
       canvasHeight: 600,
     });
+  }
+
+  function handleSharePresentation() {
+    if (!event?.shareToken) return;
+    const url = `${window.location.origin}/present/${event.shareToken}`;
+    navigator.clipboard.writeText(url).catch(() => {});
+    setShareCopied(true);
+    setTimeout(() => setShareCopied(false), 2000);
   }
 
   function toggleLighting() {
@@ -255,6 +279,22 @@ export default function FloorPlanPage() {
           <span className="hidden sm:inline">PDF</span>
         </button>
 
+        {/* Share Presentation (Pro/Teams only) */}
+        {!isDiy && (
+          <button
+            onClick={handleSharePresentation}
+            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+              shareCopied
+                ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                : "text-stone-400 hover:text-stone-600 hover:bg-stone-50 border border-transparent"
+            }`}
+            title="Copy presentation link for client"
+          >
+            {shareCopied ? <Check size={13} /> : <Share2 size={13} />}
+            <span className="hidden sm:inline">{shareCopied ? "Copied!" : "Share"}</span>
+          </button>
+        )}
+
         {/* Lighting toggle */}
         <button
           onClick={toggleLighting}
@@ -281,7 +321,42 @@ export default function FloorPlanPage() {
           <span className="hidden sm:inline">Seating</span>
         </button>
         <span className="text-xs text-stone-400 hidden sm:inline">Auto-saved</span>
+        {!isDiy && event.layoutApprovalStatus === "approved" && (
+          <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg">
+            <Check size={12} />
+            <span className="hidden sm:inline">Client Approved</span>
+          </span>
+        )}
+        {!isDiy && event.layoutApprovalStatus === "changes_requested" && (
+          <button
+            onClick={() => setShowApprovalNote(!showApprovalNote)}
+            className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-lg hover:bg-amber-100 transition"
+          >
+            <span className="hidden sm:inline">Changes Requested</span>
+            <ChevronDown size={12} className={`transition-transform ${showApprovalNote ? "rotate-180" : ""}`} />
+          </button>
+        )}
       </div>
+
+      {/* Client feedback note */}
+      {!isDiy && showApprovalNote && event.layoutApprovalStatus === "changes_requested" && event.layoutApprovalNote && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2.5 flex items-center gap-2 flex-shrink-0">
+          <span className="text-amber-600 text-xs font-medium whitespace-nowrap">Client feedback:</span>
+          <p className="text-amber-800 text-xs font-body flex-1">{event.layoutApprovalNote}</p>
+          <button
+            onClick={() => {
+              updateEvent(eventId, { layoutApprovalStatus: null, layoutApprovalAt: null, layoutApprovalNote: null });
+              setShowApprovalNote(false);
+            }}
+            className="text-xs font-medium text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded hover:bg-emerald-100 transition whitespace-nowrap"
+          >
+            Mark Resolved
+          </button>
+          <button onClick={() => setShowApprovalNote(false)} className="text-amber-400 hover:text-amber-600 flex-shrink-0">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* Floor plan tabs */}
       <div className="bg-white border-b border-stone-200 flex items-center px-2 sm:px-4 overflow-x-auto flex-shrink-0">
@@ -350,10 +425,13 @@ export default function FloorPlanPage() {
           {show3D ? (
             activePlan && (
               <FloorPlan3DView
+                key={activePlan.id}
                 floorPlanJSON={activePlan.json}
                 lightingZones={lightingZones}
                 lightingEnabled={showLighting}
                 tablescapes={event.tablescapes ?? []}
+                initialSettings={activePlan.view3dSettings}
+                onSettingsChange={handleSettingsChange}
               />
             )
           ) : (

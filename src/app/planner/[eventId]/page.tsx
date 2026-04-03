@@ -37,6 +37,8 @@ import {
   RotateCcw,
   Globe,
   UtensilsCrossed,
+  CheckCircle2,
+  MessageSquare,
 } from "lucide-react";
 import { TimelineItem, QuestionnaireAssignment, Expense, Message, BudgetItem, BUDGET_CATEGORIES, VENDOR_TO_BUDGET_CATEGORY } from "@/lib/types";
 import MessageThread from "@/components/event/MessageThread";
@@ -470,7 +472,19 @@ export default function EventDetailPage() {
         >
           <Layout size={22} className="text-rose-400 mb-2" />
           <h3 className="font-heading font-semibold text-stone-800 group-hover:text-rose-500 text-sm">Floor Plan</h3>
-          <p className="text-xs text-stone-400 mt-1">Design layout</p>
+          {!isDiy && event.layoutApprovalStatus === "approved" ? (
+            <p className="text-xs text-emerald-600 mt-1 flex items-center gap-1">
+              <CheckCircle2 size={12} />
+              Client Approved
+            </p>
+          ) : !isDiy && event.layoutApprovalStatus === "changes_requested" ? (
+            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+              <MessageSquare size={12} />
+              Changes Requested
+            </p>
+          ) : (
+            <p className="text-xs text-stone-400 mt-1">Design layout</p>
+          )}
         </Link>
         <Link
           href={`/planner/${event.id}/tablescape`}

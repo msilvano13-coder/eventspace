@@ -129,6 +129,10 @@ function eventFieldsToRow(fields: Partial<Event>): Record<string, unknown> {
   if (fields.weddingFaq !== undefined) row.wedding_faq = fields.weddingFaq;
   if (fields.weddingRegistryLinks !== undefined) row.wedding_registry_links = fields.weddingRegistryLinks;
   if (fields.weddingSectionsOrder !== undefined) row.wedding_sections_order = fields.weddingSectionsOrder;
+  // Layout approval
+  if (fields.layoutApprovalStatus !== undefined) row.layout_approval_status = fields.layoutApprovalStatus;
+  if (fields.layoutApprovalAt !== undefined) row.layout_approval_at = fields.layoutApprovalAt;
+  if (fields.layoutApprovalNote !== undefined) row.layout_approval_note = fields.layoutApprovalNote;
   return row;
 }
 
@@ -163,6 +167,10 @@ function eventCoreFields(r: any) {
     weddingFaq: r.wedding_faq ?? [],
     weddingRegistryLinks: r.wedding_registry_links ?? [],
     weddingSectionsOrder: r.wedding_sections_order ?? ['hero','story','schedule','venue','rsvp','faq','travel','registry'],
+    // Layout approval
+    layoutApprovalStatus: r.layout_approval_status ?? null,
+    layoutApprovalAt: r.layout_approval_at ?? null,
+    layoutApprovalNote: r.layout_approval_note ?? null,
   };
 }
 
@@ -264,6 +272,7 @@ function floorPlanToRow(fp: FloorPlan, eventId: string, index: number, userId: s
     room_shape: fp.roomShape ?? null,
     canvas_width: fp.canvasWidth ?? 600,
     canvas_height: fp.canvasHeight ?? 400,
+    view3d_settings: fp.view3dSettings ?? null,
     // layout_objects: joined child table — written separately via replaceLayoutObjects()
   };
 }
@@ -332,6 +341,7 @@ function floorPlanFromRow(r: any): FloorPlan {
     roomShape: r.room_shape ?? null,
     canvasWidth: Number(r.canvas_width) || 600,
     canvasHeight: Number(r.canvas_height) || 400,
+    view3dSettings: r.view3d_settings ?? null,
   };
 }
 
@@ -2510,6 +2520,9 @@ function clientEventFromRow(r: any): Event {
     weddingFaq: r.wedding_faq ?? [],
     weddingRegistryLinks: r.wedding_registry_links ?? [],
     weddingSectionsOrder: r.wedding_sections_order ?? ['hero','story','schedule','venue','rsvp','faq','travel','registry'],
+    layoutApprovalStatus: r.layout_approval_status ?? null,
+    layoutApprovalAt: r.layout_approval_at ?? null,
+    layoutApprovalNote: r.layout_approval_note ?? null,
     floorPlans: (r.floor_plans ?? []).map((fp: any) => ({
       id: fp.id,
       name: fp.name,
@@ -2519,8 +2532,31 @@ function clientEventFromRow(r: any): Event {
         intensity: lz.intensity, x: lz.x, y: lz.y, size: lz.size,
         angle: lz.angle ?? 0, height: lz.height ?? 8, spread: lz.spread ?? 45, notes: lz.notes,
       })),
+      layoutObjects: (fp.layout_objects ?? []).map((lo: any) => ({
+        id: lo.id, floorPlanId: lo.floor_plan_id, assetId: lo.asset_id,
+        positionX: Number(lo.position_x) || 0, positionY: Number(lo.position_y) || 0,
+        rotation: Number(lo.rotation) || 0, scaleX: Number(lo.scale_x) || 1, scaleY: Number(lo.scale_y) || 1,
+        widthOverride: lo.width_override != null ? Number(lo.width_override) : null,
+        heightOverride: lo.height_override != null ? Number(lo.height_override) : null,
+        label: lo.label || "", groupId: lo.group_id ?? null, parentId: lo.parent_id ?? null,
+        tableId: lo.table_id ?? null, fillOverride: lo.fill_override ?? null,
+        strokeOverride: lo.stroke_override ?? null, tablescapeId: lo.tablescape_id ?? null,
+        metadata: lo.metadata ?? {}, zIndex: lo.z_index ?? 0,
+      })),
+      view3dSettings: fp.view3d_settings ?? null,
     })),
-    tablescapes: [],
+    tablescapes: (r.tablescapes ?? []).map((ts: any) => ({
+      id: ts.id,
+      name: ts.name ?? "Untitled",
+      tableShape: ts.table_shape ?? "round",
+      tableWidth: ts.table_width ?? 60,
+      tableDepth: ts.table_depth ?? 60,
+      items: (ts.tablescape_items ?? []).map((ti: any) => ({
+        id: ti.id, assetId: ti.asset_id,
+        positionX: ti.position_x ?? 0, positionY: ti.position_y ?? 0, positionZ: ti.position_z ?? 0,
+        rotationY: ti.rotation_y ?? 0, scale: ti.scale ?? 1, colorOverride: ti.color_override ?? null,
+      })),
+    })),
     timeline: (r.timeline_items ?? []).map((t: any) => ({
       id: t.id, title: t.title, dueDate: t.due_date ?? null,
       completed: t.completed ?? false, order: t.sort_order ?? 0,
@@ -2696,6 +2732,16 @@ export async function clientUpdateEventFields(shareToken: string, fields: Partia
   if (fields.colorPalette !== undefined) payload.color_palette = fields.colorPalette;
   const { error } = await supabase.rpc('client_update_event_fields', { p_share_token: shareToken, p_fields: payload });
   if (error) throw new Error(`clientUpdateEventFields: ${error.message}`);
+}
+
+export async function clientApproveLayout(shareToken: string, status: "approved" | "changes_requested", note?: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.rpc('client_approve_layout', {
+    p_share_token: shareToken,
+    p_status: status,
+    p_note: note ?? null,
+  });
+  if (error) throw new Error(`clientApproveLayout: ${error.message}`);
 }
 
 export async function clientUpdateBudget(shareToken: string, items: BudgetItem[]): Promise<void> {
