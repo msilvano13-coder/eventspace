@@ -330,11 +330,23 @@ export default function FloorPlanEditor({
       canvas.defaultCursor = "crosshair";
       canvas.hoverCursor = "crosshair";
       canvas.discardActiveObject();
+      // Make all objects non-selectable so clicks pass through to measurement
+      canvas.getObjects().forEach((obj: any) => {
+        if (!obj.data?.isMeasure && !obj.data?.isLighting && !obj.data?.isGuide) {
+          obj.set({ selectable: false, evented: false });
+        }
+      });
       canvas.requestRenderAll();
     } else {
       canvas.selection = true;
       canvas.defaultCursor = "default";
       canvas.hoverCursor = "move";
+      // Restore selectability on all furniture/room objects
+      canvas.getObjects().forEach((obj: any) => {
+        if (!obj.data?.isMeasure && !obj.data?.isLighting && !obj.data?.isGuide) {
+          obj.set({ selectable: true, evented: true });
+        }
+      });
       clearMeasureObjects();
     }
   }, [measureMode]);
