@@ -251,7 +251,10 @@ function FloorPlan3DScene({
 
 export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
   const { floorPlanJSON } = props;
-  const [settings, setSettings] = useState<View3DSettings>(props.initialSettings ?? DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<View3DSettings>(() => ({
+    ...DEFAULT_SETTINGS,
+    ...(props.initialSettings ?? {}),
+  }));
   const [showSettings, setShowSettings] = useState(false);
 
   const handleSettingsChange = useCallback((newSettings: View3DSettings) => {
