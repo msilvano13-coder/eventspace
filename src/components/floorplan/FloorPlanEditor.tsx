@@ -637,11 +637,17 @@ export default function FloorPlanEditor({
         return;
       }
 
-      // Step 1: Grid snap (if enabled)
+      // Step 1: Grid snap — full grid when enabled, 1px rounding when disabled
       if (snapEnabledRef.current) {
         obj.set({
           left: Math.round((obj.left || 0) / GRID_SIZE) * GRID_SIZE,
           top: Math.round((obj.top || 0) / GRID_SIZE) * GRID_SIZE,
+        });
+      } else {
+        // Round to nearest pixel for clean positioning without grid constraint
+        obj.set({
+          left: Math.round(obj.left || 0),
+          top: Math.round(obj.top || 0),
         });
       }
 
