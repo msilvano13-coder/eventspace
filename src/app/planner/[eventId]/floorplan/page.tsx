@@ -7,7 +7,8 @@ import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
 import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown, FileDown, Box, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { FloorPlan, Guest, GuestRelationship, LightingZone, createDefaultFloorPlans } from "@/lib/types";
+import { FloorPlan, Guest, GuestRelationship, LayoutObject, LightingZone, RoomShape, createDefaultFloorPlans } from "@/lib/types";
+import { replaceLayoutObjects } from "@/lib/floorplan/layout-objects";
 import { v4 as uuid } from "uuid";
 import { fetchGuestRelationships } from "@/lib/supabase/db";
 import { exportFloorPlanPDF } from "@/lib/floorplan-export-pdf";
@@ -104,6 +105,18 @@ export default function FloorPlanPage() {
       updateEvent(eventId, { floorPlans: updated });
     },
     [eventId, updateEvent]
+  );
+
+  const handleSaveLayoutObjects = useCallback(
+    (objects: LayoutObject[], roomShape: RoomShape | null, canvasWidth: number, canvasHeight: number) => {
+      const planId = resolvedPlanIdRef.current;
+      if (!planId) return;
+      // Fire-and-forget — layout objects persist independently from the legacy JSON path
+      replaceLayoutObjects(planId, objects, roomShape, canvasWidth, canvasHeight).catch((err) => {
+        console.error("[FloorPlan] layout objects save error:", err);
+      });
+    },
+    []
   );
 
   // Auto-create default floor plans if none valid exist (wait for core data from DB)
@@ -348,8 +361,11 @@ export default function FloorPlanPage() {
               <FloorPlanEditor
                 key={activePlan.id}
                 eventId={eventId}
+                floorPlanId={activePlan.id}
                 initialJSON={activePlan.json}
+                initialLayoutObjects={activePlan.layoutObjects}
                 onSave={readOnly ? undefined : handleSave}
+                onSaveLayoutObjects={readOnly ? undefined : handleSaveLayoutObjects}
                 lightingZones={lightingZones}
                 lightingEnabled={showLighting}
                 onUpdateZones={readOnly ? undefined : handleUpdateLightingZones}

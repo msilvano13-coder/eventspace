@@ -28,7 +28,7 @@ FabricObject.prototype.toObject = function (propertiesToInclude?: string[]) {
 };
 
 import { v4 as uuid } from "uuid";
-import { FurnitureItemDef, LightingZone, RoomPreset, Tablescape } from "@/lib/types";
+import { FurnitureItemDef, LayoutObject, LightingZone, RoomPreset, RoomShape, Tablescape } from "@/lib/types";
 import { getFurnitureById } from "./furniture-items";
 import FurniturePalette from "./FurniturePalette";
 import Toolbar, { RotationSnapValue, ROTATION_SNAP_OPTIONS } from "./Toolbar";
@@ -71,11 +71,18 @@ import {
   clearDistanceIndicators,
   disposeDistanceIndicators,
 } from "@/lib/floorplan/distance-indicators";
+import {
+  canvasToLayoutObjects,
+  roomShapeFromCanvas,
+} from "@/lib/floorplan/canvas-bridge";
 
 interface Props {
   eventId: string;
+  floorPlanId?: string;
   initialJSON: string | null;
+  initialLayoutObjects?: LayoutObject[];
   onSave?: (json: string) => void;
+  onSaveLayoutObjects?: (objects: LayoutObject[], roomShape: RoomShape | null, canvasWidth: number, canvasHeight: number) => void;
   // Lighting integration — zones rendered directly on canvas
   lightingZones?: LightingZone[];
   lightingEnabled?: boolean;
@@ -214,8 +221,11 @@ function RoomShapePreview({ preset }: { preset: RoomPreset }) {
 
 export default function FloorPlanEditor({
   eventId,
+  floorPlanId,
   initialJSON,
+  initialLayoutObjects,
   onSave,
+  onSaveLayoutObjects,
   lightingZones = [],
   lightingEnabled = false,
   onUpdateZones,
@@ -269,6 +279,8 @@ export default function FloorPlanEditor({
 
   // ── Refs for latest values (used in closures) ──
   const onSaveRef = useRef(onSave);
+  const onSaveLayoutObjectsRef = useRef(onSaveLayoutObjects);
+  const floorPlanIdRef = useRef(floorPlanId);
   const lightingZonesRef = useRef(lightingZones);
   const lightingEnabledRef = useRef(lightingEnabled);
   const selectedZoneIdRef = useRef(selectedZoneId);
@@ -279,6 +291,8 @@ export default function FloorPlanEditor({
   const rotationSnapRef = useRef(rotationSnap);
   useEffect(() => {
     onSaveRef.current = onSave;
+    onSaveLayoutObjectsRef.current = onSaveLayoutObjects;
+    floorPlanIdRef.current = floorPlanId;
     lightingZonesRef.current = lightingZones;
     lightingEnabledRef.current = lightingEnabled;
     selectedZoneIdRef.current = selectedZoneId;
@@ -405,17 +419,36 @@ export default function FloorPlanEditor({
 
   /** Core save logic — used by both auto-save and manual save */
   const doSave = useCallback(() => {
+    const canvas = fabricRef.current;
     const json = getCanvasJSON();
     if (!json) {
       console.warn("[FloorPlan] doSave: getCanvasJSON returned null");
       return false;
     }
+
+    // Legacy save path (Fabric.js JSON blob)
     const serialized = serializeFloorPlan(json as Record<string, unknown>);
     if (!serialized) {
       console.warn("[FloorPlan] doSave: serializeFloorPlan returned null (validation failed)");
       return false;
     }
     onSaveRef.current?.(serialized);
+
+    // Phase 2: Also extract and persist layout objects
+    if (onSaveLayoutObjectsRef.current && floorPlanIdRef.current && canvas) {
+      const layoutObjects = canvasToLayoutObjects(
+        json as Record<string, unknown>,
+        floorPlanIdRef.current,
+      );
+      const roomShape = roomShapeFromCanvas(json as Record<string, unknown>);
+      onSaveLayoutObjectsRef.current(
+        layoutObjects,
+        roomShape,
+        canvas.getWidth(),
+        canvas.getHeight(),
+      );
+    }
+
     return true;
   }, [getCanvasJSON]);
 
