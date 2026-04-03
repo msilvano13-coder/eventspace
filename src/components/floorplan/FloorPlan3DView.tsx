@@ -879,10 +879,35 @@ function TablescapeGLBItemInner({ item, asset }: { item: { positionX: number; po
   );
 }
 
+/** Per-item error boundary so a single missing GLB doesn't kill the entire 3D view */
+class TablescapeItemErrorBoundary extends React.Component<
+  { children: React.ReactNode; assetId: string },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; assetId: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(): { hasError: boolean } {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error) {
+    console.warn(`[3D] Skipping tablescape item "${this.props.assetId}": ${error.message}`);
+  }
+  render() {
+    if (this.state.hasError) return null; // silently skip missing model
+    return this.props.children;
+  }
+}
+
 function TablescapeGLBItem({ item, manifest }: { item: { assetId: string; positionX: number; positionY: number; positionZ: number; rotationY: number; scale: number }; manifest: Record<string, { category: string; filePath: string }> }) {
   const asset = manifest[item.assetId];
   if (!asset) return null;
-  return <TablescapeGLBItemInner item={item} asset={asset} />;
+  return (
+    <TablescapeItemErrorBoundary assetId={item.assetId}>
+      <TablescapeGLBItemInner item={item} asset={asset} />
+    </TablescapeItemErrorBoundary>
+  );
 }
 
 /**
