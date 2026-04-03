@@ -85,35 +85,37 @@ export function RoomFloor({ obj, originX, originY, settings, showWalls = true, f
 
   return (
     <group>
-      {/* Floor — reflective for marble/hardwood, textured for others */}
-      {isReflective && roomBBox ? (
-        <mesh key={`floor-reflect-${floorMat.color}`} rotation={[-Math.PI / 2, 0, 0]} position={[roomBBox.cx, 0.001, roomBBox.cz]} receiveShadow>
+      {/* Floor — textured base for all types, with reflective overlay for marble/hardwood */}
+      <mesh key={`floor-${floorMat.color}-${settings.floorMaterial}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+        <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
+        <meshStandardMaterial
+          color={floorTextures ? (settings.floorColor ?? "#ffffff") : floorMat.color}
+          map={floorTextures?.albedo ?? null}
+          side={DoubleSide}
+          roughness={floorTextures ? 1.0 : floorMat.roughness}
+          roughnessMap={floorTextures?.roughness ?? null}
+          metalness={floorMat.metalness}
+          envMapIntensity={(floorMat as { envMapIntensity?: number }).envMapIntensity ?? 0.3}
+          normalMap={floorTextures?.normal ?? null}
+          normalScale={floorTextures ? new Vector2(0.4, 0.4) : undefined}
+        />
+      </mesh>
+      {/* Reflective overlay for marble/hardwood — semi-transparent mirror on top of textured floor */}
+      {isReflective && roomBBox && (
+        <mesh key={`floor-reflect-${floorMat.color}`} rotation={[-Math.PI / 2, 0, 0]} position={[roomBBox.cx, 0.003, roomBBox.cz]} receiveShadow>
           <planeGeometry args={[roomBBox.w, roomBBox.d]} />
           <MeshReflectorMaterial
-            mirror={settings.floorMaterial === "marble" ? 0.15 : 0.08}
+            mirror={settings.floorMaterial === "marble" ? 0.12 : 0.06}
             blur={settings.floorMaterial === "marble" ? [600, 300] : [800, 400]}
             resolution={512}
             mixBlur={1}
-            mixStrength={settings.floorMaterial === "marble" ? 0.4 : 0.2}
+            mixStrength={settings.floorMaterial === "marble" ? 0.3 : 0.15}
             roughness={floorMat.roughness}
             metalness={floorMat.metalness}
             color={floorMat.color}
             depthScale={0}
-          />
-        </mesh>
-      ) : (
-        <mesh key={`floor-${floorMat.color}-${floorMat.roughness}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-          <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
-          <meshStandardMaterial
-            color={floorTextures ? (settings.floorColor ?? "#ffffff") : floorMat.color}
-            map={floorTextures?.albedo ?? null}
-            side={DoubleSide}
-            roughness={floorTextures ? 1.0 : floorMat.roughness}
-            roughnessMap={floorTextures?.roughness ?? null}
-            metalness={floorMat.metalness}
-            envMapIntensity={(floorMat as { envMapIntensity?: number }).envMapIntensity ?? 0.3}
-            normalMap={floorTextures?.normal ?? null}
-            normalScale={floorTextures ? new Vector2(0.4, 0.4) : undefined}
+            transparent
+            opacity={settings.floorMaterial === "marble" ? 0.35 : 0.2}
           />
         </mesh>
       )}

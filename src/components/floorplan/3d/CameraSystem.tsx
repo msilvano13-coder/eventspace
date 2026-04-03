@@ -138,11 +138,12 @@ export function WalkthroughControls({
   const MOVE_SPEED = 5.0;
   const LOOK_SENSITIVITY = 0.003;
 
-  // Initialize camera position on mount
+  // Initialize camera position on mount — start INSIDE the room, offset slightly from center
   useEffect(() => {
     if (!initialized.current) {
-      const dist = Math.max(span * 0.3, 4);
-      camera.position.set(cx + dist, EYE_HEIGHT, cz + dist);
+      const offset = Math.min(span * 0.15, 2); // small offset so we're not dead-center
+      camera.position.set(cx + offset, EYE_HEIGHT, cz + offset);
+      // Look toward center of room
       yaw.current = Math.atan2(-(cx - camera.position.x), -(cz - camera.position.z));
       initialized.current = true;
     }
