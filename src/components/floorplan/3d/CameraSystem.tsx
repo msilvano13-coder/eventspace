@@ -284,9 +284,26 @@ export function CameraAnimator({
   const STIFFNESS = 4.0;
   const DAMPING = 5.0;
 
+  // Track whether this is the first render — skip animation on mount
+  const isFirstRender = useRef(true);
+
   useEffect(() => {
+    // On first render, just record the preset — don't animate
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      prevPreset.current = preset;
+      return;
+    }
+
     if (preset === prevPreset.current) return;
     prevPreset.current = preset;
+
+    // "default" means "leave camera where it is" — no animation
+    if (preset === "default") {
+      animating.current = false;
+      autoRotateActive.current = false;
+      return;
+    }
 
     const dist = Math.max(span * 0.75, 8);
     // Default look-at target is the center
@@ -307,9 +324,6 @@ export function CameraAnimator({
           dist * 0.35, // x offset
           dist * 0.5,  // z offset
         );
-        break;
-      default:
-        targetPos.current.set(cx + dist * 0.5, dist * 0.45, cz + dist * 0.7);
         break;
     }
     velocity.current.set(0, 0, 0);
