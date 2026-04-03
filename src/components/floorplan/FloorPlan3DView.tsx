@@ -2712,29 +2712,34 @@ function WalkthroughControls({ cx, cz, span }: { cx: number; cz: number; span: n
     };
   }, [gl]);
 
+  // Reusable vectors — avoid allocating 3 Vector3s per frame (180/sec at 60fps)
+  const _forward = useMemo(() => new THREE.Vector3(), []);
+  const _right = useMemo(() => new THREE.Vector3(), []);
+  const _lookTarget = useMemo(() => new THREE.Vector3(), []);
+
   useFrame((_, delta) => {
     const dt = Math.min(delta, 0.05);
     const speed = MOVE_SPEED * dt;
 
-    // Direction vectors from yaw
-    const forward = new THREE.Vector3(-Math.sin(yaw.current), 0, -Math.cos(yaw.current));
-    const right = new THREE.Vector3(forward.z, 0, -forward.x);
+    // Direction vectors from yaw (reuse pre-allocated vectors)
+    _forward.set(-Math.sin(yaw.current), 0, -Math.cos(yaw.current));
+    _right.set(_forward.z, 0, -_forward.x);
 
-    if (keys.current.has("KeyW") || keys.current.has("ArrowUp")) camera.position.addScaledVector(forward, speed);
-    if (keys.current.has("KeyS") || keys.current.has("ArrowDown")) camera.position.addScaledVector(forward, -speed);
-    if (keys.current.has("KeyA") || keys.current.has("ArrowLeft")) camera.position.addScaledVector(right, speed);
-    if (keys.current.has("KeyD") || keys.current.has("ArrowRight")) camera.position.addScaledVector(right, -speed);
+    if (keys.current.has("KeyW") || keys.current.has("ArrowUp")) camera.position.addScaledVector(_forward, speed);
+    if (keys.current.has("KeyS") || keys.current.has("ArrowDown")) camera.position.addScaledVector(_forward, -speed);
+    if (keys.current.has("KeyA") || keys.current.has("ArrowLeft")) camera.position.addScaledVector(_right, speed);
+    if (keys.current.has("KeyD") || keys.current.has("ArrowRight")) camera.position.addScaledVector(_right, -speed);
 
     // Lock to eye height
     camera.position.y = EYE_HEIGHT;
 
-    // Apply look direction
-    const lookTarget = new THREE.Vector3(
+    // Apply look direction (reuse pre-allocated vector)
+    _lookTarget.set(
       camera.position.x - Math.sin(yaw.current) * Math.cos(pitch.current),
       camera.position.y + Math.sin(pitch.current),
       camera.position.z - Math.cos(yaw.current) * Math.cos(pitch.current),
     );
-    camera.lookAt(lookTarget);
+    camera.lookAt(_lookTarget);
   });
 
   return null;
@@ -3218,10 +3223,22 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
     });
   }, []);
 
-  // Clear color cache when the 3D view unmounts to free GPU-side references
+  // Clear caches and dispose GPU resources when the 3D view unmounts
   useEffect(() => {
     return () => {
       colorCache.clear();
+
+      // Dispose floor texture cache
+      floorTextureCache.forEach((set) => {
+        set.albedo.dispose();
+        set.normal.dispose();
+        set.roughness.dispose();
+      });
+      floorTextureCache.clear();
+
+      // Dispose label texture cache
+      labelTextureCache.forEach((tex) => tex.dispose());
+      labelTextureCache.clear();
     };
   }, []);
 

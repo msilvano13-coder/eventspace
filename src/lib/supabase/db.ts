@@ -283,6 +283,7 @@ function layoutObjectToRow(obj: LayoutObject) {
     id: obj.id,
     floor_plan_id: obj.floorPlanId,
     asset_id: obj.assetId,
+    // user_id: written by layout-objects.ts (getUserId) — not available on LayoutObject type
     position_x: obj.positionX,
     position_y: obj.positionY,
     rotation: obj.rotation,

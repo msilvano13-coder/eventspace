@@ -7,11 +7,12 @@
     "build": "npm run qa && next build",
     "start": "next start",
     "lint": "next lint",
-    "qa": "node scripts/check-sub-entity-registry.js && node scripts/check-client-planner-parity.js && node scripts/check-error-handling.js && node scripts/check-row-mapping-symmetry.js",
+    "qa": "node scripts/check-sub-entity-registry.js && node scripts/check-client-planner-parity.js && node scripts/check-error-handling.js && node scripts/check-row-mapping-symmetry.js && node scripts/check-migration-drift.js",
     "qa:registry": "node scripts/check-sub-entity-registry.js",
     "qa:parity": "node scripts/check-client-planner-parity.js",
     "qa:errors": "node scripts/check-error-handling.js",
-    "qa:rows": "node scripts/check-row-mapping-symmetry.js"
+    "qa:rows": "node scripts/check-row-mapping-symmetry.js",
+    "qa:drift": "node scripts/check-migration-drift.js"
   },
   "dependencies": {
     "@react-three/drei": "^9.121.5",

@@ -7,11 +7,12 @@ import type { LayoutObject, RoomShape } from "@/lib/types";
 
 // ── Row mappers ──
 
-function layoutObjectToRow(obj: LayoutObject) {
+function layoutObjectToRow(obj: LayoutObject, userId: string) {
   return {
     id: obj.id,
     floor_plan_id: obj.floorPlanId,
     asset_id: obj.assetId,
+    user_id: userId,
     position_x: obj.positionX,
     position_y: obj.positionY,
     rotation: obj.rotation,
@@ -74,6 +75,14 @@ export async function fetchLayoutObjects(floorPlanId: string): Promise<LayoutObj
   return (data || []).map(layoutObjectFromRow);
 }
 
+/** Get the current user's ID from the Supabase session */
+async function getUserId(): Promise<string> {
+  const supabase = createClient();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) throw new Error("Not authenticated");
+  return data.user.id;
+}
+
 /**
  * Replace all layout objects for a floor plan (full upsert + delete removed).
  * Also updates room_shape and canvas dimensions on the floor_plan row.
@@ -85,13 +94,8 @@ export async function replaceLayoutObjects(
   canvasWidth: number,
   canvasHeight: number,
 ): Promise<void> {
-  console.log("[LayoutObjects] replaceLayoutObjects called:", {
-    floorPlanId,
-    objectCount: objects.length,
-    assetIds: objects.map((o) => o.assetId),
-  });
-
   const supabase = createClient();
+  const userId = await getUserId();
 
   // 1. Update floor plan metadata
   const { error: fpError } = await supabase
@@ -105,35 +109,27 @@ export async function replaceLayoutObjects(
 
   if (fpError) {
     console.error("[LayoutObjects] floor plan update error:", fpError.message);
-  } else {
-    console.log("[LayoutObjects] floor plan metadata updated OK");
   }
 
   // 2. Upsert layout objects (parent objects first to satisfy FK)
-  const parentRows = objects.filter((o) => !o.parentId).map(layoutObjectToRow);
-  const childRows = objects.filter((o) => o.parentId).map(layoutObjectToRow);
+  const parentRows = objects.filter((o) => !o.parentId).map((o) => layoutObjectToRow(o, userId));
+  const childRows = objects.filter((o) => o.parentId).map((o) => layoutObjectToRow(o, userId));
 
   if (parentRows.length > 0) {
-    console.log("[LayoutObjects] upserting", parentRows.length, "parent rows:", JSON.stringify(parentRows[0]));
     const { error } = await supabase
       .from("layout_objects")
       .upsert(parentRows, { onConflict: "id" });
     if (error) {
-      console.error("[LayoutObjects] upsert parents error:", error.message, error);
-    } else {
-      console.log("[LayoutObjects] parent upsert OK");
+      console.error("[LayoutObjects] upsert parents error:", error.message);
     }
   }
 
   if (childRows.length > 0) {
-    console.log("[LayoutObjects] upserting", childRows.length, "child rows");
     const { error } = await supabase
       .from("layout_objects")
       .upsert(childRows, { onConflict: "id" });
     if (error) {
-      console.error("[LayoutObjects] upsert children error:", error.message, error);
-    } else {
-      console.log("[LayoutObjects] child upsert OK");
+      console.error("[LayoutObjects] upsert children error:", error.message);
     }
   }
 
