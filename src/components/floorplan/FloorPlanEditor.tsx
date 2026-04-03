@@ -330,9 +330,10 @@ export default function FloorPlanEditor({
       canvas.defaultCursor = "crosshair";
       canvas.hoverCursor = "crosshair";
       canvas.discardActiveObject();
-      // Make all objects non-selectable so clicks pass through to measurement
+      // Make all content objects non-selectable so clicks pass through to measurement
       canvas.getObjects().forEach((obj: any) => {
-        if (!obj.data?.isMeasure && !obj.data?.isLighting && !obj.data?.isGuide) {
+        if (!obj.data?.isMeasure && !obj.data?.isLighting && !obj.data?.isGuide && !obj.data?.isGrid && !obj.data?.isLightingOverlay && !obj.data?.isRoom) {
+          obj._preSelectableState = { selectable: obj.selectable, evented: obj.evented };
           obj.set({ selectable: false, evented: false });
         }
       });
@@ -341,10 +342,11 @@ export default function FloorPlanEditor({
       canvas.selection = true;
       canvas.defaultCursor = "default";
       canvas.hoverCursor = "move";
-      // Restore selectability on all furniture/room objects
+      // Restore selectability on furniture objects only
       canvas.getObjects().forEach((obj: any) => {
-        if (!obj.data?.isMeasure && !obj.data?.isLighting && !obj.data?.isGuide) {
-          obj.set({ selectable: true, evented: true });
+        if (obj._preSelectableState) {
+          obj.set({ selectable: obj._preSelectableState.selectable, evented: obj._preSelectableState.evented });
+          delete obj._preSelectableState;
         }
       });
       clearMeasureObjects();
@@ -841,6 +843,21 @@ export default function FloorPlanEditor({
       if (!measureModeRef.current) return;
       const pointer = canvas.getScenePoint(e.e);
       handleMeasureClick(pointer.x, pointer.y);
+    });
+
+    // Scroll-wheel zoom — zoom toward pointer position
+    canvas.on("mouse:wheel", (opt) => {
+      const e = opt.e as WheelEvent;
+      e.preventDefault();
+      e.stopPropagation();
+      const delta = e.deltaY;
+      const currentZoom = canvas.getZoom();
+      const newZoom = delta > 0
+        ? Math.max(currentZoom / 1.08, 0.3)
+        : Math.min(currentZoom * 1.08, 3);
+      const point = canvas.getScenePoint(e);
+      canvas.zoomToPoint(point, newZoom);
+      setZoom(newZoom);
     });
 
     const updateSelection = () => {
