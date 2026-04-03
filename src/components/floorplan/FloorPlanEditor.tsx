@@ -1925,7 +1925,8 @@ export default function FloorPlanEditor({
         furnitureId: primaryItemId || group.items[0]?.furnitureId,
         label: group.name,
         isTableSet: true,
-        groupId: group.id,
+        groupId: group.id,          // template slug (e.g. "round-60-8") — NOT a UUID
+        _groupUUID: uuid(),          // stable UUID for layout_objects.group_id
         tableId: uuid(),
       },
     });

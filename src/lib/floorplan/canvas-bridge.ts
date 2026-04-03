@@ -294,7 +294,8 @@ export function canvasToLayoutObjects(
 
     if (obj.data?.isTableSet && obj.type === "Group" && Array.isArray(obj.objects)) {
       // Table-set group: extract each sub-item as its own LayoutObject
-      const groupId = obj.data.groupId || uuid();
+      // Always generate a fresh UUID — obj.data.groupId is a template slug (e.g. "round-60-8"), not a UUID
+      const groupId = obj.data._groupUUID || uuid();
       const parentLeft = obj.left || 0;
       const parentTop = obj.top || 0;
       const parentAngle = obj.angle || 0;
