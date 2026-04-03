@@ -20,7 +20,6 @@ import {
   blendToNeutral,
   type View3DSettings,
 } from "./3d/constants";
-import { floorTextureCache } from "./3d/floor-textures";
 import { parseCanvasJSON } from "./3d/parse-canvas";
 import { FurnitureMesh, InteractiveFurniture, labelTextureCache } from "./3d/FurnitureRenderer";
 import { RoomFloor } from "./3d/RoomFloor";
@@ -348,14 +347,6 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
   useEffect(() => {
     return () => {
       colorCache.clear();
-
-      // Dispose floor texture cache
-      floorTextureCache.forEach((set) => {
-        set.albedo.dispose();
-        set.normal.dispose();
-        set.roughness.dispose();
-      });
-      floorTextureCache.clear();
 
       // Dispose label texture cache
       labelTextureCache.forEach((tex) => tex.dispose());

@@ -3,7 +3,6 @@
 import React, { useMemo } from "react";
 import { MeshReflectorMaterial } from "@react-three/drei";
 import { Vector2, Shape, DoubleSide } from "three";
-import { getFloorTextures } from "./floor-textures";
 import {
   S,
   WALL_HEIGHT,
@@ -17,10 +16,6 @@ export function RoomFloor({ obj, originX, originY, settings, showWalls = true, f
   // Memoize shape to avoid re-creating on every render
   const floorShape = useMemo(() => {
     if (!obj.points || obj.points.length < 3) return null;
-    // Points are already absolute canvas coordinates (precomputed in parseCanvasJSON).
-    // Negate Y because the Shape (XY plane) is rotated -pi/2 around X,
-    // mapping Shape Y -> World -Z.  Furniture uses posZ = +(canvasY - originY),
-    // so we negate here to keep room floor and furniture in the same Z direction.
     const shapePoints = obj.points.map(
       ([x, y]) => new Vector2((x - originX) * S, -(y - originY) * S)
     );
@@ -28,8 +23,6 @@ export function RoomFloor({ obj, originX, originY, settings, showWalls = true, f
   }, [obj.points, originX, originY]);
 
   // Compute wall segments from polygon edges in world space.
-  // Points are already absolute canvas coords. Walls are placed directly in
-  // world coords (not via Shape rotation), so Z = +(canvasY - originY) * S.
   const wallSegments = useMemo(() => {
     if (!obj.points || obj.points.length < 3) return [];
     const segments: { x1: number; z1: number; x2: number; z2: number; length: number; angle: number; cx: number; cz: number }[] = [];
@@ -55,12 +48,6 @@ export function RoomFloor({ obj, originX, originY, settings, showWalls = true, f
     return segments;
   }, [obj.points, originX, originY]);
 
-  // Generate full PBR texture set for non-override floors (must be before early return)
-  const floorTextures = useMemo(() => {
-    if (floorOverride) return null; // venue overrides (grass, sand) don't need procedural textures
-    return getFloorTextures(settings.floorMaterial, 512);
-  }, [settings.floorMaterial, floorOverride]);
-
   // Compute bounding rect for reflection plane
   const roomBBox = useMemo(() => {
     if (!obj.points || obj.points.length < 3) return null;
@@ -76,49 +63,64 @@ export function RoomFloor({ obj, originX, originY, settings, showWalls = true, f
     return { cx: (minX + maxX) / 2, cz: (minZ + maxZ) / 2, w: maxX - minX, d: maxZ - minZ };
   }, [obj.points, originX, originY]);
 
+  // Reflection intensity per material type (must be before early return — hooks can't be conditional)
+  const reflectConfig = useMemo(() => {
+    switch (settings.floorMaterial) {
+      case "marble":
+        return { mirror: 0.25, blur: [400, 200] as [number, number], mixStrength: 0.5, resolution: 512 };
+      case "tile":
+        return { mirror: 0.15, blur: [500, 250] as [number, number], mixStrength: 0.35, resolution: 512 };
+      case "hardwood":
+        return { mirror: 0.08, blur: [800, 400] as [number, number], mixStrength: 0.2, resolution: 512 };
+      default:
+        return { mirror: 0, blur: [400, 200] as [number, number], mixStrength: 0, resolution: 256 };
+    }
+  }, [settings.floorMaterial]);
+
   if (!floorShape) return null;
 
   const wallThickness = 0.15;
   const baseFloorMat = FLOOR_MATERIALS[settings.floorMaterial];
   const floorMat = floorOverride ?? (settings.floorColor ? { ...baseFloorMat, color: settings.floorColor } : baseFloorMat);
-  const isReflective = !floorOverride && (settings.floorMaterial === "marble" || settings.floorMaterial === "hardwood");
+
+  // Floors that should have reflections (polished surfaces)
+  const isReflective = !floorOverride && (
+    settings.floorMaterial === "marble" ||
+    settings.floorMaterial === "hardwood" ||
+    settings.floorMaterial === "tile"
+  );
 
   return (
     <group>
-      {/* Floor — textured base for all types, with reflective overlay for marble/hardwood */}
-      <mesh key={`floor-${floorMat.color}-${settings.floorMaterial}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
-        <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
-        <meshStandardMaterial
-          color={floorTextures ? (settings.floorColor ?? "#ffffff") : floorMat.color}
-          map={floorTextures?.albedo ?? null}
-          side={DoubleSide}
-          roughness={floorTextures ? 1.0 : floorMat.roughness}
-          roughnessMap={floorTextures?.roughness ?? null}
-          metalness={floorMat.metalness}
-          envMapIntensity={(floorMat as { envMapIntensity?: number }).envMapIntensity ?? 0.3}
-          normalMap={floorTextures?.normal ?? null}
-          normalScale={floorTextures ? new Vector2(0.4, 0.4) : undefined}
-        />
-      </mesh>
-      {/* Reflective overlay for marble/hardwood — semi-transparent mirror on top of textured floor */}
-      {isReflective && roomBBox && (
-        <mesh key={`floor-reflect-${floorMat.color}`} rotation={[-Math.PI / 2, 0, 0]} position={[roomBBox.cx, 0.003, roomBBox.cz]} receiveShadow>
+      {/* Floor — MeshReflectorMaterial for polished surfaces, meshStandardMaterial for matte */}
+      {isReflective && roomBBox ? (
+        <mesh key={`floor-reflect-${floorMat.color}-${settings.floorMaterial}`} rotation={[-Math.PI / 2, 0, 0]} position={[roomBBox.cx, 0.001, roomBBox.cz]} receiveShadow>
           <planeGeometry args={[roomBBox.w, roomBBox.d]} />
           <MeshReflectorMaterial
-            mirror={settings.floorMaterial === "marble" ? 0.12 : 0.06}
-            blur={settings.floorMaterial === "marble" ? [600, 300] : [800, 400]}
-            resolution={512}
+            mirror={reflectConfig.mirror}
+            blur={reflectConfig.blur}
+            resolution={reflectConfig.resolution}
             mixBlur={1}
-            mixStrength={settings.floorMaterial === "marble" ? 0.3 : 0.15}
+            mixStrength={reflectConfig.mixStrength}
             roughness={floorMat.roughness}
             metalness={floorMat.metalness}
             color={floorMat.color}
             depthScale={0}
-            transparent
-            opacity={settings.floorMaterial === "marble" ? 0.35 : 0.2}
+          />
+        </mesh>
+      ) : (
+        <mesh key={`floor-${floorMat.color}-${settings.floorMaterial}`} rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
+          <extrudeGeometry args={[floorShape, { depth: 0.02, bevelEnabled: false }]} />
+          <meshStandardMaterial
+            color={floorMat.color}
+            side={DoubleSide}
+            roughness={floorMat.roughness}
+            metalness={floorMat.metalness}
+            envMapIntensity={(floorMat as { envMapIntensity?: number }).envMapIntensity ?? 0.3}
           />
         </mesh>
       )}
+
       {/* Walls, baseboard, crown — only when venue has walls */}
       {showWalls && (() => {
         const wBase = settings.wallColor ?? "#f5f0e8";

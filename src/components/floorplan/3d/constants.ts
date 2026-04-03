@@ -100,11 +100,11 @@ export const LINEN_COLORS: Record<View3DSettings["linenColor"], string> = {
 };
 
 export const FLOOR_MATERIALS: Record<View3DSettings["floorMaterial"], { color: string; roughness: number; metalness: number; envMapIntensity: number }> = {
-  hardwood: { color: "#b8986a", roughness: 0.7, metalness: 0.03, envMapIntensity: 0.3 },
-  marble: { color: "#e8e0d0", roughness: 0.15, metalness: 0.12, envMapIntensity: 0.6 },
-  carpet: { color: "#8a7b6b", roughness: 0.95, metalness: 0.0, envMapIntensity: 0.02 },
-  concrete: { color: "#a0a0a0", roughness: 0.85, metalness: 0.02, envMapIntensity: 0.1 },
-  tile: { color: "#f0ece4", roughness: 0.45, metalness: 0.05, envMapIntensity: 0.4 },
+  hardwood: { color: "#c4a06e", roughness: 0.55, metalness: 0.02, envMapIntensity: 0.4 },
+  marble: { color: "#ede6d8", roughness: 0.08, metalness: 0.08, envMapIntensity: 0.8 },
+  carpet: { color: "#9a8b7a", roughness: 0.98, metalness: 0.0, envMapIntensity: 0.01 },
+  concrete: { color: "#b0b0b0", roughness: 0.82, metalness: 0.01, envMapIntensity: 0.08 },
+  tile: { color: "#f2ede5", roughness: 0.25, metalness: 0.04, envMapIntensity: 0.5 },
 };
 
 export const LIGHTING_MOODS: Record<View3DSettings["lightingMood"], {
