@@ -89,16 +89,21 @@ export interface LightingZone {
 export interface FloorPlan {
   id: string;
   name: string;
-  json: string | null;
+  json: string | null;              // legacy — replaced by layoutObjects
   lightingZones: LightingZone[];
+  layoutObjects: LayoutObject[];
+  roomShape: RoomShape | null;
+  canvasWidth: number;
+  canvasHeight: number;
 }
 
 export function createDefaultFloorPlans(): FloorPlan[] {
+  const defaults = { json: null, lightingZones: [], layoutObjects: [], roomShape: null, canvasWidth: 600, canvasHeight: 400 };
   return [
-    { id: uuid(), name: "Ceremony", json: null, lightingZones: [] },
-    { id: uuid(), name: "Cocktail Hour", json: null, lightingZones: [] },
-    { id: uuid(), name: "Reception", json: null, lightingZones: [] },
-    { id: uuid(), name: "Dance Floor", json: null, lightingZones: [] },
+    { id: uuid(), name: "Ceremony", ...defaults },
+    { id: uuid(), name: "Cocktail Hour", ...defaults },
+    { id: uuid(), name: "Reception", ...defaults },
+    { id: uuid(), name: "Dance Floor", ...defaults },
   ];
 }
 
@@ -245,6 +250,116 @@ export interface RoomPreset {
   points: number[][];
   width: number;
   height: number;
+}
+
+// ── Phase 2: Spatial Data Model ──
+
+export interface SnapPoint {
+  x: number;      // inches, relative to asset center
+  y: number;      // inches, relative to asset center
+  angle: number;  // degrees, direction the snap point faces
+}
+
+export interface ModelVariant {
+  name: string;
+  color: string;
+  material: string;
+  productFolder: string;
+}
+
+/** Unified asset definition — replaces FurnitureItemDef + models-manifest entries */
+export interface AssetDefinition {
+  id: string;
+  name: string;
+  category: string;
+  subcategory: string;
+
+  // 2D rendering
+  shape: "circle" | "rect";
+  defaultWidth: number;       // inches
+  defaultHeight: number;      // inches
+  defaultRadius?: number;     // inches
+  fillColor: string;
+  strokeColor: string;
+
+  // Capacity
+  maxSeats: number;
+  minSeats: number;
+  seatSpacing: number;        // inches between seat centers
+
+  // Snap points
+  snapPoints: SnapPoint[];
+
+  // 3D model
+  modelFilePath: string | null;
+  modelFileSize: number | null;
+  modelComplexity: "low" | "medium" | "high" | null;
+  modelVariants: ModelVariant[];
+
+  // Physical 3D dimensions (inches)
+  physicalWidthIn: number | null;
+  physicalDepthIn: number | null;
+  physicalHeightIn: number | null;
+
+  // Extensibility (vendor, SKU, price, weight, etc.)
+  metadata: Record<string, unknown>;
+
+  source: "builtin" | "model_manifest" | "custom";
+  active: boolean;
+}
+
+/** Individual object placed on a floor plan */
+export interface LayoutObject {
+  id: string;
+  floorPlanId: string;
+  assetId: string;
+
+  // Spatial (inches)
+  positionX: number;
+  positionY: number;
+  rotation: number;            // degrees
+  scaleX: number;
+  scaleY: number;
+
+  // Dimension overrides (null = use asset defaults)
+  widthOverride: number | null;
+  heightOverride: number | null;
+
+  label: string;
+
+  // Grouping
+  groupId: string | null;
+  parentId: string | null;
+
+  // Table assignment
+  tableId: string | null;
+
+  // Visual overrides
+  fillOverride: string | null;
+  strokeOverride: string | null;
+
+  tablescapeId: string | null;
+
+  metadata: Record<string, unknown>;
+  zIndex: number;
+}
+
+/** Room shape stored on floor_plans */
+export interface RoomShape {
+  points: number[][];          // [[x,y], ...] in inches
+  width: number;               // bounding width in inches
+  height: number;              // bounding height in inches
+}
+
+/** Version history snapshot */
+export interface LayoutVersion {
+  id: string;
+  floorPlanId: string;
+  versionNumber: number;
+  label: string;
+  snapshot: LayoutObject[];
+  roomShape: RoomShape | null;
+  createdAt: string;
 }
 
 export type VendorCategory =

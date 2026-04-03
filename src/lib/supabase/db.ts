@@ -28,6 +28,7 @@ import type {
   ContractTemplate,
   ContractAuditEntry,
   ContractAuditAction,
+  LayoutObject,
 } from "@/lib/types";
 import { MAX_EVENTS } from "@/lib/plan-features";
 import type { PlanType } from "@/lib/types";
@@ -264,6 +265,30 @@ function floorPlanToRow(fp: FloorPlan, eventId: string, index: number, userId: s
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+function layoutObjectFromRow(r: any): LayoutObject {
+  return {
+    id: r.id,
+    floorPlanId: r.floor_plan_id,
+    assetId: r.asset_id,
+    positionX: Number(r.position_x) || 0,
+    positionY: Number(r.position_y) || 0,
+    rotation: Number(r.rotation) || 0,
+    scaleX: Number(r.scale_x) || 1,
+    scaleY: Number(r.scale_y) || 1,
+    widthOverride: r.width_override != null ? Number(r.width_override) : null,
+    heightOverride: r.height_override != null ? Number(r.height_override) : null,
+    label: r.label || "",
+    groupId: r.group_id ?? null,
+    parentId: r.parent_id ?? null,
+    tableId: r.table_id ?? null,
+    fillOverride: r.fill_override ?? null,
+    strokeOverride: r.stroke_override ?? null,
+    tablescapeId: r.tablescape_id ?? null,
+    metadata: r.metadata ?? {},
+    zIndex: r.z_index ?? 0,
+  };
+}
+
 function floorPlanFromRow(r: any): FloorPlan {
   return {
     id: r.id,
@@ -272,6 +297,12 @@ function floorPlanFromRow(r: any): FloorPlan {
     lightingZones: Array.isArray(r.lighting_zones)
       ? r.lighting_zones.map(lightingZoneFromRow)
       : [],
+    layoutObjects: Array.isArray(r.layout_objects)
+      ? r.layout_objects.map(layoutObjectFromRow)
+      : [],
+    roomShape: r.room_shape ?? null,
+    canvasWidth: Number(r.canvas_width) || 600,
+    canvasHeight: Number(r.canvas_height) || 400,
   };
 }
 
@@ -1175,7 +1206,7 @@ export async function fetchEventCore(eventId: string): Promise<Event | null> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("events")
-    .select("*, floor_plans (*, lighting_zones (*))")
+    .select("*, floor_plans (*, lighting_zones (*), layout_objects (*))")
     .eq("id", eventId)
     .single();
   if (error) {

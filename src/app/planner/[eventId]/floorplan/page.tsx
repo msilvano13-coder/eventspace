@@ -182,7 +182,7 @@ export default function FloorPlanPage() {
 
   function addTab() {
     if (!newTabName.trim()) return;
-    const newPlan: FloorPlan = { id: uuid(), name: newTabName.trim(), json: null, lightingZones: [] };
+    const newPlan: FloorPlan = { id: uuid(), name: newTabName.trim(), json: null, lightingZones: [], layoutObjects: [], roomShape: null, canvasWidth: 600, canvasHeight: 400 };
     updateEvent(eventId, { floorPlans: [...plans, newPlan] });
     setActivePlanId(newPlan.id);
     setNewTabName("");
