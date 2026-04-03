@@ -680,11 +680,20 @@ export default function FloorPlanEditor({
       // Step 4: Distance indicators (always show during drag regardless of alignment mode)
       obj.setCoords();
       const targetBounds = computeObjectBounds(obj);
+      // Use room walls as boundaries if a room shape exists
+      const roomObj = canvas.getObjects().find((o: any) => o.data?.isRoom);
+      const roomBoundsForDist = roomObj ? {
+        left: roomObj.left || 0,
+        top: roomObj.top || 0,
+        right: (roomObj.left || 0) + (roomObj.width || 0) * (roomObj.scaleX || 1),
+        bottom: (roomObj.top || 0) + (roomObj.height || 0) * (roomObj.scaleY || 1),
+      } : undefined;
       const distances = computeNearestDistances(
         targetBounds,
         boundsCacheRef.current,
         canvas.getWidth(),
         canvas.getHeight(),
+        roomBoundsForDist,
       );
       renderDistanceIndicators(canvas, distances);
     });

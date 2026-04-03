@@ -24,13 +24,28 @@ export interface DistanceIndicator {
 // ── Computation ──
 
 /** Compute distance indicators from target to nearest objects in each direction + canvas edges */
+/** Room boundary rectangle for distance calculations */
+export interface RoomBounds {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+}
+
 export function computeNearestDistances(
   targetBounds: ObjectBounds,
   otherBounds: ObjectBounds[],
   canvasWidth: number,
   canvasHeight: number,
+  roomBounds?: RoomBounds,
 ): DistanceIndicator[] {
   const indicators: DistanceIndicator[] = [];
+
+  // Use room walls as boundaries if available, otherwise fall back to canvas edges
+  const wallLeft = roomBounds ? roomBounds.left : 0;
+  const wallTop = roomBounds ? roomBounds.top : 0;
+  const wallRight = roomBounds ? roomBounds.right : canvasWidth;
+  const wallBottom = roomBounds ? roomBounds.bottom : canvasHeight;
 
   // Find nearest object in each cardinal direction from target center
   let nearestLeft: { dist: number; point: number; y: number } | null = null;
@@ -79,23 +94,23 @@ export function computeNearestDistances(
     }
   }
 
-  // Also check canvas edges as potential nearest boundaries
-  const edgeLeft = targetBounds.left;
-  const edgeRight = canvasWidth - targetBounds.right;
-  const edgeTop = targetBounds.top;
-  const edgeBottom = canvasHeight - targetBounds.bottom;
+  // Check room walls (or canvas edges) as potential nearest boundaries
+  const edgeLeft = targetBounds.left - wallLeft;
+  const edgeRight = wallRight - targetBounds.right;
+  const edgeTop = targetBounds.top - wallTop;
+  const edgeBottom = wallBottom - targetBounds.bottom;
 
   if (!nearestLeft || edgeLeft < nearestLeft.dist) {
-    nearestLeft = { dist: edgeLeft, point: 0, y: targetBounds.centerY };
+    nearestLeft = { dist: edgeLeft, point: wallLeft, y: targetBounds.centerY };
   }
   if (!nearestRight || edgeRight < nearestRight.dist) {
-    nearestRight = { dist: edgeRight, point: canvasWidth, y: targetBounds.centerY };
+    nearestRight = { dist: edgeRight, point: wallRight, y: targetBounds.centerY };
   }
   if (!nearestUp || edgeTop < nearestUp.dist) {
-    nearestUp = { dist: edgeTop, point: 0, x: targetBounds.centerX };
+    nearestUp = { dist: edgeTop, point: wallTop, x: targetBounds.centerX };
   }
   if (!nearestDown || edgeBottom < nearestDown.dist) {
-    nearestDown = { dist: edgeBottom, point: canvasHeight, x: targetBounds.centerX };
+    nearestDown = { dist: edgeBottom, point: wallBottom, x: targetBounds.centerX };
   }
 
   // Build indicators
