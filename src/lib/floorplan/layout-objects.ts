@@ -85,6 +85,12 @@ export async function replaceLayoutObjects(
   canvasWidth: number,
   canvasHeight: number,
 ): Promise<void> {
+  console.log("[LayoutObjects] replaceLayoutObjects called:", {
+    floorPlanId,
+    objectCount: objects.length,
+    assetIds: objects.map((o) => o.assetId),
+  });
+
   const supabase = createClient();
 
   // 1. Update floor plan metadata
@@ -99,6 +105,8 @@ export async function replaceLayoutObjects(
 
   if (fpError) {
     console.error("[LayoutObjects] floor plan update error:", fpError.message);
+  } else {
+    console.log("[LayoutObjects] floor plan metadata updated OK");
   }
 
   // 2. Upsert layout objects (parent objects first to satisfy FK)
@@ -106,20 +114,26 @@ export async function replaceLayoutObjects(
   const childRows = objects.filter((o) => o.parentId).map(layoutObjectToRow);
 
   if (parentRows.length > 0) {
+    console.log("[LayoutObjects] upserting", parentRows.length, "parent rows:", JSON.stringify(parentRows[0]));
     const { error } = await supabase
       .from("layout_objects")
       .upsert(parentRows, { onConflict: "id" });
     if (error) {
-      console.error("[LayoutObjects] upsert parents error:", error.message);
+      console.error("[LayoutObjects] upsert parents error:", error.message, error);
+    } else {
+      console.log("[LayoutObjects] parent upsert OK");
     }
   }
 
   if (childRows.length > 0) {
+    console.log("[LayoutObjects] upserting", childRows.length, "child rows");
     const { error } = await supabase
       .from("layout_objects")
       .upsert(childRows, { onConflict: "id" });
     if (error) {
-      console.error("[LayoutObjects] upsert children error:", error.message);
+      console.error("[LayoutObjects] upsert children error:", error.message, error);
+    } else {
+      console.log("[LayoutObjects] child upsert OK");
     }
   }
 

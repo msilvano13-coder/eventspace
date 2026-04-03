@@ -442,12 +442,26 @@ export default function FloorPlanEditor({
         floorPlanIdRef.current,
       );
       const roomShape = roomShapeFromCanvas(json as Record<string, unknown>);
+      console.log("[FloorPlan] dual-write:", {
+        floorPlanId: floorPlanIdRef.current,
+        layoutObjectCount: layoutObjects.length,
+        assetIds: layoutObjects.map((o) => o.assetId),
+        canvasObjectCount: (json as Record<string, unknown>).objects
+          ? ((json as Record<string, unknown>).objects as unknown[]).length
+          : 0,
+      });
       onSaveLayoutObjectsRef.current(
         layoutObjects,
         roomShape,
         canvas.getWidth(),
         canvas.getHeight(),
       );
+    } else {
+      console.warn("[FloorPlan] dual-write SKIPPED:", {
+        hasCallback: !!onSaveLayoutObjectsRef.current,
+        hasFloorPlanId: !!floorPlanIdRef.current,
+        hasCanvas: !!canvas,
+      });
     }
 
     return true;
