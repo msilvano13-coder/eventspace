@@ -223,7 +223,8 @@ export default function FloorPlanEditor({
   eventId,
   floorPlanId,
   initialJSON,
-  initialLayoutObjects,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  initialLayoutObjects: _initialLayoutObjects,
   onSave,
   onSaveLayoutObjects,
   lightingZones = [],

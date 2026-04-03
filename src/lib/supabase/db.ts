@@ -268,7 +268,7 @@ function floorPlanToRow(fp: FloorPlan, eventId: string, index: number, userId: s
   };
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars
 function layoutObjectToRow(obj: LayoutObject) {
   return {
     id: obj.id,

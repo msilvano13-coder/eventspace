@@ -40,8 +40,6 @@ export function generateRectSnapPoints(width: number, height: number, count: num
   const halfH = height / 2;
 
   // Distribute seats along long sides (width > height assumed)
-  const longSide = Math.max(width, height);
-  const shortSide = Math.min(width, height);
   const isWide = width >= height;
 
   const seatsPerSide = Math.floor(count / 2);
