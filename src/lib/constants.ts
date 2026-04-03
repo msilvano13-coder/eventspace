@@ -1,6 +1,6 @@
 import { FurnitureItemDef, LightingType, RoomPreset } from "./types";
 
-export const GRID_SIZE = 20;
+export const GRID_SIZE = 10;
 
 export const PIXELS_PER_INCH = 1; // 1px = 1 inch (implicit in furniture catalog)
 export const INCHES_PER_FOOT = 12;

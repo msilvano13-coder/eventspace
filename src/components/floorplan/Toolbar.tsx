@@ -17,6 +17,8 @@ import {
   Check,
   AlertCircle,
   Ruler,
+  AlignHorizontalJustifyCenter,
+  ShieldAlert,
 } from "lucide-react";
 
 /** Rotation snap angles the user can cycle through */
@@ -48,6 +50,10 @@ interface Props {
   saveStatus: "idle" | "saving" | "saved" | "error";
   measureMode: boolean;
   onToggleMeasure: () => void;
+  alignmentEnabled: boolean;
+  onToggleAlignment: () => void;
+  collisionEnabled: boolean;
+  onToggleCollision: () => void;
 }
 
 export default function Toolbar({
@@ -75,6 +81,10 @@ export default function Toolbar({
   saveStatus,
   measureMode,
   onToggleMeasure,
+  alignmentEnabled,
+  onToggleAlignment,
+  collisionEnabled,
+  onToggleCollision,
 }: Props) {
   return (
     <div className="h-11 bg-white border-b border-stone-200 flex items-center px-3 gap-1 overflow-x-auto flex-nowrap">
@@ -92,6 +102,18 @@ export default function Toolbar({
         onClick={onToggleSnap}
         active={snapEnabled}
         tooltip="Snap to Grid"
+      />
+      <ToolButton
+        icon={AlignHorizontalJustifyCenter}
+        onClick={onToggleAlignment}
+        active={alignmentEnabled}
+        tooltip="Alignment Guides + Distance"
+      />
+      <ToolButton
+        icon={ShieldAlert}
+        onClick={onToggleCollision}
+        active={collisionEnabled}
+        tooltip="Overlap Warning"
       />
       <ToolButton
         icon={Ruler}

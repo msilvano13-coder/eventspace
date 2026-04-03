@@ -35,6 +35,42 @@ import Toolbar, { RotationSnapValue, ROTATION_SNAP_OPTIONS } from "./Toolbar";
 import PropertiesPanel from "./PropertiesPanel";
 import { Plus, X } from "lucide-react";
 import { LAYOUT_TEMPLATES, LayoutTemplate } from "@/lib/layout-templates";
+import {
+  ensureObjectId,
+  ensureAllObjectIds,
+  captureObjectState,
+  captureSelectionState,
+  findOpenPosition,
+  ObjectSnapshot,
+} from "@/lib/floorplan/canvas-helpers";
+import {
+  CommandHistory,
+  MoveCommand,
+  RotateCommand,
+  AddCommand,
+  RemoveCommand,
+  BatchCommand,
+} from "@/lib/floorplan/command-history";
+import {
+  buildBoundsCache,
+  computeObjectBounds,
+  findAlignments,
+  renderGuides,
+  clearGuides,
+  disposeGuides,
+  ObjectBounds,
+  ALIGNMENT_SNAP_THRESHOLD,
+} from "@/lib/floorplan/alignment-engine";
+import {
+  updateCollisionHighlights,
+  resetCollisionTracking,
+} from "@/lib/floorplan/collision-detection";
+import {
+  computeNearestDistances,
+  renderDistanceIndicators,
+  clearDistanceIndicators,
+  disposeDistanceIndicators,
+} from "@/lib/floorplan/distance-indicators";
 
 interface Props {
   eventId: string;
@@ -198,15 +234,12 @@ export default function FloorPlanEditor({
   const [rotationSnap, setRotationSnap] = useState<RotationSnapValue>(15);
   const [zoom, setZoom] = useState(1);
   const [selectedInfo, setSelectedInfo] = useState<SelectedInfo | null>(null);
-  const [undoStack, setUndoStack] = useState<string[]>([]);
-  const [redoStack, setRedoStack] = useState<string[]>([]);
   const [showMobilePalette, setShowMobilePalette] = useState(false);
   const [showRoomPicker, setShowRoomPicker] = useState(false);
   const [showLayoutPicker, setShowLayoutPicker] = useState(false);
   const [customRoomWidth, setCustomRoomWidth] = useState("50");
   const [customRoomHeight, setCustomRoomHeight] = useState("30");
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const undoDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isLoadingRef = useRef(false);
   const gridObjectsRef = useRef<FabricObject[]>([]);
   const lightingOverlayRef = useRef<Rect | null>(null);
@@ -220,6 +253,19 @@ export default function FloorPlanEditor({
   const measureModeRef = useRef(false);
   const measurePointRef = useRef<{ x: number; y: number } | null>(null);
   const measureObjectsRef = useRef<FabricObject[]>([]);
+
+  // ── Phase 1: Command-pattern undo/redo ──
+  const historyRef = useRef(new CommandHistory(100));
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [historyVersion, setHistoryVersion] = useState(0); // triggers re-render on undo/redo
+  const preDragStateRef = useRef<ObjectSnapshot[] | null>(null);
+
+  // ── Phase 1: Alignment guides + collision + distance ──
+  const [alignmentEnabled, setAlignmentEnabled] = useState(true);
+  const [collisionEnabled, setCollisionEnabled] = useState(true);
+  const alignmentEnabledRef = useRef(true);
+  const collisionEnabledRef = useRef(true);
+  const boundsCacheRef = useRef<ObjectBounds[]>([]);
 
   // ── Refs for latest values (used in closures) ──
   const onSaveRef = useRef(onSave);
@@ -242,7 +288,16 @@ export default function FloorPlanEditor({
     snapEnabledRef.current = snapEnabled;
     rotationSnapRef.current = rotationSnap;
     measureModeRef.current = measureMode;
+    alignmentEnabledRef.current = alignmentEnabled;
+    collisionEnabledRef.current = collisionEnabled;
   });
+
+  // Subscribe to CommandHistory changes for reactive canUndo/canRedo
+  useEffect(() => {
+    return historyRef.current.subscribe(() => {
+      setHistoryVersion((v) => v + 1);
+    });
+  }, []);
 
   // ── Measure mode: disable selection, change cursor ──
   useEffect(() => {
@@ -294,20 +349,55 @@ export default function FloorPlanEditor({
     return rawJSON;
   }, []);
 
-  // ── Undo (debounced — prevents rapid-fire state pushes) ──
+  // ── Push to command history (replaces old snapshot-based pushUndo) ──
+  const pushCommand = useCallback((cmd: import("@/lib/floorplan/command-history").FloorPlanCommand) => {
+    if (isLoadingRef.current) return;
+    historyRef.current.push(cmd);
+  }, []);
+
+  // Backward-compatible pushUndo: creates a snapshot-based command for operations
+  // that don't yet have specific command types (room shape, layout template, etc.)
+  const lastSnapshotRef = useRef<string | null>(null);
   const pushUndo = useCallback(() => {
     const canvas = fabricRef.current;
     if (!canvas || isLoadingRef.current) return;
-
-    if (undoDebounceRef.current) clearTimeout(undoDebounceRef.current);
-    undoDebounceRef.current = setTimeout(() => {
-      const json = getCanvasJSON();
-      if (!json) return;
-      const str = JSON.stringify(json);
-      setUndoStack((prev) => [...prev.slice(-29), str]);
-      setRedoStack([]);
-    }, 150);
-  }, [getCanvasJSON]);
+    const json = getCanvasJSON();
+    if (!json) return;
+    const currentSnapshot = JSON.stringify(json);
+    const previousSnapshot = lastSnapshotRef.current;
+    lastSnapshotRef.current = currentSnapshot;
+    if (!previousSnapshot || previousSnapshot === currentSnapshot) return;
+    // Create a snapshot command that restores full canvas state
+    const snapshotCmd = {
+      type: "snapshot" as const,
+      description: "Canvas change",
+      execute(c: Canvas) {
+        isLoadingRef.current = true;
+        lightingOverlayRef.current = null;
+        lightingObjectsRef.current.clear();
+        c.loadFromJSON(JSON.parse(currentSnapshot)).then(() => {
+          createGrid(c, c.getWidth(), c.getHeight());
+          ensureAllObjectIds(c);
+          c.requestRenderAll();
+          isLoadingRef.current = false;
+          syncLightingToCanvas();
+        });
+      },
+      undo(c: Canvas) {
+        isLoadingRef.current = true;
+        lightingOverlayRef.current = null;
+        lightingObjectsRef.current.clear();
+        c.loadFromJSON(JSON.parse(previousSnapshot)).then(() => {
+          createGrid(c, c.getWidth(), c.getHeight());
+          ensureAllObjectIds(c);
+          c.requestRenderAll();
+          isLoadingRef.current = false;
+          syncLightingToCanvas();
+        });
+      },
+    };
+    pushCommand(snapshotCmd);
+  }, [getCanvasJSON, pushCommand]);
 
   // ── Save status for manual save feedback ──
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
@@ -493,9 +583,22 @@ export default function FloorPlanEditor({
     createGrid(canvas, w, h);
 
     canvas.on("object:moving", (e) => {
-      if (!snapEnabledRef.current) return;
       const obj = e.target;
       if (!obj) return;
+
+      // Capture pre-drag state on first move frame
+      if (!preDragStateRef.current) {
+        if (obj instanceof ActiveSelection) {
+          preDragStateRef.current = captureSelectionState(obj);
+          // Build bounds cache excluding dragged objects
+          const ids = new Set(obj.getObjects().map((o) => o.data?._objectId).filter(Boolean) as string[]);
+          boundsCacheRef.current = buildBoundsCache(canvas, ids);
+        } else {
+          preDragStateRef.current = [captureObjectState(obj)];
+          const id = obj.data?._objectId;
+          boundsCacheRef.current = buildBoundsCache(canvas, id ? new Set([id]) : new Set());
+        }
+      }
 
       // Lighting zones: snap to furniture or convert pixel position to percentage
       if (obj.data?.isLighting) {
@@ -503,7 +606,6 @@ export default function FloorPlanEditor({
         const objLeft = obj.left || 0;
         const objTop = obj.top || 0;
 
-        // Check proximity to furniture objects for snap
         const SNAP_DIST = 40;
         let snappedLabel: string | undefined;
         let snapX = objLeft;
@@ -531,18 +633,56 @@ export default function FloorPlanEditor({
           obj.setCoords();
         }
 
-        // Store snap info on the object for object:modified to read.
-        // Don't update React state here — firing on every drag frame
-        // causes a state→effect→sync loop that overflows the stack.
         obj.data = { ...obj.data, _snappedLabel: snappedLabel };
         return;
       }
 
-      // Furniture: snap to grid
-      obj.set({
-        left: Math.round((obj.left || 0) / GRID_SIZE) * GRID_SIZE,
-        top: Math.round((obj.top || 0) / GRID_SIZE) * GRID_SIZE,
-      });
+      // Step 1: Grid snap (if enabled)
+      if (snapEnabledRef.current) {
+        obj.set({
+          left: Math.round((obj.left || 0) / GRID_SIZE) * GRID_SIZE,
+          top: Math.round((obj.top || 0) / GRID_SIZE) * GRID_SIZE,
+        });
+      }
+
+      // Step 2: Alignment snap (overrides grid when within threshold)
+      if (alignmentEnabledRef.current && boundsCacheRef.current.length > 0) {
+        obj.setCoords();
+        const draggedBounds = computeObjectBounds(obj);
+        const result = findAlignments(draggedBounds, boundsCacheRef.current, ALIGNMENT_SNAP_THRESHOLD);
+
+        if (result.deltaX !== 0 || result.deltaY !== 0) {
+          obj.set({
+            left: (obj.left || 0) + result.deltaX,
+            top: (obj.top || 0) + result.deltaY,
+          });
+          obj.setCoords();
+        }
+
+        if (result.guides.length > 0) {
+          renderGuides(canvas, result.guides);
+        } else {
+          clearGuides();
+        }
+      }
+
+      // Step 3: Collision detection
+      if (collisionEnabledRef.current) {
+        updateCollisionHighlights(obj, canvas);
+      }
+
+      // Step 4: Distance indicators
+      if (alignmentEnabledRef.current) {
+        obj.setCoords();
+        const targetBounds = computeObjectBounds(obj);
+        const distances = computeNearestDistances(
+          targetBounds,
+          boundsCacheRef.current,
+          canvas.getWidth(),
+          canvas.getHeight(),
+        );
+        renderDistanceIndicators(canvas, distances);
+      }
     });
 
     // ── Rotation snapping (configurable angle) + visual angle guide ──
@@ -624,6 +764,11 @@ export default function FloorPlanEditor({
     canvas.on("mouse:up", () => {
       clearAngleGuide();
       isDraggingLightRef.current = false;
+      // Clean up drag visuals
+      clearGuides();
+      clearDistanceIndicators();
+      resetCollisionTracking(canvas);
+      boundsCacheRef.current = [];
     });
     canvas.on("mouse:down", (e) => {
       if (!measureModeRef.current) return;
@@ -701,12 +846,14 @@ export default function FloorPlanEditor({
     canvas.on("object:modified", (e) => {
       // Clear rotation angle guide
       clearAngleGuide();
+      // Clear alignment guides, collision highlights, distance indicators
+      clearGuides();
+      clearDistanceIndicators();
+      resetCollisionTracking(canvas);
 
       const obj = e.target;
 
       // If lighting zone was moved, persist final position.
-      // Do NOT call syncLightingToCanvas() here — the useEffect watching
-      // lightingZones will pick up the state change and sync safely.
       if (obj?.data?.isLighting) {
         isDraggingLightRef.current = false;
         const cw = canvas.getWidth();
@@ -722,10 +869,58 @@ export default function FloorPlanEditor({
             )
           );
         }
-        return; // Don't push undo or save for lighting changes
+        return;
       }
 
-      pushUndo();
+      // Create command from pre-drag state
+      const preState = preDragStateRef.current;
+      if (preState && preState.length > 0 && obj) {
+        // Determine if this was a move or rotate (or both)
+        const postState = obj instanceof ActiveSelection
+          ? captureSelectionState(obj)
+          : [captureObjectState(obj)];
+
+        const commands: import("@/lib/floorplan/command-history").FloorPlanCommand[] = [];
+
+        // Check for position changes
+        const movedIds: string[] = [];
+        const fromPos: Array<{ left: number; top: number }> = [];
+        const toPos: Array<{ left: number; top: number }> = [];
+
+        // Check for rotation changes
+        const rotatedIds: string[] = [];
+        const fromAngles: number[] = [];
+        const toAngles: number[] = [];
+
+        for (const post of postState) {
+          const pre = preState.find((p) => p.objectId === post.objectId);
+          if (!pre) continue;
+          if (Math.abs(pre.left - post.left) > 0.5 || Math.abs(pre.top - post.top) > 0.5) {
+            movedIds.push(post.objectId);
+            fromPos.push({ left: pre.left, top: pre.top });
+            toPos.push({ left: post.left, top: post.top });
+          }
+          if (Math.abs(pre.angle - post.angle) > 0.5) {
+            rotatedIds.push(post.objectId);
+            fromAngles.push(pre.angle);
+            toAngles.push(post.angle);
+          }
+        }
+
+        if (movedIds.length > 0) commands.push(new MoveCommand(movedIds, fromPos, toPos));
+        if (rotatedIds.length > 0) commands.push(new RotateCommand(rotatedIds, fromAngles, toAngles));
+
+        if (commands.length === 1) {
+          pushCommand(commands[0]);
+        } else if (commands.length > 1) {
+          pushCommand(new BatchCommand(commands));
+        }
+        // Update snapshot ref for fallback pushUndo
+        const json = getCanvasJSON();
+        if (json) lastSnapshotRef.current = JSON.stringify(json);
+      }
+
+      preDragStateRef.current = null;
       triggerAutoSave();
       updateSelection();
     });
@@ -747,21 +942,47 @@ export default function FloorPlanEditor({
       isLoadingRef.current = true;
       const canvasJSON = unwrapCanvasJSON(initialJSON);
       canvas.loadFromJSON(canvasJSON).then(() => {
+        ensureAllObjectIds(canvas);
         canvas.requestRenderAll();
         isLoadingRef.current = false;
-        // Initial undo state (excluding lighting)
+        // Capture initial snapshot for fallback undo
         const rawJSON = canvas.toJSON();
-        setUndoStack([JSON.stringify(rawJSON)]);
+        lastSnapshotRef.current = JSON.stringify(rawJSON);
+        historyRef.current.clear();
       }).catch((err) => {
         console.error("[FloorPlan] Failed to load canvas JSON:", err);
         isLoadingRef.current = false;
-        setUndoStack([JSON.stringify(canvas.toJSON())]);
+        lastSnapshotRef.current = JSON.stringify(canvas.toJSON());
       });
     } else {
-      setUndoStack([JSON.stringify(canvas.toJSON())]);
+      lastSnapshotRef.current = JSON.stringify(canvas.toJSON());
+      historyRef.current.clear();
     }
 
     const handleKey = (e: KeyboardEvent) => {
+      // ── Undo / Redo ──
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) {
+          // Cmd+Shift+Z = Redo
+          if (historyRef.current.canRedo) {
+            historyRef.current.redo(canvas);
+            triggerAutoSave();
+            const json = getCanvasJSON();
+            if (json) lastSnapshotRef.current = JSON.stringify(json);
+          }
+        } else {
+          // Cmd+Z = Undo
+          if (historyRef.current.canUndo) {
+            historyRef.current.undo(canvas);
+            triggerAutoSave();
+            const json = getCanvasJSON();
+            if (json) lastSnapshotRef.current = JSON.stringify(json);
+          }
+        }
+        return;
+      }
+
       // ── Copy ──
       if ((e.ctrlKey || e.metaKey) && e.key === "c") {
         const active = canvas.getActiveObject();
@@ -808,12 +1029,18 @@ export default function FloorPlanEditor({
         }
 
         util.enlivenObjects(clipboardRef.current).then((objects: any[]) => {
+          const ids: string[] = [];
           objects.forEach((obj) => {
+            obj.data = { ...obj.data, _objectId: undefined };
+            ensureObjectId(obj);
+            ids.push(obj.data._objectId);
             obj.set({ left: (obj.left || 0) + 20, top: (obj.top || 0) + 20 });
             canvas.add(obj);
           });
           canvas.requestRenderAll();
-          pushUndo();
+          pushCommand(new AddCommand(ids, objects));
+          const json = getCanvasJSON();
+          if (json) lastSnapshotRef.current = JSON.stringify(json);
           triggerAutoSave();
         }).catch((err) => {
           console.error("[FloorPlan] Paste failed:", err);
@@ -835,29 +1062,28 @@ export default function FloorPlanEditor({
 
       // ── Delete / Backspace ──
       if (e.key === "Delete" || e.key === "Backspace") {
-        // Don't intercept when typing in an input field
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || (e.target as HTMLElement)?.isContentEditable) return;
 
         const active = canvas.getActiveObject();
         if (!active) return;
 
-        // Don't delete grid or overlay
         if (active.data?.isGrid || active.data?.isLightingOverlay) return;
 
-        // Multi-select delete
         if (active instanceof ActiveSelection) {
           const objects = active.getObjects().filter(
             (o) => !o.data?.isGrid && !o.data?.isLighting && !o.data?.isLightingOverlay && !o.data?.isRoom
           );
+          const ids = objects.map((o) => ensureObjectId(o));
           canvas.discardActiveObject();
           objects.forEach((o) => canvas.remove(o));
-          pushUndo();
+          pushCommand(new RemoveCommand(ids, objects));
+          const json = getCanvasJSON();
+          if (json) lastSnapshotRef.current = JSON.stringify(json);
           triggerAutoSave();
           return;
         }
 
-        // Delete lighting zone
         if (active.data?.isLighting) {
           const zoneId = active.data.zoneId;
           if (onUpdateZonesRef.current && lightingZonesRef.current) {
@@ -868,10 +1094,12 @@ export default function FloorPlanEditor({
           return;
         }
 
-        // Delete furniture
+        const id = ensureObjectId(active);
         canvas.remove(active);
         canvas.discardActiveObject();
-        pushUndo();
+        pushCommand(new RemoveCommand([id], [active]));
+        const json = getCanvasJSON();
+        if (json) lastSnapshotRef.current = JSON.stringify(json);
         triggerAutoSave();
       }
     };
@@ -897,11 +1125,12 @@ export default function FloorPlanEditor({
       window.removeEventListener("keydown", handleKey);
       resizeObserver.disconnect();
       clearAngleGuide();
+      disposeGuides(canvas);
+      disposeDistanceIndicators(canvas);
       // Remove all canvas event listeners to prevent accumulation on remount
       canvas.off();
       // Cancel pending debounces
       if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
-      if (undoDebounceRef.current) clearTimeout(undoDebounceRef.current);
       // Flush save — persist current canvas state before disposing
       // Skip if canvas is still loading (loadFromJSON hasn't resolved yet) —
       // saving here would serialize an empty canvas and overwrite real data.
@@ -1072,39 +1301,7 @@ export default function FloorPlanEditor({
     setShowRoomPicker(false);
   }
 
-  /** Find a non-overlapping position near the canvas center for new items */
-  function findOpenPosition(canvas: any, preferX: number, preferY: number): { x: number; y: number } {
-    const objects = canvas.getObjects().filter((o: any) => o.data && !o.data.isGrid && !o.data.isLighting && !o.data.isLightingOverlay && !o.data.isGuide && !o.data.isRoom);
-    const step = GRID_SIZE * 5; // 100px offset per step
-    const canvasW = canvas.getWidth();
-    const canvasH = canvas.getHeight();
-    let x = preferX;
-    let y = preferY;
-    for (let attempt = 0; attempt < 20; attempt++) {
-      const snappedX = Math.round(x / GRID_SIZE) * GRID_SIZE;
-      const snappedY = Math.round(y / GRID_SIZE) * GRID_SIZE;
-      // Bounds check: keep items within canvas boundaries (with 50px margin)
-      if (snappedX < 50 || snappedX > canvasW - 50 || snappedY < 50 || snappedY > canvasH - 50) {
-        // Skip out-of-bounds positions, continue spiraling
-        x = preferX + step * ((attempt % 4 < 2 ? 1 : -1) * Math.ceil((attempt + 1) / 2));
-        y = preferY + step * ((attempt % 2 === 0 ? 0 : 1) * Math.ceil((attempt + 1) / 2));
-        continue;
-      }
-      const tooClose = objects.some((obj: any) => {
-        const ox = obj.left || 0;
-        const oy = obj.top || 0;
-        return Math.abs(ox - snappedX) < step && Math.abs(oy - snappedY) < step;
-      });
-      if (!tooClose) return { x: snappedX, y: snappedY };
-      // Spiral outward: right, then down-right, etc.
-      x = preferX + step * ((attempt % 4 < 2 ? 1 : -1) * Math.ceil((attempt + 1) / 2));
-      y = preferY + step * ((attempt % 2 === 0 ? 0 : 1) * Math.ceil((attempt + 1) / 2));
-    }
-    // Clamp final fallback position within canvas bounds
-    const finalX = Math.max(50, Math.min(canvasW - 50, Math.round(x / GRID_SIZE) * GRID_SIZE));
-    const finalY = Math.max(50, Math.min(canvasH - 50, Math.round(y / GRID_SIZE) * GRID_SIZE));
-    return { x: finalX, y: finalY };
-  }
+  // findOpenPosition is now imported from @/lib/floorplan/canvas-helpers
 
   function addFurnitureToCanvas(item: FurnitureItemDef, x?: number, y?: number, skipSave = false): FabricObject | null {
     const canvas = fabricRef.current;
@@ -1160,11 +1357,14 @@ export default function FloorPlanEditor({
       data: { furnitureId: item.id, label: item.name, tableId: uuid() },
     });
 
+    ensureObjectId(group);
     canvas.add(group);
     if (!skipSave) {
       canvas.setActiveObject(group);
       canvas.requestRenderAll();
-      pushUndo();
+      pushCommand(new AddCommand([group.data!._objectId], [group]));
+      const json = getCanvasJSON();
+      if (json) lastSnapshotRef.current = JSON.stringify(json);
       triggerAutoSave();
       setShowMobilePalette(false);
     }
@@ -1228,50 +1428,21 @@ export default function FloorPlanEditor({
 
   function handleUndo() {
     const canvas = fabricRef.current;
-    if (!canvas || undoStack.length <= 1) return;
-    // Flush pending debounced undo push
-    if (undoDebounceRef.current) { clearTimeout(undoDebounceRef.current); undoDebounceRef.current = null; }
-    const current = undoStack[undoStack.length - 1];
-    const previous = undoStack[undoStack.length - 2];
-    setRedoStack((prev) => [...prev, current]);
-    setUndoStack((prev) => prev.slice(0, -1));
-    isLoadingRef.current = true;
-    // Clear stale refs — loadFromJSON removes all canvas objects
-    lightingOverlayRef.current = null;
-    lightingObjectsRef.current.clear();
-    canvas.loadFromJSON(JSON.parse(previous)).then(() => {
-      // Re-add grid (loadFromJSON cleared it)
-      createGrid(canvas, canvas.getWidth(), canvas.getHeight());
-      canvas.requestRenderAll();
-      isLoadingRef.current = false;
-      triggerAutoSave();
-      syncLightingToCanvas();
-    }).catch((err) => {
-      console.error("[FloorPlan] Undo failed:", err);
-      isLoadingRef.current = false;
-    });
+    if (!canvas || !historyRef.current.canUndo) return;
+    historyRef.current.undo(canvas);
+    triggerAutoSave();
+    // Update snapshot ref after undo
+    const json = getCanvasJSON();
+    if (json) lastSnapshotRef.current = JSON.stringify(json);
   }
 
   function handleRedo() {
     const canvas = fabricRef.current;
-    if (!canvas || redoStack.length === 0) return;
-    if (undoDebounceRef.current) { clearTimeout(undoDebounceRef.current); undoDebounceRef.current = null; }
-    const next = redoStack[redoStack.length - 1];
-    setRedoStack((prev) => prev.slice(0, -1));
-    setUndoStack((prev) => [...prev, next]);
-    isLoadingRef.current = true;
-    lightingOverlayRef.current = null;
-    lightingObjectsRef.current.clear();
-    canvas.loadFromJSON(JSON.parse(next)).then(() => {
-      createGrid(canvas, canvas.getWidth(), canvas.getHeight());
-      canvas.requestRenderAll();
-      isLoadingRef.current = false;
-      triggerAutoSave();
-      syncLightingToCanvas();
-    }).catch((err) => {
-      console.error("[FloorPlan] Redo failed:", err);
-      isLoadingRef.current = false;
-    });
+    if (!canvas || !historyRef.current.canRedo) return;
+    historyRef.current.redo(canvas);
+    triggerAutoSave();
+    const json = getCanvasJSON();
+    if (json) lastSnapshotRef.current = JSON.stringify(json);
   }
 
   function handleZoomIn() {
@@ -1324,10 +1495,13 @@ export default function FloorPlanEditor({
       const objects = active.getObjects().filter(
         (o) => !o.data?.isGrid && !o.data?.isLighting && !o.data?.isLightingOverlay && !o.data?.isRoom
       );
+      const ids = objects.map((o) => ensureObjectId(o));
       canvas.discardActiveObject();
       objects.forEach((o) => canvas.remove(o));
       setSelectedInfo(null);
-      pushUndo();
+      pushCommand(new RemoveCommand(ids, objects));
+      const json = getCanvasJSON();
+      if (json) lastSnapshotRef.current = JSON.stringify(json);
       triggerAutoSave();
       return;
     }
@@ -1344,10 +1518,13 @@ export default function FloorPlanEditor({
     }
 
     // Furniture
+    const id = ensureObjectId(active);
     canvas.remove(active);
     canvas.discardActiveObject();
     setSelectedInfo(null);
-    pushUndo();
+    pushCommand(new RemoveCommand([id], [active]));
+    const json = getCanvasJSON();
+    if (json) lastSnapshotRef.current = JSON.stringify(json);
     triggerAutoSave();
   }
 
@@ -1382,16 +1559,29 @@ export default function FloorPlanEditor({
     if (!active || active.data?.isLighting) return;
 
     const step = rotationSnap ? rotationSnap : 45;
+    const ids: string[] = [];
+    const fromAngles: number[] = [];
+    const toAngles: number[] = [];
+
     if (active instanceof ActiveSelection) {
       active.getObjects().forEach((obj) => {
-        obj.rotate((obj.angle || 0) + step);
+        const fromAngle = obj.angle || 0;
+        const toAngle = fromAngle + step;
+        ids.push(ensureObjectId(obj));
+        fromAngles.push(fromAngle);
+        toAngles.push(toAngle);
+        obj.rotate(toAngle);
       });
     } else {
-      active.rotate((active.angle || 0) + step);
+      const fromAngle = active.angle || 0;
+      const toAngle = fromAngle + step;
+      ids.push(ensureObjectId(active));
+      fromAngles.push(fromAngle);
+      toAngles.push(toAngle);
+      active.rotate(toAngle);
     }
     canvas.requestRenderAll();
 
-    // Update properties panel to reflect new angle
     if (selectedInfo && !(active instanceof ActiveSelection)) {
       const bound = active.getBoundingRect();
       setSelectedInfo({
@@ -1404,7 +1594,9 @@ export default function FloorPlanEditor({
       });
     }
 
-    pushUndo();
+    pushCommand(new RotateCommand(ids, fromAngles, toAngles));
+    const json = getCanvasJSON();
+    if (json) lastSnapshotRef.current = JSON.stringify(json);
     triggerAutoSave();
   }
 
@@ -1456,12 +1648,19 @@ export default function FloorPlanEditor({
 
     if (clipboardRef.current.length === 0) return;
     util.enlivenObjects(clipboardRef.current).then((objects: any[]) => {
+      const ids: string[] = [];
       objects.forEach((obj) => {
+        // Give pasted objects new IDs (they're copies, not the originals)
+        obj.data = { ...obj.data, _objectId: undefined };
+        ensureObjectId(obj);
+        ids.push(obj.data._objectId);
         obj.set({ left: (obj.left || 0) + 20, top: (obj.top || 0) + 20 });
         canvas.add(obj);
       });
       canvas.requestRenderAll();
-      pushUndo();
+      pushCommand(new AddCommand(ids, objects));
+      const json = getCanvasJSON();
+      if (json) lastSnapshotRef.current = JSON.stringify(json);
       triggerAutoSave();
     }).catch((err) => {
       console.error("[FloorPlan] Paste failed:", err);
@@ -1658,11 +1857,14 @@ export default function FloorPlanEditor({
       },
     });
 
+    ensureObjectId(combinedGroup);
     canvas.add(combinedGroup);
     if (!skipSave) {
       canvas.setActiveObject(combinedGroup);
       canvas.requestRenderAll();
-      pushUndo();
+      pushCommand(new AddCommand([combinedGroup.data!._objectId], [combinedGroup]));
+      const json = getCanvasJSON();
+      if (json) lastSnapshotRef.current = JSON.stringify(json);
       triggerAutoSave();
       setShowMobilePalette(false);
     }
@@ -1731,8 +1933,12 @@ export default function FloorPlanEditor({
         onZoomOut={handleZoomOut}
         onUndo={handleUndo}
         onRedo={handleRedo}
-        canUndo={undoStack.length > 1}
-        canRedo={redoStack.length > 0}
+        canUndo={historyRef.current.canUndo}
+        canRedo={historyRef.current.canRedo}
+        alignmentEnabled={alignmentEnabled}
+        onToggleAlignment={() => setAlignmentEnabled(!alignmentEnabled)}
+        collisionEnabled={collisionEnabled}
+        onToggleCollision={() => setCollisionEnabled(!collisionEnabled)}
         onExport={handleExport}
         onDeleteSelected={handleDeleteSelected}
         onRotateSelected={handleRotateSelected}
