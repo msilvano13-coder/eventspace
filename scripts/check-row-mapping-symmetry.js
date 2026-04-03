@@ -150,7 +150,7 @@ for (const toFn of toRowFns) {
     // Joined child tables (FromRow reads these as nested arrays, ToRow doesn't write them)
     "floor_plans", "timeline_items", "schedule_items", "questionnaire_assignments",
     "budget_items", "event_contracts", "shared_files", "mood_board_images",
-    "discovered_vendors", "lighting_zones", "vendor_payments", "invoice_line_items",
+    "discovered_vendors", "lighting_zones", "layout_objects", "vendor_payments", "invoice_line_items",
     "tablescapes", "tablescape_items",
   ]);
 

@@ -261,6 +261,35 @@ function floorPlanToRow(fp: FloorPlan, eventId: string, index: number, userId: s
     name: fp.name,
     json: fp.json ?? null,
     sort_order: index,
+    room_shape: fp.roomShape ?? null,
+    canvas_width: fp.canvasWidth ?? 600,
+    canvas_height: fp.canvasHeight ?? 400,
+    // layout_objects: joined child table — written separately via replaceLayoutObjects()
+  };
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function layoutObjectToRow(obj: LayoutObject) {
+  return {
+    id: obj.id,
+    floor_plan_id: obj.floorPlanId,
+    asset_id: obj.assetId,
+    position_x: obj.positionX,
+    position_y: obj.positionY,
+    rotation: obj.rotation,
+    scale_x: obj.scaleX,
+    scale_y: obj.scaleY,
+    width_override: obj.widthOverride,
+    height_override: obj.heightOverride,
+    label: obj.label,
+    group_id: obj.groupId,
+    parent_id: obj.parentId,
+    table_id: obj.tableId,
+    fill_override: obj.fillOverride,
+    stroke_override: obj.strokeOverride,
+    tablescape_id: obj.tablescapeId,
+    metadata: obj.metadata,
+    z_index: obj.zIndex,
   };
 }
 
