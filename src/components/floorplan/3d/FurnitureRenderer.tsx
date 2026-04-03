@@ -21,6 +21,8 @@ import {
   type ParsedObject,
   type View3DSettings,
 } from "./constants";
+import { useAssetModelUrl } from "./useAssetModel";
+import { GLTFFurnitureInner, GLTFErrorBoundary } from "./GLTFFurniture";
 
 // ── Label texture cache ──
 
@@ -226,6 +228,43 @@ export function FurnitureMesh({ obj, originX, originY, settings, tablescapes }: 
     const awayX = obj.x - obj.tableCenter.x;
     const awayZ = obj.y - obj.tableCenter.y;
     rotY = Math.atan2(awayX, awayZ);
+  }
+
+  // ── GLTF model path — render loaded model instead of procedural geometry ──
+  const { url: gltfUrl, useProcedural } = useAssetModelUrl(obj.furnitureId);
+
+  if (!useProcedural && gltfUrl) {
+    const heightInches = getHeight(obj.furnitureId);
+    const tableTopY = heightInches * S;
+    const tablescape = obj.tablescapeId && tablescapes
+      ? tablescapes.find((t) => t.id === obj.tablescapeId)
+      : undefined;
+
+    return (
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        <GLTFErrorBoundary furnitureId={obj.furnitureId}>
+          <Suspense fallback={null}>
+            <GLTFFurnitureInner
+              url={gltfUrl}
+              widthInches={obj.width}
+              heightInches={heightInches}
+              depthInches={obj.height}
+              color={obj.fill}
+            />
+          </Suspense>
+        </GLTFErrorBoundary>
+        {settings.showLabels && (
+          <FurnitureLabel label={obj.label} y={heightInches * S * H_MULT + 0.15} />
+        )}
+        {/* Tablescape items on tables */}
+        {tablescape && (
+          <TablescapeItems3D
+            tablescape={tablescape}
+            tableTopY={tableTopY}
+          />
+        )}
+      </group>
+    );
   }
 
   // Override 2D diagram colors with realistic 3D material colors.
