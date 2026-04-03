@@ -856,7 +856,8 @@ const TABLESCAPE_CATEGORY_SIZE: Record<string, number> = {
 };
 
 function TablescapeGLBItemInner({ item, asset }: { item: { positionX: number; positionY: number; positionZ: number; rotationY: number; scale: number }; asset: { category: string; filePath: string } }) {
-  const url = `/models/${asset.filePath}`;
+  const baseUrl = process.env.NEXT_PUBLIC_MODELS_CDN_URL || "/models";
+  const url = `${baseUrl}/${asset.filePath}`;
   const { scene } = useGLTF(url);
   const autoScale = useMemo(() => {
     const box = new THREE.Box3().setFromObject(scene);
