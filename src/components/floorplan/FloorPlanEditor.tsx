@@ -671,18 +671,16 @@ export default function FloorPlanEditor({
         updateCollisionHighlights(obj, canvas);
       }
 
-      // Step 4: Distance indicators
-      if (alignmentEnabledRef.current) {
-        obj.setCoords();
-        const targetBounds = computeObjectBounds(obj);
-        const distances = computeNearestDistances(
-          targetBounds,
-          boundsCacheRef.current,
-          canvas.getWidth(),
-          canvas.getHeight(),
-        );
-        renderDistanceIndicators(canvas, distances);
-      }
+      // Step 4: Distance indicators (always show during drag regardless of alignment mode)
+      obj.setCoords();
+      const targetBounds = computeObjectBounds(obj);
+      const distances = computeNearestDistances(
+        targetBounds,
+        boundsCacheRef.current,
+        canvas.getWidth(),
+        canvas.getHeight(),
+      );
+      renderDistanceIndicators(canvas, distances);
     });
 
     // ── Rotation snapping (configurable angle) + visual angle guide ──
