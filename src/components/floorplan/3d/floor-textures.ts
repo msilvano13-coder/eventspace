@@ -292,7 +292,6 @@ function generateMarble(
 
   // Deeper cloudy base variation with more depth
   const noise = makeNoise2D(rand, 30, size);
-  const noise2 = makeNoise2D(rand, 60, size);
   for (let i = 0; i < 90; i++) {
     const cx = rand() * size;
     const cy = rand() * size;
@@ -357,7 +356,6 @@ function generateMarble(
     const branchCount = 2 + Math.floor(rand() * 3);
     for (let b2 = 0; b2 < branchCount; b2++) {
       const t = 0.2 + rand() * 0.6;
-      const t2 = 1 - t;
       // point on curve at parameter t (approx)
       const bx = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * cpx + t * t * x1;
       const by = (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * cpy + t * t * y1;
