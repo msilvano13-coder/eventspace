@@ -73,14 +73,19 @@ import {
 } from "@/lib/floorplan/distance-indicators";
 import {
   canvasToLayoutObjects,
+  layoutObjectsToCanvasJSON,
   roomShapeFromCanvas,
 } from "@/lib/floorplan/canvas-bridge";
+import { getAssetCatalog } from "@/lib/asset-catalog";
 
 interface Props {
   eventId: string;
   floorPlanId?: string;
   initialJSON: string | null;
   initialLayoutObjects?: LayoutObject[];
+  initialRoomShape?: RoomShape | null;
+  initialCanvasWidth?: number;
+  initialCanvasHeight?: number;
   onSave?: (json: string) => void;
   onSaveLayoutObjects?: (objects: LayoutObject[], roomShape: RoomShape | null, canvasWidth: number, canvasHeight: number) => void;
   // Lighting integration — zones rendered directly on canvas
@@ -223,8 +228,10 @@ export default function FloorPlanEditor({
   eventId,
   floorPlanId,
   initialJSON,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  initialLayoutObjects: _initialLayoutObjects,
+  initialLayoutObjects,
+  initialRoomShape,
+  initialCanvasWidth = 600,
+  initialCanvasHeight = 400,
   onSave,
   onSaveLayoutObjects,
   lightingZones = [],
@@ -996,15 +1003,56 @@ export default function FloorPlanEditor({
       });
     }
 
-    // Load initial JSON with schema migration
-    if (initialJSON) {
+    // ── Load path: prefer structured layout_objects, fall back to JSON blob ──
+    const hasStructuredData = initialLayoutObjects && initialLayoutObjects.length > 0;
+
+    if (hasStructuredData) {
+      // Phase 2 load path: generate canvas JSON from structured data
+      isLoadingRef.current = true;
+      getAssetCatalog().then((catalog) => {
+        const canvasJSON = layoutObjectsToCanvasJSON(
+          initialLayoutObjects,
+          catalog,
+          initialCanvasWidth,
+          initialCanvasHeight,
+          initialRoomShape ?? null,
+        );
+        return canvas.loadFromJSON(canvasJSON);
+      }).then(() => {
+        ensureAllObjectIds(canvas);
+        canvas.requestRenderAll();
+        isLoadingRef.current = false;
+        const rawJSON = canvas.toJSON();
+        lastSnapshotRef.current = JSON.stringify(rawJSON);
+        historyRef.current.clear();
+      }).catch((err) => {
+        console.error("[FloorPlan] Failed to load from layout objects, falling back to JSON:", err);
+        // Fall back to legacy JSON if structured load fails
+        if (initialJSON) {
+          const canvasJSON = unwrapCanvasJSON(initialJSON);
+          canvas.loadFromJSON(canvasJSON).then(() => {
+            ensureAllObjectIds(canvas);
+            canvas.requestRenderAll();
+            isLoadingRef.current = false;
+            lastSnapshotRef.current = JSON.stringify(canvas.toJSON());
+            historyRef.current.clear();
+          }).catch(() => {
+            isLoadingRef.current = false;
+            lastSnapshotRef.current = JSON.stringify(canvas.toJSON());
+          });
+        } else {
+          isLoadingRef.current = false;
+          lastSnapshotRef.current = JSON.stringify(canvas.toJSON());
+        }
+      });
+    } else if (initialJSON) {
+      // Legacy load path: parse Fabric.js JSON blob
       isLoadingRef.current = true;
       const canvasJSON = unwrapCanvasJSON(initialJSON);
       canvas.loadFromJSON(canvasJSON).then(() => {
         ensureAllObjectIds(canvas);
         canvas.requestRenderAll();
         isLoadingRef.current = false;
-        // Capture initial snapshot for fallback undo
         const rawJSON = canvas.toJSON();
         lastSnapshotRef.current = JSON.stringify(rawJSON);
         historyRef.current.clear();
@@ -1014,6 +1062,7 @@ export default function FloorPlanEditor({
         lastSnapshotRef.current = JSON.stringify(canvas.toJSON());
       });
     } else {
+      // Empty canvas — no data to load
       lastSnapshotRef.current = JSON.stringify(canvas.toJSON());
       historyRef.current.clear();
     }

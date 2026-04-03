@@ -442,6 +442,9 @@ export default function FloorPlanPage() {
                 floorPlanId={activePlan.id}
                 initialJSON={activePlan.json}
                 initialLayoutObjects={activePlan.layoutObjects}
+                initialRoomShape={activePlan.roomShape}
+                initialCanvasWidth={activePlan.canvasWidth}
+                initialCanvasHeight={activePlan.canvasHeight}
                 onSave={readOnly ? undefined : handleSave}
                 onSaveLayoutObjects={readOnly ? undefined : handleSaveLayoutObjects}
                 lightingZones={lightingZones}
