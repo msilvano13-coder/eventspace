@@ -769,6 +769,7 @@ export default function FloorPlanEditor({
       clearDistanceIndicators();
       resetCollisionTracking(canvas);
       boundsCacheRef.current = [];
+      canvas.requestRenderAll();
     });
     canvas.on("mouse:down", (e) => {
       if (!measureModeRef.current) return;
