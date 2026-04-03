@@ -90,7 +90,7 @@ export interface View3DSettings {
   venuePreset: "none" | "indoor-ballroom" | "tent" | "outdoor-garden" | "rooftop" | "barn" | "beach";
   chairStyle: "solid-back" | "chiavari" | "folding" | "ghost";
   linenColor: "ivory" | "white" | "blush" | "navy" | "sage" | "gold";
-  floorMaterial: "hardwood" | "marble" | "carpet" | "concrete";
+  floorMaterial: "hardwood" | "marble" | "carpet" | "concrete" | "tile";
   floorColor: string | null;
   lightingMood: "warm" | "cool" | "neutral" | "dramatic";
   lightingColorCast: number;

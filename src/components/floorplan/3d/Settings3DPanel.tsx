@@ -168,7 +168,7 @@ export function Settings3DPanel({
           <div>
             <label className="text-xs font-medium text-stone-500 mb-1.5 block">Floor</label>
             <div className="flex flex-wrap gap-1.5">
-              {(["hardwood", "marble", "carpet", "concrete"] as const).map((mat) => (
+              {(["hardwood", "marble", "carpet", "concrete", "tile"] as const).map((mat) => (
                 <button
                   key={mat}
                   onClick={() => onChange({ ...settings, floorMaterial: mat, floorColor: null })}

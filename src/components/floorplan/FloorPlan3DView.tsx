@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useCallback, useEffect, useState, Suspense } from "react";
+import React, { useMemo, useCallback, useEffect, useState, useRef, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, MeshReflectorMaterial } from "@react-three/drei";
 import { ACESFilmicToneMapping } from "three";
@@ -25,7 +25,7 @@ import { parseCanvasJSON } from "./3d/parse-canvas";
 import { FurnitureMesh, InteractiveFurniture, labelTextureCache } from "./3d/FurnitureRenderer";
 import { RoomFloor } from "./3d/RoomFloor";
 import { LightingZone3D } from "./3d/LightingSystem";
-import { WalkthroughControls, CameraAnimator } from "./3d/CameraSystem";
+import { WalkthroughControls, CameraAnimator, FPSCounter, type WallSegment } from "./3d/CameraSystem";
 import { PostProcessingEffects } from "./3d/PostProcessing";
 import { Settings3DPanel } from "./3d/Settings3DPanel";
 
@@ -84,6 +84,27 @@ function FloorPlan3DScene({
     const roomSpan = Math.max(maxX - minX, maxZ - minZ);
     return { cx: roomCx, cz: roomCz, span: roomSpan };
   }, [rooms, originX, originY, cx, cz, maxDim]);
+
+  // Compute wall segments from all rooms for walkthrough collision detection
+  const wallSegments = useMemo<WallSegment[]>(() => {
+    const segs: WallSegment[] = [];
+    for (const room of rooms) {
+      if (!room.points || room.points.length < 3) continue;
+      const pts = room.points.map(([x, y]) => ({
+        x: (x - originX) * S,
+        z: (y - originY) * S,
+      }));
+      for (let i = 0; i < pts.length; i++) {
+        const a = pts[i];
+        const b = pts[(i + 1) % pts.length];
+        segs.push({ x1: a.x, z1: a.z, x2: b.x, z2: b.z });
+      }
+    }
+    return segs;
+  }, [rooms, originX, originY]);
+
+  // Ref for OrbitControls so CameraAnimator can interpolate its target
+  const orbitControlsRef = useRef<any>(null);
 
   // Resolve venue preset
   const activePreset: VenuePresetDef | null = settings.venuePreset !== "none"
@@ -220,10 +241,11 @@ function FloorPlan3DScene({
       </mesh>
 
       {settings.cameraPreset === "walkthrough" ? (
-        <WalkthroughControls cx={cx} cz={cz} span={roomBounds.span} />
+        <WalkthroughControls cx={cx} cz={cz} span={roomBounds.span} wallSegments={wallSegments} />
       ) : (
         <>
           <OrbitControls
+            ref={orbitControlsRef}
             makeDefault
             enablePan
             enableZoom
@@ -239,9 +261,12 @@ function FloorPlan3DScene({
             maxDistance={maxDim * 3}
           />
           {/* Smooth camera transitions between presets */}
-          <CameraAnimator preset={settings.cameraPreset} cx={cx} cz={cz} span={roomBounds.span} />
+          <CameraAnimator preset={settings.cameraPreset} cx={cx} cz={cz} span={roomBounds.span} orbitControlsRef={orbitControlsRef} />
         </>
       )}
+
+      {/* FPS counter — dev mode only */}
+      <FPSCounter />
 
       {/* Post-processing — SSAO for depth + vignette for polish, quality-gated */}
       <PostProcessingEffects mood={settings.lightingMood} />

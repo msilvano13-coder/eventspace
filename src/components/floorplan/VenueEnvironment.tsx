@@ -19,7 +19,7 @@ export type VenueElement =
 
 export interface VenuePresetDef {
   label: string;
-  floorMaterial: "hardwood" | "marble" | "carpet" | "concrete";
+  floorMaterial: "hardwood" | "marble" | "carpet" | "concrete" | "tile";
   lightingMood: "warm" | "cool" | "neutral" | "dramatic";
   floorOverride?: { color: string; roughness: number; metalness: number };
   showWalls: boolean;

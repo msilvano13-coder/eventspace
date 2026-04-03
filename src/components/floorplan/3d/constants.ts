@@ -24,7 +24,7 @@ export interface View3DSettings {
   venuePreset: VenuePreset;
   chairStyle: "solid-back" | "chiavari" | "folding" | "ghost";
   linenColor: "ivory" | "white" | "blush" | "navy" | "sage" | "gold";
-  floorMaterial: "hardwood" | "marble" | "carpet" | "concrete";
+  floorMaterial: "hardwood" | "marble" | "carpet" | "concrete" | "tile";
   floorColor: string | null; // null = use default for material type
   lightingMood: "warm" | "cool" | "neutral" | "dramatic";
   lightingColorCast: number; // 0 = neutral white, 1 = full mood color
@@ -104,6 +104,7 @@ export const FLOOR_MATERIALS: Record<View3DSettings["floorMaterial"], { color: s
   marble: { color: "#e8e0d0", roughness: 0.15, metalness: 0.12, envMapIntensity: 0.6 },
   carpet: { color: "#8a7b6b", roughness: 0.95, metalness: 0.0, envMapIntensity: 0.02 },
   concrete: { color: "#a0a0a0", roughness: 0.85, metalness: 0.02, envMapIntensity: 0.1 },
+  tile: { color: "#f0ece4", roughness: 0.45, metalness: 0.05, envMapIntensity: 0.4 },
 };
 
 export const LIGHTING_MOODS: Record<View3DSettings["lightingMood"], {
