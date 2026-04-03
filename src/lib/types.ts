@@ -101,6 +101,7 @@ export interface View3DSettings {
   showLabels: boolean;
   showShadows: boolean;
   cameraPreset: "default" | "birds-eye" | "eye-level" | "presentation" | "walkthrough";
+  qualityOverride: "auto" | "low" | "medium" | "high";
 }
 
 export interface FloorPlan {

@@ -350,7 +350,7 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
             toneMappingExposure: 1.1,
           }}
         >
-          <QualityProvider>
+          <QualityProvider overrideTier={settings.qualityOverride}>
             <Suspense fallback={null}>
               <FloorPlan3DScene {...props} centerX={centerX} centerZ={centerZ} settings={settings} />
             </Suspense>

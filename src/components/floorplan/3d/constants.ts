@@ -35,6 +35,7 @@ export interface View3DSettings {
   showLabels: boolean;
   showShadows: boolean;
   cameraPreset: CameraPreset;
+  qualityOverride: "auto" | "low" | "medium" | "high";
 }
 
 export interface ParsedObject {
@@ -84,6 +85,7 @@ export const DEFAULT_SETTINGS: View3DSettings = {
   showLabels: true,
   showShadows: true,
   cameraPreset: "default",
+  qualityOverride: "auto",
 };
 
 // ── Material / color lookup tables ──

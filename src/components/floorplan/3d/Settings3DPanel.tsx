@@ -282,6 +282,32 @@ export function Settings3DPanel({
             </div>
           </div>
 
+          {/* Quality */}
+          <div>
+            <label className="text-xs font-medium text-stone-500 mb-1.5 block">Quality</label>
+            <div className="flex flex-wrap gap-1.5">
+              {([
+                { key: "auto", label: "Auto" },
+                { key: "low", label: "Low" },
+                { key: "medium", label: "Medium" },
+                { key: "high", label: "High" },
+              ] as const).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => update("qualityOverride", key)}
+                  className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+                    settings.qualityOverride === key
+                      ? "bg-indigo-100 text-indigo-700 border border-indigo-300"
+                      : "bg-stone-50 text-stone-500 border border-stone-200 hover:bg-stone-100"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-stone-400 mt-1">Higher quality uses more GPU. Auto detects your device.</p>
+          </div>
+
           {/* Toggles */}
           <div className="flex items-center justify-between pt-1 border-t border-stone-100">
             <span className="text-xs text-stone-500">Labels</span>

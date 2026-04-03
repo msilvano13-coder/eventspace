@@ -127,14 +127,19 @@ function QualityDetector({ onDetected }: { onDetected: (tier: QualityTier) => vo
 /**
  * Provides quality settings to all child components inside the R3F Canvas.
  * Must be placed inside <Canvas>.
+ *
+ * @param overrideTier - If set to "low", "medium", or "high", bypasses auto-detection.
+ *                       "auto" (default) uses GPU-based detection.
  */
-export function QualityProvider({ children }: { children: ReactNode }) {
-  const [tier, setTier] = useState<QualityTier>("medium");
-  const settings = useMemo(() => TIER_SETTINGS[tier], [tier]);
+export function QualityProvider({ children, overrideTier }: { children: ReactNode; overrideTier?: "auto" | "low" | "medium" | "high" }) {
+  const [detectedTier, setDetectedTier] = useState<QualityTier>("medium");
+  const effectiveTier = overrideTier && overrideTier !== "auto" ? overrideTier : detectedTier;
+  const settings = useMemo(() => TIER_SETTINGS[effectiveTier], [effectiveTier]);
 
   return (
     <QualityContext.Provider value={settings}>
-      <QualityDetector onDetected={setTier} />
+      {/* Always run detector so we have a baseline, even if overridden */}
+      <QualityDetector onDetected={setDetectedTier} />
       {children}
     </QualityContext.Provider>
   );
