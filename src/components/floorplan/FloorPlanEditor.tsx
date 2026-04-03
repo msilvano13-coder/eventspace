@@ -1948,9 +1948,12 @@ export default function FloorPlanEditor({
         rotationSnap={rotationSnap}
         onCycleRotationSnap={() => {
           setRotationSnap((prev) => {
-            const opts: (RotationSnapValue)[] = [...ROTATION_SNAP_OPTIONS, false];
+            if (prev === false) return 15; // Off → 15°
+            const opts = ROTATION_SNAP_OPTIONS;
             const idx = opts.indexOf(prev);
-            return opts[(idx + 1) % opts.length];
+            const nextIdx = idx + 1;
+            if (nextIdx >= opts.length) return false; // Past last angle → Off
+            return opts[nextIdx]; // Next angle
           });
         }}
         onLayoutTemplate={() => setShowLayoutPicker(true)}

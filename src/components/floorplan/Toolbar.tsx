@@ -145,12 +145,20 @@ export default function Toolbar({
         disabled={!hasSelection}
         tooltip={rotationSnap ? `Rotate ${rotationSnap}°` : "Rotate 45°"}
       />
-      <ToolButton
-        icon={Magnet}
+      <button
         onClick={onCycleRotationSnap}
-        active={rotationSnap !== false}
-        tooltip={rotationSnap ? `Snap: ${rotationSnap}°  (click to cycle)` : "Snap: Off  (click to enable)"}
-      />
+        title={rotationSnap ? `Rotation Snap: ${rotationSnap}° (click to cycle)` : "Rotation Snap: Off"}
+        className={`p-1.5 rounded-lg transition-colors shrink-0 flex items-center gap-0.5 ${
+          rotationSnap !== false
+            ? "bg-rose-50 text-rose-600"
+            : "text-stone-400 hover:text-stone-600 hover:bg-stone-100"
+        }`}
+      >
+        <Magnet size={16} />
+        {rotationSnap !== false && (
+          <span className="text-[10px] font-semibold leading-none">{rotationSnap}°</span>
+        )}
+      </button>
       <ToolButton
         icon={Trash2}
         onClick={onDeleteSelected}
