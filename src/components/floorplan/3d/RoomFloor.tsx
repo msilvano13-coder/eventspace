@@ -105,16 +105,31 @@ function TexturedFloor({
   //   This overcomes Three.js multiplicative color×albedo limitation.
   const hasCustomColor = !!floorColor;
 
-  // Average luminance per material type (pre-measured from textures)
-  // Used to normalize grayscale so average brightness → 1.0
-  const AVG_LUMINANCE: Record<string, number> = {
-    hardwood: 0.55,
-    marble: 0.82,
-    carpet: 0.45,
-    concrete: 0.65,
-    tile: 0.80,
-  };
-  const normFactor = AVG_LUMINANCE[floorMaterial] ?? 0.7;
+  // Measure actual average luminance from the texture (one-time, downsampled)
+  // so the shader can normalize correctly regardless of texture brightness
+  const normFactor = useMemo(() => {
+    const img = albedoTex.image;
+    if (!img || !img.width) return 0.5;
+    try {
+      const canvas = document.createElement("canvas");
+      const size = 64; // downsample for speed
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return 0.5;
+      ctx.drawImage(img, 0, 0, size, size);
+      const data = ctx.getImageData(0, 0, size, size).data;
+      let total = 0;
+      const pixels = data.length / 4;
+      for (let i = 0; i < data.length; i += 4) {
+        total += (data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114) / 255;
+      }
+      const avg = total / pixels;
+      return Math.max(avg, 0.1); // clamp to avoid division by near-zero
+    } catch {
+      return 0.5;
+    }
+  }, [albedoTex]);
 
   // Shader modifier: converts albedo to grayscale detail when custom color is active.
   // The detail map preserves surface pattern (marble veining, wood grain) while
