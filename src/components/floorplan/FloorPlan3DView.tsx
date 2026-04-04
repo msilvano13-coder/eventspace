@@ -3,7 +3,7 @@
 import React, { useMemo, useCallback, useEffect, useState, useRef, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, MeshReflectorMaterial } from "@react-three/drei";
-import { ACESFilmicToneMapping } from "three";
+import { ACESFilmicToneMapping, PCFSoftShadowMap } from "three";
 import { LightingZone, Tablescape } from "@/lib/types";
 import { ErrorBoundary } from "./FloorPlan3DErrorBoundary";
 import VenueEnvironment, { VenuePresetDef, VENUE_PRESETS } from "./VenueEnvironment";
@@ -127,38 +127,50 @@ function FloorPlan3DScene({
       ]} />
 
       {/* Scene lighting — mood-driven key + fill, color cast blended toward neutral */}
-      <ambientLight intensity={lightingEnabled ? LIGHTING_MOODS[settings.lightingMood].ambientIntensity * 0.4 : LIGHTING_MOODS[settings.lightingMood].ambientIntensity} color={blendToNeutral(LIGHTING_MOODS[settings.lightingMood].ambientColor, settings.lightingColorCast)} />
-      {/* Key light — directional from upper-right */}
-      <directionalLight
-        position={[cx + maxDim * 0.4, maxDim * 0.6, cz + maxDim * 0.3]}
-        intensity={lightingEnabled ? LIGHTING_MOODS[settings.lightingMood].keyIntensity * 0.4 : LIGHTING_MOODS[settings.lightingMood].keyIntensity}
-        color={blendToNeutral(LIGHTING_MOODS[settings.lightingMood].keyColor, settings.lightingColorCast)}
-        castShadow={settings.showShadows}
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-left={-maxDim}
-        shadow-camera-right={maxDim}
-        shadow-camera-top={maxDim}
-        shadow-camera-bottom={-maxDim}
-        shadow-bias={-0.0002}
-        shadow-normalBias={0.02}
-      />
-      {/* Fill light — from opposite side, dims when user lighting takes over */}
-      <directionalLight
-        position={[cx - maxDim * 0.3, maxDim * 0.4, cz - maxDim * 0.3]}
-        intensity={lightingEnabled ? LIGHTING_MOODS[settings.lightingMood].fillIntensity * 0.3 : LIGHTING_MOODS[settings.lightingMood].fillIntensity}
-        color={blendToNeutral(LIGHTING_MOODS[settings.lightingMood].fillColor, settings.lightingColorCast)}
-      />
-      {/* Rim light for edge separation — softer when user lighting is on */}
-      <directionalLight
-        position={[cx, maxDim * 0.3, cz - maxDim * 0.5]}
-        intensity={lightingEnabled ? 0.06 : 0.12}
-        color={blendToNeutral("#f0ece6", settings.lightingColorCast)}
-      />
-      {/* Bounce light from below — simulates floor reflection */}
-      <hemisphereLight
-        args={[blendToNeutral("#faf7f0", settings.lightingColorCast), blendToNeutral("#d4c8b8", settings.lightingColorCast), lightingEnabled ? 0.08 : 0.15]}
-      />
+      {/* roomDimmer (0–1) scales ambient scene lights when lighting mode is active */}
+      {(() => {
+        const mood = LIGHTING_MOODS[settings.lightingMood];
+        const dim = lightingEnabled ? 0.25 : 1;
+        return (
+          <>
+            <ambientLight
+              intensity={lightingEnabled ? mood.ambientIntensity * 0.4 * dim : mood.ambientIntensity}
+              color={blendToNeutral(mood.ambientColor, settings.lightingColorCast)}
+            />
+            {/* Key light — directional from upper-right */}
+            <directionalLight
+              position={[cx + maxDim * 0.4, maxDim * 0.6, cz + maxDim * 0.3]}
+              intensity={lightingEnabled ? mood.keyIntensity * 0.4 * dim : mood.keyIntensity}
+              color={blendToNeutral(mood.keyColor, settings.lightingColorCast)}
+              castShadow={settings.showShadows}
+              shadow-mapSize-width={2048}
+              shadow-mapSize-height={2048}
+              shadow-camera-left={-maxDim}
+              shadow-camera-right={maxDim}
+              shadow-camera-top={maxDim}
+              shadow-camera-bottom={-maxDim}
+              shadow-bias={-0.0002}
+              shadow-normalBias={0.02}
+            />
+            {/* Fill light — from opposite side, dims when user lighting takes over */}
+            <directionalLight
+              position={[cx - maxDim * 0.3, maxDim * 0.4, cz - maxDim * 0.3]}
+              intensity={lightingEnabled ? mood.fillIntensity * 0.3 * dim : mood.fillIntensity}
+              color={blendToNeutral(mood.fillColor, settings.lightingColorCast)}
+            />
+            {/* Rim light for edge separation — softer when user lighting is on */}
+            <directionalLight
+              position={[cx, maxDim * 0.3, cz - maxDim * 0.5]}
+              intensity={lightingEnabled ? 0.06 * dim : 0.12}
+              color={blendToNeutral("#f0ece6", settings.lightingColorCast)}
+            />
+            {/* Bounce light from below — simulates floor reflection */}
+            <hemisphereLight
+              args={[blendToNeutral("#faf7f0", settings.lightingColorCast), blendToNeutral("#d4c8b8", settings.lightingColorCast), lightingEnabled ? 0.08 * dim : 0.15]}
+            />
+          </>
+        );
+      })()}
 
       {/* Ground plane (fallback if no room) — reflective for marble/hardwood, flat for carpet/concrete */}
       {rooms.length === 0 && (
@@ -331,9 +343,22 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
     };
   }, [floorPlanJSON]);
 
+  const glRef = useRef<any>(null);
+
   const handleCreated = useCallback((state: any) => {
-    // Handle WebGL context loss gracefully
     const renderer = state.gl;
+    glRef.current = renderer;
+
+    // Enable soft shadows on high-quality tier
+    if (settings.qualityOverride === "high" || (!settings.qualityOverride || settings.qualityOverride === "auto")) {
+      renderer.shadowMap.type = PCFSoftShadowMap;
+      renderer.shadowMap.needsUpdate = true;
+    }
+
+    // Set initial exposure
+    renderer.toneMappingExposure = settings.exposure ?? 1.1;
+
+    // Handle WebGL context loss gracefully
     const canvas = renderer.domElement;
     canvas.addEventListener("webglcontextlost", (e: Event) => {
       e.preventDefault();
@@ -341,7 +366,14 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
     canvas.addEventListener("webglcontextrestored", () => {
       // R3F will re-render automatically
     });
-  }, []);
+  }, [settings.qualityOverride, settings.exposure]);
+
+  // Keep exposure in sync when the slider moves
+  useEffect(() => {
+    if (glRef.current) {
+      glRef.current.toneMappingExposure = settings.exposure ?? 1.1;
+    }
+  }, [settings.exposure]);
 
   // Clear caches and dispose GPU resources when the 3D view unmounts
   useEffect(() => {

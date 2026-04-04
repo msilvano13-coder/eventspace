@@ -36,6 +36,7 @@ export interface View3DSettings {
   showShadows: boolean;
   cameraPreset: CameraPreset;
   qualityOverride: "auto" | "low" | "medium" | "high";
+  exposure: number; // tone mapping exposure: 0.5–2.0, default 1.1
 }
 
 export interface ParsedObject {
@@ -86,6 +87,7 @@ export const DEFAULT_SETTINGS: View3DSettings = {
   showShadows: true,
   cameraPreset: "default",
   qualityOverride: "auto",
+  exposure: 1.1,
 };
 
 // ── Material / color lookup tables ──

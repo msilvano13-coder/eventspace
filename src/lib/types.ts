@@ -84,6 +84,7 @@ export interface LightingZone {
   spread: number;         // beam spread angle in degrees (10–120), default varies by type
   notes: string;
   snappedToFurnitureId?: string;  // canvas object data.label when snapped to furniture
+  goboPattern?: string;           // pattern name for gobo projectors (e.g., "leaves", "stars")
 }
 
 export interface View3DSettings {
@@ -102,6 +103,7 @@ export interface View3DSettings {
   showShadows: boolean;
   cameraPreset: "default" | "birds-eye" | "eye-level" | "presentation" | "walkthrough";
   qualityOverride: "auto" | "low" | "medium" | "high";
+  exposure: number;
 }
 
 export interface FloorPlan {

@@ -3,6 +3,7 @@
 import { LightingZone, LightingType } from "@/lib/types";
 import { Trash2, Lightbulb, Link2, Link2Off, Copy } from "lucide-react";
 import { LIGHTING_TYPE_DEFAULTS as TYPE_DEFAULTS } from "@/lib/constants";
+import { GOBO_PATTERNS } from "./3d/gobo-textures";
 
 interface Props {
   zones: LightingZone[];
@@ -294,6 +295,30 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
               <span>Wide</span>
             </div>
           </div>
+
+          {/* Gobo Pattern — only shown for gobo type */}
+          {selectedZone.type === "gobo" && (
+            <div className="mb-3">
+              <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">
+                Gobo Pattern
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {GOBO_PATTERNS.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    onClick={() => updateZone(selectedZone.id, { goboPattern: id })}
+                    className={`px-2.5 py-1 text-xs rounded-full transition-colors ${
+                      (selectedZone.goboPattern ?? "leaves") === id
+                        ? "bg-rose-100 text-rose-700 border border-rose-300"
+                        : "bg-stone-50 text-stone-500 border border-stone-200 hover:bg-stone-100"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Snap status */}
           <div className="mb-3">

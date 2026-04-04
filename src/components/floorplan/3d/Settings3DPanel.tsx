@@ -254,6 +254,19 @@ export function Settings3DPanel({
               />
               <span className="text-xs text-stone-400 w-10 text-right">{Math.round(settings.lightingColorCast * 100)}%</span>
             </div>
+            <div className="flex items-center gap-2 mt-2">
+              <label className="text-xs text-stone-400 whitespace-nowrap">Exposure</label>
+              <input
+                type="range"
+                min={0.5}
+                max={2.0}
+                step={0.05}
+                value={settings.exposure ?? 1.1}
+                onChange={(e) => update("exposure", parseFloat(e.target.value))}
+                className="flex-1 h-1.5 accent-indigo-500"
+              />
+              <span className="text-xs text-stone-400 w-10 text-right">{(settings.exposure ?? 1.1).toFixed(1)}</span>
+            </div>
           </div>
 
           {/* Camera Preset */}
