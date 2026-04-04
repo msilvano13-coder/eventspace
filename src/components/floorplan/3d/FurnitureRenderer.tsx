@@ -352,24 +352,13 @@ export function FurnitureMesh({ obj, originX, originY, settings, tablescapes }: 
             </mesh>
           );
         })}
-        {/* Centerpiece or tablescape items */}
+        {/* Tablescape items (only if assigned) */}
         {obj.tablescapeId && tablescapes && tablescapes.find((t) => t.id === obj.tablescapeId) ? (
           <TablescapeItems3D
             tablescape={tablescapes.find((t) => t.id === obj.tablescapeId)!}
             tableTopY={tableTopY + topThick / 2}
           />
-        ) : (
-          <>
-            <mesh position={[0, tableTopY + topThick / 2 + 2 * S, 0]} castShadow>
-              <cylinderGeometry args={[0.8 * S, 1.2 * S, 4 * S, 8]} />
-              <meshStandardMaterial color={strokeColor} roughness={0.3} metalness={0.15} />
-            </mesh>
-            <mesh position={[0, tableTopY + topThick / 2 + 5 * S, 0]} castShadow>
-              <sphereGeometry args={[1.5 * S, 8, 8]} />
-              <meshStandardMaterial color={fillColor} roughness={0.7} metalness={0} />
-            </mesh>
-          </>
-        )}
+        ) : null}
         {settings.showLabels && <FurnitureLabel label={obj.label} y={tableTopY + topThick + 2 * S} />}
       </group>
     );
