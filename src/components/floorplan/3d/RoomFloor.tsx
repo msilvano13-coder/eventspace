@@ -98,20 +98,23 @@ function TexturedFloor({
   }, [albedoTex, normalTex, roughTex, aoTex, paths.ao, repeat, bbox.w, bbox.d]);
 
   // Floor color behavior:
-  // - No custom color (null): show raw texture as-is (color=#ffffff = no tint)
-  // - Custom color set: Three.js multiplies color × albedo texture, preserving
-  //   surface detail (veining, grain, pattern) while tinting to the chosen color.
-  //   Normal + roughness maps stay active for surface finish.
+  // - No custom color (null): show raw albedo texture as-is (full detail)
+  // - Custom color set: drop albedo texture so user's color shows directly.
+  //   Normal + roughness maps stay active for surface finish (bumps, shininess).
+  //   MeshReflectorMaterial overlay (separate mesh) provides reflections.
+  //   Note: Three.js color × albedo is multiplicative — can't go lighter than
+  //   the texture, so we must drop albedo for user to pick light colors.
+  const hasCustomColor = !!floorColor;
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[bbox.cx, 0.001, bbox.cz]} receiveShadow>
       <planeGeometry args={[bbox.w, bbox.d]} />
       <meshStandardMaterial
-        map={albedoTex}
+        map={hasCustomColor ? null : albedoTex}
         normalMap={normalTex}
-        normalScale={new THREE.Vector2(0.8, 0.8)}
+        normalScale={new THREE.Vector2(hasCustomColor ? 0.5 : 0.8, hasCustomColor ? 0.5 : 0.8)}
         roughnessMap={roughTex}
-        aoMap={paths.ao ? aoTex : null}
+        aoMap={!hasCustomColor && paths.ao ? aoTex : null}
         aoMapIntensity={0.6}
         color={floorColor ?? "#ffffff"}
         metalness={matProps.metalness}

@@ -2093,9 +2093,11 @@ export async function replaceTablescapes(
     });
 
     if (rpcError) {
-      // If the RPC function doesn't exist yet, fall back to direct operations
-      if (rpcError.message.includes("replace_tablescape_items") || rpcError.code === "42883") {
-        console.warn("[replaceTablescapes] RPC not available, falling back to direct ops");
+      // If the RPC function doesn't exist or any RPC error, fall back to direct operations
+      const isMissingRPC = rpcError.message.includes("replace_tablescape_items") || rpcError.code === "42883";
+      const isTimeout = rpcError.message.includes("timeout");
+      if (isMissingRPC || isTimeout) {
+        // Fallback: direct delete + insert (slower due to per-row RLS)
         const { error: delItemError } = await supabase
           .from("tablescape_items")
           .delete()

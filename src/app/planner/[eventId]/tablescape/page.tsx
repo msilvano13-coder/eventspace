@@ -53,15 +53,35 @@ export default function TablescapePage() {
     }
   }, [event, eventId, updateEvent, tablescapes.length, coreLoaded]);
 
+  const savePendingRef = useRef<Tablescape | null>(null);
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleSave = useCallback(
     (updated: Tablescape) => {
       const current = tablescapesRef.current;
       const currentId = resolvedIdRef.current;
       if (!currentId || current.length === 0) return;
+
+      // Immediately update the local ref so the editor stays in sync
       const updatedList = current.map((t) =>
         t.id === currentId ? updated : t
       );
-      updateEvent(eventId, { tablescapes: updatedList });
+      tablescapesRef.current = updatedList;
+      savePendingRef.current = updated;
+
+      // Debounce the actual DB save to avoid hammering replaceTablescapes
+      // on every item placement/move (which causes statement timeouts)
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = setTimeout(() => {
+        const pending = savePendingRef.current;
+        if (!pending) return;
+        savePendingRef.current = null;
+        const latest = tablescapesRef.current;
+        const latestList = latest.map((t) =>
+          t.id === currentId ? pending : t
+        );
+        updateEvent(eventId, { tablescapes: latestList });
+      }, 800);
     },
     [eventId, updateEvent]
   );
