@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback } from "react";
 import { useTexture, MeshReflectorMaterial } from "@react-three/drei";
 import * as THREE from "three";
 import { useQuality } from "../QualityTier";
@@ -98,28 +98,63 @@ function TexturedFloor({
   }, [albedoTex, normalTex, roughTex, aoTex, paths.ao, repeat, bbox.w, bbox.d]);
 
   // Floor color behavior:
-  // - No custom color (null): show raw albedo texture as-is (full detail)
-  // - Custom color set: drop albedo texture so user's color shows directly.
-  //   Normal + roughness maps stay active for surface finish (bumps, shininess).
-  //   MeshReflectorMaterial overlay (separate mesh) provides reflections.
-  //   Note: Three.js color × albedo is multiplicative — can't go lighter than
-  //   the texture, so we must drop albedo for user to pick light colors.
+  // - No custom color (null): show raw albedo texture as-is (full natural detail)
+  // - Custom color set: shader converts albedo to grayscale "detail map"
+  //   (preserving veining/grain pattern) then multiplies by user's chosen color.
+  //   Result: white marble with dark veining, blue wood with grain, etc.
+  //   This overcomes Three.js multiplicative color×albedo limitation.
   const hasCustomColor = !!floorColor;
+
+  // Average luminance per material type (pre-measured from textures)
+  // Used to normalize grayscale so average brightness → 1.0
+  const AVG_LUMINANCE: Record<string, number> = {
+    hardwood: 0.55,
+    marble: 0.82,
+    carpet: 0.45,
+    concrete: 0.65,
+    tile: 0.80,
+  };
+  const normFactor = AVG_LUMINANCE[floorMaterial] ?? 0.7;
+
+  // Shader modifier: converts albedo to grayscale detail when custom color is active.
+  // The detail map preserves surface pattern (marble veining, wood grain) while
+  // allowing the user's color to dominate. Grayscale is normalized so average
+  // brightness maps to 1.0 — this means picking white gives actual white.
+  const onBeforeCompile = useCallback((shader: { fragmentShader: string }) => {
+    shader.fragmentShader = shader.fragmentShader.replace(
+      '#include <map_fragment>',
+      `
+      #ifdef USE_MAP
+        vec4 sampledDiffuseColor = texture2D( map, vMapUv );
+        #ifdef DECODE_VIDEO_TEXTURE
+          sampledDiffuseColor = vec4( mix( pow( sampledDiffuseColor.rgb * 0.9478672986 + vec3( 0.0521327014 ), vec3( 2.4 ) ), sampledDiffuseColor.rgb * 0.0773993808, vec3( lessThanEqual( sampledDiffuseColor.rgb, vec3( 0.04045 ) ) ) ), sampledDiffuseColor.a );
+        #endif
+        // Convert to luminance-only detail: preserves texture pattern, removes color
+        float _lum = dot(sampledDiffuseColor.rgb, vec3(0.299, 0.587, 0.114));
+        float _detail = clamp(_lum / ${normFactor.toFixed(3)}, 0.0, 1.5);
+        // Apply: user_color × grayscale_detail (instead of user_color × full_texture)
+        diffuseColor = vec4(diffuse * _detail, opacity * sampledDiffuseColor.a);
+      #endif
+      `
+    );
+  }, [normFactor]);
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[bbox.cx, 0.001, bbox.cz]} receiveShadow>
       <planeGeometry args={[bbox.w, bbox.d]} />
       <meshStandardMaterial
-        map={hasCustomColor ? null : albedoTex}
+        key={hasCustomColor ? `detail-${floorMaterial}` : `standard-${floorMaterial}`}
+        map={albedoTex}
         normalMap={normalTex}
-        normalScale={new THREE.Vector2(hasCustomColor ? 0.5 : 0.8, hasCustomColor ? 0.5 : 0.8)}
+        normalScale={new THREE.Vector2(0.8, 0.8)}
         roughnessMap={roughTex}
-        aoMap={!hasCustomColor && paths.ao ? aoTex : null}
-        aoMapIntensity={0.6}
+        aoMap={paths.ao ? aoTex : null}
+        aoMapIntensity={hasCustomColor ? 0.3 : 0.6}
         color={floorColor ?? "#ffffff"}
         metalness={matProps.metalness}
         envMapIntensity={matProps.envMapIntensity}
         side={THREE.DoubleSide}
+        onBeforeCompile={hasCustomColor ? onBeforeCompile : undefined}
       />
     </mesh>
   );
