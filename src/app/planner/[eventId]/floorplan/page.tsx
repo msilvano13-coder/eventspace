@@ -12,6 +12,7 @@ import { replaceLayoutObjects } from "@/lib/floorplan/layout-objects";
 import { v4 as uuid } from "uuid";
 import { fetchGuestRelationships, updateFloorPlanSettings } from "@/lib/supabase/db";
 import { exportFloorPlanPDF } from "@/lib/floorplan-export-pdf";
+import { showErrorToast } from "@/lib/error-toast";
 import SeatingPanel from "@/components/floorplan/SeatingPanel";
 import LightingPanel from "@/components/floorplan/LightingPanel";
 import { FloorPlanErrorBoundary } from "@/components/floorplan/FloorPlanErrorBoundary";
@@ -135,7 +136,7 @@ export default function FloorPlanPage() {
       settingsSaveTimeoutRef.current = setTimeout(() => {
         updateFloorPlanSettings(currentPlanId, newSettings as unknown as Record<string, unknown>)
           .catch((err) => {
-            console.error("[FloorPlan] Failed to save 3D settings:", err);
+            showErrorToast("Failed to save 3D settings. Try again.");
           });
       }, 600);
     },
