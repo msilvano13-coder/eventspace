@@ -456,6 +456,6 @@ export const LIGHTING_TYPE_DEFAULTS: Record<LightingType, { name: string; color:
   pinspot:   { name: "Pin Spot",     color: "#f5f5f4", size: 30,  intensity: 60, height: 14, spread: 15 },
   gobo:      { name: "Gobo",         color: "#fb7185", size: 45,  intensity: 50, height: 12, spread: 40 },
   wash:      { name: "Wash Light",   color: "#60a5fa", size: 80,  intensity: 65, height: 10, spread: 90 },
-  string:    { name: "String Light", color: "#fde68a", size: 40,  intensity: 75, height: 10, spread: 60 },
+  string:    { name: "String Light", color: "#fde68a", size: 120, intensity: 75, height: 10, spread: 60 },
   candles:   { name: "Candles",      color: "#f59e0b", size: 20,  intensity: 40, height: 3,  spread: 80 },
 };
