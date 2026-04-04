@@ -98,16 +98,16 @@ function TexturedFloor({
   }, [albedoTex, normalTex, roughTex, aoTex, paths.ao, repeat, bbox.w, bbox.d]);
 
   // Floor color behavior:
-  // - No custom color (null): show raw texture as-is
-  // - Custom color set: use the color directly, texture provides detail/pattern only
-  //   via normal + roughness maps (albedo map is dimmed so color dominates)
-  const hasCustomColor = !!floorColor;
+  // - No custom color (null): show raw texture as-is (color=#ffffff = no tint)
+  // - Custom color set: Three.js multiplies color × albedo texture, preserving
+  //   surface detail (veining, grain, pattern) while tinting to the chosen color.
+  //   Normal + roughness maps stay active for surface finish.
 
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[bbox.cx, 0.001, bbox.cz]} receiveShadow>
       <planeGeometry args={[bbox.w, bbox.d]} />
       <meshStandardMaterial
-        map={hasCustomColor ? null : albedoTex}
+        map={albedoTex}
         normalMap={normalTex}
         normalScale={new THREE.Vector2(0.8, 0.8)}
         roughnessMap={roughTex}

@@ -10,7 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { FloorPlan, Guest, GuestRelationship, LayoutObject, LightingZone, RoomShape, View3DSettings, createDefaultFloorPlans } from "@/lib/types";
 import { replaceLayoutObjects } from "@/lib/floorplan/layout-objects";
 import { v4 as uuid } from "uuid";
-import { fetchGuestRelationships } from "@/lib/supabase/db";
+import { fetchGuestRelationships, updateFloorPlanSettings } from "@/lib/supabase/db";
 import { exportFloorPlanPDF } from "@/lib/floorplan-export-pdf";
 import SeatingPanel from "@/components/floorplan/SeatingPanel";
 import LightingPanel from "@/components/floorplan/LightingPanel";
@@ -122,17 +122,24 @@ export default function FloorPlanPage() {
     []
   );
 
+  const settingsSaveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const handleSettingsChange = useCallback(
     (newSettings: View3DSettings) => {
-      const currentPlans = validPlansRef.current;
       const currentPlanId = resolvedPlanIdRef.current;
-      if (!currentPlanId || currentPlans.length === 0) return;
-      const updated = currentPlans.map((fp) =>
-        fp.id === currentPlanId ? { ...fp, view3dSettings: newSettings } : fp
-      );
-      updateEvent(eventId, { floorPlans: updated });
+      if (!currentPlanId) return;
+
+      // Debounced targeted DB update — only writes the view3d_settings column,
+      // avoiding the full replaceFloorPlans upsert (which re-sends massive JSON
+      // blobs for ALL plans and causes statement timeouts).
+      if (settingsSaveTimeoutRef.current) clearTimeout(settingsSaveTimeoutRef.current);
+      settingsSaveTimeoutRef.current = setTimeout(() => {
+        updateFloorPlanSettings(currentPlanId, newSettings as unknown as Record<string, unknown>)
+          .catch((err) => {
+            console.error("[FloorPlan] Failed to save 3D settings:", err);
+          });
+      }, 600);
     },
-    [eventId, updateEvent]
+    []
   );
 
   // Auto-create default floor plans if none valid exist (wait for core data from DB)

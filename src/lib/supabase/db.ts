@@ -1814,6 +1814,22 @@ export async function replaceFloorPlans(
   }
 }
 
+/**
+ * Targeted update for a single floor plan's view3d_settings.
+ * Avoids re-upserting the full JSON blob (which can be massive and cause timeouts).
+ */
+export async function updateFloorPlanSettings(
+  planId: string,
+  settings: Record<string, unknown>
+): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("floor_plans")
+    .update({ view3d_settings: settings })
+    .eq("id", planId);
+  if (error) throw new Error(`updateFloorPlanSettings: ${error.message}`);
+}
+
 export async function replaceExpenses(
   eventId: string,
   expenses: Expense[]
