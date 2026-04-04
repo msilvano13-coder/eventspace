@@ -12,12 +12,14 @@ import { useQuality } from "./QualityTier";
 export default function ProceduralEnvMap({ mood }: { mood: string }) {
   const quality = useQuality();
 
-  // Low quality: use a minimal preset to avoid loading the HDRI
+  // Low quality: skip environment map entirely — the drei presets fetch from
+  // an external CDN which fails on mobile Safari. Solid-color materials still
+  // look fine without env reflections at low quality.
   if (quality.tier === "low") {
-    return <Environment preset="apartment" background={false} />;
+    return null;
   }
 
-  // Medium/High: real HDRI for photorealistic reflections
+  // Medium/High: real HDRI for photorealistic reflections (served locally)
   return (
     <Environment
       files="/textures/env/venue.exr"
