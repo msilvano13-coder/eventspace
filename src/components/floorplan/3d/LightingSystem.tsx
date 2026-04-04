@@ -4,7 +4,7 @@ import React, { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { DoubleSide, Color } from "three";
-import { SpotLight } from "@react-three/drei";
+import { SpotLight, useDepthBuffer } from "@react-three/drei";
 import { LightingZone } from "@/lib/types";
 import {
   S,
@@ -112,6 +112,7 @@ export function LightingZone3D({
   canvasHeight,
   castShadow,
   furnitureObjects,
+  depthBuffer,
 }: {
   zone: LightingZone;
   originX: number;
@@ -120,6 +121,7 @@ export function LightingZone3D({
   canvasHeight: number;
   castShadow: boolean;
   furnitureObjects: ParsedObject[];
+  depthBuffer?: THREE.DepthTexture;
 }) {
   const quality = useQuality();
   const shadowMapSize = quality.tier === "high" ? 1024 : 512;
@@ -175,23 +177,21 @@ export function LightingZone3D({
             shadowMapSize={shadowMapSize}
           />
         ) : useVolumetric ? (
-          /* drei SpotLight — volumetric cone rendered via custom shader */
+          /* drei SpotLight — volumetric beam with depth-aware occlusion */
           <SpotLight
             color={zone.color}
             intensity={intensity * 2}
             distance={lightDistance * 1.5}
             angle={spreadRad / 2}
-            penumbra={0.4}
+            penumbra={0.5}
             position={[0, mountHeight, 0]}
             castShadow={castShadow}
             shadow-mapSize-width={castShadow ? shadowMapSize : undefined}
             shadow-mapSize-height={castShadow ? shadowMapSize : undefined}
-            attenuation={5}
-            anglePower={4}
-            opacity={0.15 + t * 0.35}
-            volumetric
-            radiusTop={0.05}
-            radiusBottom={coneRadius}
+            depthBuffer={depthBuffer}
+            attenuation={8}
+            anglePower={5}
+            opacity={0.08 + t * 0.15}
           />
         ) : (
           /* Fallback for low tier — raw spotLight + cone geometry */
@@ -256,23 +256,21 @@ export function LightingZone3D({
     return (
       <group position={[posX, 0, posZ]}>
         {useVolumetric ? (
-          /* drei SpotLight — volumetric upward beam */
+          /* drei SpotLight — volumetric upward beam with depth-aware occlusion */
           <SpotLight
             color={zone.color}
             intensity={intensity * 1.5}
             distance={lightDistance * 1.5}
             angle={spreadRad / 2}
-            penumbra={0.3}
+            penumbra={0.4}
             position={[0, 0.2, 0]}
             castShadow={castShadow}
             shadow-mapSize-width={castShadow ? shadowMapSize : undefined}
             shadow-mapSize-height={castShadow ? shadowMapSize : undefined}
-            attenuation={5}
-            anglePower={3}
-            opacity={0.12 + t * 0.30}
-            volumetric
-            radiusTop={0.08}
-            radiusBottom={coneRadius}
+            depthBuffer={depthBuffer}
+            attenuation={8}
+            anglePower={4}
+            opacity={0.06 + t * 0.15}
           />
         ) : (
           /* Fallback for low tier */
