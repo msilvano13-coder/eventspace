@@ -135,7 +135,7 @@ export default function FloorPlanPage() {
       if (settingsSaveTimeoutRef.current) clearTimeout(settingsSaveTimeoutRef.current);
       settingsSaveTimeoutRef.current = setTimeout(() => {
         updateFloorPlanSettings(currentPlanId, newSettings as unknown as Record<string, unknown>)
-          .catch((err) => {
+          .catch(() => {
             showErrorToast("Failed to save 3D settings. Try again.");
           });
       }, 600);
