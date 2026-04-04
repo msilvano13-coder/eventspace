@@ -130,7 +130,6 @@ export function LightingZone3D({
   canvasHeight,
   castShadow,
   furnitureObjects,
-  depthBuffer,
 }: {
   zone: LightingZone;
   originX: number;
@@ -139,7 +138,6 @@ export function LightingZone3D({
   canvasHeight: number;
   castShadow: boolean;
   furnitureObjects: ParsedObject[];
-  depthBuffer?: THREE.DepthTexture;
 }) {
   const quality = useQuality();
   const shadowMapSize = quality.tier === "high" ? 1024 : 512;
@@ -426,13 +424,13 @@ export function LightingZone3D({
   // Small bulb positions in a gentle arc — 5 bulbs spread along a short catenary
   const bulbSpread = 0.8; // width of the string in world units
   const bulbDroop = 0.15; // how much the center sags
-  const bulbPositions = useMemo(() => [
+  const bulbPositions: [number, number, number][] = [
     [-bulbSpread * 0.5, 0, 0],
     [-bulbSpread * 0.25, -bulbDroop * 0.5, bulbSpread * 0.12],
     [0, -bulbDroop, 0],
     [bulbSpread * 0.25, -bulbDroop * 0.5, -bulbSpread * 0.12],
     [bulbSpread * 0.5, 0, 0],
-  ] as [number, number, number][], []);
+  ];
 
   return (
     <group position={[posX, baseY, posZ]} rotation={[0, (zone.angle ?? 0) * Math.PI / 180, 0]}>

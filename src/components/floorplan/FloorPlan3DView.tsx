@@ -2,7 +2,7 @@
 
 import React, { useMemo, useCallback, useEffect, useState, useRef, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, ContactShadows, MeshReflectorMaterial, useDepthBuffer } from "@react-three/drei";
+import { OrbitControls, ContactShadows, MeshReflectorMaterial } from "@react-three/drei";
 import { ACESFilmicToneMapping, PCFSoftShadowMap } from "three";
 import { LightingZone, Tablescape } from "@/lib/types";
 import { ErrorBoundary } from "./FloorPlan3DErrorBoundary";
@@ -60,9 +60,6 @@ function FloorPlan3DScene({
 
   const rooms = useMemo(() => objects.filter((o) => o.type === "room"), [objects]);
   const furniture = useMemo(() => objects.filter((o) => o.type === "furniture"), [objects]);
-
-  // Depth buffer for volumetric spotlight occlusion — renders scene depth once per frame
-  const depthBuffer = useDepthBuffer({ size: 256, frames: 1 });
 
   // Compute actual room bounding box so venue elements fit the room, not the canvas
   const roomBounds = useMemo(() => {
@@ -240,7 +237,6 @@ function FloorPlan3DScene({
             canvasHeight={canvasHeight}
             castShadow={i < MAX_SHADOW_LIGHTS}
             furnitureObjects={furniture}
-            depthBuffer={depthBuffer}
           />
         ))}
 
