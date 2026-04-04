@@ -795,8 +795,8 @@ function moodBoardImageFromRow(r: any): MoodBoardImage {
 
 // ── Tablescape ──
 
-function tablescapeItemToRow(item: TablescapeItem, tablescapeId: string, index: number = 0) {
-  return {
+function tablescapeItemToRow(item: TablescapeItem, tablescapeId: string, index: number = 0, userId?: string) {
+  const row: Record<string, unknown> = {
     id: item.id,
     tablescape_id: tablescapeId,
     asset_id: item.assetId,
@@ -808,6 +808,8 @@ function tablescapeItemToRow(item: TablescapeItem, tablescapeId: string, index: 
     color_override: item.colorOverride ?? null,
     sort_order: index,
   };
+  if (userId) row.user_id = userId;
+  return row;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -2084,7 +2086,7 @@ export async function replaceTablescapes(
   // Replace tablescape items via RPC (SECURITY DEFINER bypasses per-row RLS).
   // Falls back to direct delete+insert if the RPC hasn't been deployed yet.
   for (const t of tablescapes) {
-    const itemRows = t.items.map((item, i) => tablescapeItemToRow(item, t.id, i));
+    const itemRows = t.items.map((item, i) => tablescapeItemToRow(item, t.id, i, userId));
 
     const { error: rpcError } = await supabase.rpc("replace_tablescape_items", {
       p_tablescape_id: t.id,

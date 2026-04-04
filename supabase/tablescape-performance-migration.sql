@@ -1,6 +1,6 @@
 -- =============================================================================
 -- Tablescape performance fix: index + RPC for fast item replacement
--- Run this AFTER tablescape-migration.sql
+-- Run this AFTER tablescape-migration.sql AND phase2.5-rls-denormalization.sql
 -- =============================================================================
 
 -- 1. Add composite index on tablescapes(id, user_id) so the RLS policy
@@ -12,6 +12,7 @@ CREATE INDEX IF NOT EXISTS idx_tablescapes_id_user_id
 -- 2. Create a SECURITY DEFINER function that replaces all tablescape items
 --    for a single tablescape in one shot, bypassing per-row RLS evaluation.
 --    The function verifies ownership before making changes.
+--    Includes user_id column required by phase2.5-rls-denormalization.
 CREATE OR REPLACE FUNCTION replace_tablescape_items(
   p_tablescape_id UUID,
   p_user_id UUID,
@@ -34,12 +35,13 @@ BEGIN
   -- Delete existing items
   DELETE FROM tablescape_items WHERE tablescape_id = p_tablescape_id;
 
-  -- Insert new items from JSONB array
+  -- Insert new items from JSONB array (includes user_id for RLS denormalization)
   IF jsonb_array_length(p_items) > 0 THEN
-    INSERT INTO tablescape_items (id, tablescape_id, asset_id, position_x, position_y, position_z, rotation_y, scale, color_override, sort_order)
+    INSERT INTO tablescape_items (id, tablescape_id, user_id, asset_id, position_x, position_y, position_z, rotation_y, scale, color_override, sort_order)
     SELECT
       COALESCE((item->>'id')::UUID, gen_random_uuid()),
       p_tablescape_id,
+      p_user_id,
       item->>'asset_id',
       COALESCE((item->>'position_x')::NUMERIC, 0),
       COALESCE((item->>'position_y')::NUMERIC, 0),
