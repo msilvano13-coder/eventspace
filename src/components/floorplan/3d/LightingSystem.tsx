@@ -4,7 +4,7 @@ import React, { useRef, useMemo } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { DoubleSide, Color } from "three";
-import { SpotLight, useDepthBuffer } from "@react-three/drei";
+// drei SpotLight removed — using raw spotLight + emissive cone for reliable visible beams
 import { LightingZone } from "@/lib/types";
 import {
   S,
@@ -67,39 +67,57 @@ function CandleLight({ posX, posY, posZ, color, intensity, lightDistance, castSh
   );
 }
 
-/** Gobo projector — native spotLight with texture map for pattern projection */
-function GoboProjector({ color, intensity, distance, angle, penumbra, mountHeight, pattern, castShadow, shadowMapSize }: {
-  color: Color; intensity: number; distance: number; angle: number; penumbra: number;
-  mountHeight: number; pattern: string; castShadow: boolean; shadowMapSize: number;
+/** Gobo beam — spotlight + patterned cone + patterned ground projection */
+function GoboBeam({ color, intensity, t, lightDistance, spreadRad, mountHeight, coneHeight, coneRadius, pattern, castShadow, shadowMapSize }: {
+  color: Color; intensity: number; t: number; lightDistance: number; spreadRad: number;
+  mountHeight: number; coneHeight: number; coneRadius: number;
+  pattern: string; castShadow: boolean; shadowMapSize: number;
 }) {
-  const spotRef = useRef<THREE.SpotLight>(null);
-  const targetRef = useRef<THREE.Object3D>(null);
   const goboMap = useMemo(() => getGoboTexture(pattern), [pattern]);
-
-  useFrame(() => {
-    if (spotRef.current && targetRef.current) {
-      spotRef.current.target = targetRef.current;
-      if (spotRef.current.map !== goboMap) {
-        spotRef.current.map = goboMap;
-      }
-    }
-  });
 
   return (
     <>
+      {/* SpotLight for actual scene lighting */}
       <spotLight
-        ref={spotRef}
         color={color}
-        intensity={intensity}
-        distance={distance}
-        angle={angle}
-        penumbra={penumbra}
+        intensity={intensity * 2}
+        distance={lightDistance * 1.5}
+        angle={spreadRad / 2}
+        penumbra={0.4}
         position={[0, mountHeight, 0]}
+        target-position={[0, 0, 0]}
         castShadow={castShadow}
         shadow-mapSize-width={castShadow ? shadowMapSize : undefined}
         shadow-mapSize-height={castShadow ? shadowMapSize : undefined}
       />
-      <object3D ref={targetRef} position={[0, 0, 0]} />
+      {/* Visible beam cone with emissive glow */}
+      <mesh position={[0, mountHeight - coneHeight / 2, 0]}>
+        <coneGeometry args={[coneRadius, coneHeight, 32, 1, true]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={0.15 + t * 0.4}
+          toneMapped={false}
+          transparent
+          opacity={0.06 + t * 0.18}
+          side={DoubleSide}
+          depthWrite={false}
+        />
+      </mesh>
+      {/* Patterned ground projection — gobo texture as alphaMap, raised above surfaces */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.25, 0]}>
+        <circleGeometry args={[coneRadius * 1.2, 64]} />
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={0.5 + t * 1.5}
+          toneMapped={false}
+          transparent
+          opacity={0.15 + t * 0.4}
+          alphaMap={goboMap}
+          depthWrite={false}
+        />
+      </mesh>
     </>
   );
 }
@@ -140,23 +158,40 @@ export function LightingZone3D({
   const isUplight = UPLIGHT_TYPES.has(zone.type);
   const lightDistance = zone.size * S * 6;
 
-  // If snapped to furniture, calculate the surface height to place light on top
+  // Calculate surface height for furniture-snapped lights (candles, string lights, etc.)
   let snapElevation = 0;
-  if (zone.snappedToFurnitureId) {
-    const snappedObj = furnitureObjects.find(
-      (obj) => obj.label === zone.snappedToFurnitureId
-    );
+  const needsSnap = zone.snappedToFurnitureId || zone.type === "candles";
+  if (needsSnap) {
+    // Try exact label match, then furnitureId match
+    let snappedObj = zone.snappedToFurnitureId
+      ? furnitureObjects.find((obj) => obj.label === zone.snappedToFurnitureId) ||
+        furnitureObjects.find((obj) => obj.furnitureId === zone.snappedToFurnitureId)
+      : null;
+    // Proximity fallback: find nearest furniture to the light's position
+    if (!snappedObj) {
+      let bestDist = 5; // max 5 world units (~5 feet)
+      for (const obj of furnitureObjects) {
+        if (!obj.furnitureId || obj.type !== "furniture") continue;
+        const objPosX = (obj.x - originX) * S;
+        const objPosZ = (obj.y - originY) * S;
+        const dist = Math.sqrt((objPosX - posX) ** 2 + (objPosZ - posZ) ** 2);
+        if (dist < bestDist) {
+          bestDist = dist;
+          snappedObj = obj;
+        }
+      }
+    }
     if (snappedObj) {
       const h = getHeight(snappedObj.furnitureId);
       snapElevation = h * S;  // convert inches to world units
     }
   }
 
-  // ── Downlight spotlight types: volumetric beam from ceiling down ──
+  // ── Downlight spotlight types: visible beam from ceiling down ──
   if (isDownlight) {
     const coneHeight = mountHeight * 0.85;
     const coneRadius = Math.tan(spreadRad / 2) * coneHeight;
-    const useVolumetric = quality.tier !== "low";
+    const useEmissiveCone = quality.tier !== "low";
 
     const isGobo = zone.type === "gobo";
     const goboPattern = zone.goboPattern ?? "leaves";
@@ -164,38 +199,23 @@ export function LightingZone3D({
     return (
       <group position={[posX, 0, posZ]}>
         {isGobo ? (
-          /* Gobo projector — native spotLight with texture map for pattern projection */
-          <GoboProjector
+          /* Gobo projector — spotLight + patterned beam cone + patterned ground pool */
+          <GoboBeam
             color={color}
-            intensity={intensity * 2}
-            distance={lightDistance * 1.5}
-            angle={spreadRad / 2}
-            penumbra={0.4}
+            intensity={intensity}
+            t={t}
+            lightDistance={lightDistance}
+            spreadRad={spreadRad}
             mountHeight={mountHeight}
+            coneHeight={coneHeight}
+            coneRadius={coneRadius}
             pattern={goboPattern}
             castShadow={castShadow}
             shadowMapSize={shadowMapSize}
           />
-        ) : useVolumetric ? (
-          /* drei SpotLight — volumetric beam with depth-aware occlusion */
-          <SpotLight
-            color={zone.color}
-            intensity={intensity * 2}
-            distance={lightDistance * 1.5}
-            angle={spreadRad / 2}
-            penumbra={0.5}
-            position={[0, mountHeight, 0]}
-            castShadow={castShadow}
-            shadow-mapSize-width={castShadow ? shadowMapSize : undefined}
-            shadow-mapSize-height={castShadow ? shadowMapSize : undefined}
-            depthBuffer={depthBuffer}
-            attenuation={8}
-            anglePower={5}
-            opacity={0.08 + t * 0.15}
-          />
         ) : (
-          /* Fallback for low tier — raw spotLight + cone geometry */
           <>
+            {/* Raw spotLight for actual scene lighting */}
             <spotLight
               color={color}
               intensity={intensity * 2}
@@ -208,15 +228,29 @@ export function LightingZone3D({
               shadow-mapSize-width={castShadow ? shadowMapSize : undefined}
               shadow-mapSize-height={castShadow ? shadowMapSize : undefined}
             />
+            {/* Visible beam cone — emissive on medium/high so bloom amplifies it */}
             <mesh position={[0, mountHeight - coneHeight / 2, 0]}>
-              <coneGeometry args={[coneRadius, coneHeight, 24, 1, true]} />
-              <meshStandardMaterial
-                color={color}
-                transparent
-                opacity={0.06 + t * 0.22}
-                side={DoubleSide}
-                depthWrite={false}
-              />
+              <coneGeometry args={[coneRadius, coneHeight, 32, 1, true]} />
+              {useEmissiveCone ? (
+                <meshStandardMaterial
+                  color={color}
+                  emissive={color}
+                  emissiveIntensity={0.2 + t * 0.5}
+                  toneMapped={false}
+                  transparent
+                  opacity={0.06 + t * 0.22}
+                  side={DoubleSide}
+                  depthWrite={false}
+                />
+              ) : (
+                <meshStandardMaterial
+                  color={color}
+                  transparent
+                  opacity={0.06 + t * 0.22}
+                  side={DoubleSide}
+                  depthWrite={false}
+                />
+              )}
             </mesh>
           </>
         )}
@@ -247,58 +281,51 @@ export function LightingZone3D({
     );
   }
 
-  // ── Uplight types: volumetric glow cone upward + wall wash ──
+  // ── Uplight types: upward beam cone + wall wash ──
   if (isUplight) {
     const coneHeight = mountHeight * 1.2;
     const coneRadius = Math.tan(spreadRad / 2) * coneHeight;
-    const useVolumetric = quality.tier !== "low";
+    const useEmissiveCone = quality.tier !== "low";
 
     return (
       <group position={[posX, 0, posZ]}>
-        {useVolumetric ? (
-          /* drei SpotLight — volumetric upward beam with depth-aware occlusion */
-          <SpotLight
-            color={zone.color}
-            intensity={intensity * 1.5}
-            distance={lightDistance * 1.5}
-            angle={spreadRad / 2}
-            penumbra={0.4}
-            position={[0, 0.2, 0]}
-            castShadow={castShadow}
-            shadow-mapSize-width={castShadow ? shadowMapSize : undefined}
-            shadow-mapSize-height={castShadow ? shadowMapSize : undefined}
-            depthBuffer={depthBuffer}
-            attenuation={8}
-            anglePower={4}
-            opacity={0.06 + t * 0.15}
-          />
-        ) : (
-          /* Fallback for low tier */
-          <>
-            <spotLight
+        {/* Raw spotLight aimed upward for actual lighting */}
+        <spotLight
+          color={color}
+          intensity={intensity * 1.5}
+          distance={lightDistance * 1.5}
+          angle={spreadRad / 2}
+          penumbra={0.3}
+          position={[0, 0.2, 0]}
+          target-position={[0, mountHeight, 0]}
+          castShadow={castShadow}
+          shadow-mapSize-width={castShadow ? shadowMapSize : undefined}
+          shadow-mapSize-height={castShadow ? shadowMapSize : undefined}
+        />
+        {/* Upward volumetric cone visual — emissive on medium/high so bloom amplifies it */}
+        <mesh position={[0, 0.2 + coneHeight / 2, 0]} rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[coneRadius, coneHeight, 24, 1, true]} />
+          {useEmissiveCone ? (
+            <meshStandardMaterial
               color={color}
-              intensity={intensity * 1.5}
-              distance={lightDistance * 1.5}
-              angle={spreadRad / 2}
-              penumbra={0.3}
-              position={[0, 0.2, 0]}
-              target-position={[0, mountHeight, 0]}
-              castShadow={castShadow}
-              shadow-mapSize-width={castShadow ? shadowMapSize : undefined}
-              shadow-mapSize-height={castShadow ? shadowMapSize : undefined}
+              emissive={color}
+              emissiveIntensity={0.15 + t * 0.4}
+              toneMapped={false}
+              transparent
+              opacity={0.05 + t * 0.20}
+              side={DoubleSide}
+              depthWrite={false}
             />
-            <mesh position={[0, 0.2 + coneHeight / 2, 0]} rotation={[Math.PI, 0, 0]}>
-              <coneGeometry args={[coneRadius, coneHeight, 24, 1, true]} />
-              <meshStandardMaterial
-                color={color}
-                transparent
-                opacity={0.05 + t * 0.20}
-                side={DoubleSide}
-                depthWrite={false}
-              />
-            </mesh>
-          </>
-        )}
+          ) : (
+            <meshStandardMaterial
+              color={color}
+              transparent
+              opacity={0.05 + t * 0.20}
+              side={DoubleSide}
+              depthWrite={false}
+            />
+          )}
+        </mesh>
 
         {/* Fixture on ground */}
         <mesh position={[0, 0.1, 0]}>
@@ -393,31 +420,68 @@ export function LightingZone3D({
     );
   }
 
-  // ── Other types (string lights, etc.): point light + ground pool ──
-  // If snapped to furniture, place on top of it; otherwise use mountHeight
-  const baseY = snapElevation > 0 ? snapElevation : mountHeight;
+  // ── String lights: cluster of small glowing bulbs with warm ambient glow ──
+  // If snapped to furniture, drape just above it; otherwise hang at mountHeight
+  const baseY = snapElevation > 0 ? snapElevation + 0.3 : mountHeight;
+  // Small bulb positions in a gentle arc — 5 bulbs spread along a short catenary
+  const bulbSpread = 0.8; // width of the string in world units
+  const bulbDroop = 0.15; // how much the center sags
+  const bulbPositions = useMemo(() => [
+    [-bulbSpread * 0.5, 0, 0],
+    [-bulbSpread * 0.25, -bulbDroop * 0.5, bulbSpread * 0.12],
+    [0, -bulbDroop, 0],
+    [bulbSpread * 0.25, -bulbDroop * 0.5, -bulbSpread * 0.12],
+    [bulbSpread * 0.5, 0, 0],
+  ] as [number, number, number][], []);
+
   return (
-    <group position={[posX, baseY, posZ]}>
+    <group position={[posX, baseY, posZ]} rotation={[0, (zone.angle ?? 0) * Math.PI / 180, 0]}>
+      {/* Soft ambient point light — no directional spread */}
       <pointLight
         color={color}
-        intensity={intensity}
-        distance={lightDistance}
-        castShadow={castShadow}
-        shadow-mapSize-width={castShadow ? shadowMapSize : undefined}
-        shadow-mapSize-height={castShadow ? shadowMapSize : undefined}
+        intensity={intensity * 0.6}
+        distance={lightDistance * 0.5}
+        castShadow={false}
       />
-      {/* Fixture indicator — emissive + toneMapped off so bloom picks it up */}
+      {/* Wire between bulbs — thin dark line */}
       <mesh>
-        <sphereGeometry args={[0.12, 12, 12]} />
-        <meshStandardMaterial color={color} emissive={color} emissiveIntensity={2 + t * 3} toneMapped={false} transparent opacity={0.8} />
+        <cylinderGeometry args={[0.005, 0.005, bulbSpread, 4]} />
+        <meshStandardMaterial color="#333" roughness={0.8} metalness={0.2} />
       </mesh>
-      {/* Ground light pool */}
+      {/* Individual bulbs — small emissive spheres that bloom picks up */}
+      {bulbPositions.map((pos, i) => (
+        <group key={i} position={pos}>
+          <mesh>
+            <sphereGeometry args={[0.035, 8, 8]} />
+            <meshStandardMaterial
+              color={color}
+              emissive={color}
+              emissiveIntensity={2 + t * 4}
+              toneMapped={false}
+              transparent
+              opacity={0.9}
+            />
+          </mesh>
+          {/* Each bulb casts a tiny warm glow below it */}
+          {i === 2 && (
+            <pointLight
+              color={color}
+              intensity={intensity * 0.3}
+              distance={lightDistance * 0.3}
+              castShadow={castShadow}
+              shadow-mapSize-width={castShadow ? shadowMapSize : undefined}
+              shadow-mapSize-height={castShadow ? shadowMapSize : undefined}
+            />
+          )}
+        </group>
+      ))}
+      {/* Soft ground glow — small circle, not directional */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -baseY + 0.01, 0]}>
-        <circleGeometry args={[Math.tan(spreadRad / 2) * baseY * 0.7, 24]} />
+        <circleGeometry args={[0.8, 16]} />
         <meshBasicMaterial
           color={color}
           transparent
-          opacity={0.08 + t * 0.20}
+          opacity={0.04 + t * 0.10}
           depthWrite={false}
         />
       </mesh>
