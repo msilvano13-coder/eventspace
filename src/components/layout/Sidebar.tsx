@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet, Settings, Inbox, BarChart3, Search, Heart, FileText, MoreHorizontal, X, LogOut } from "lucide-react";
+import { LayoutDashboard, ClipboardList, BookUser, CalendarDays, Wallet, Settings, Inbox, BarChart3, Search, Heart, FileText, Sparkles, MoreHorizontal, X, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { clearUserIdCache } from "@/lib/supabase/db";
@@ -22,6 +22,7 @@ const navItems = [
   { href: "/planner/directory", label: "Directory", icon: BookUser },
   { href: "/planner/discover", label: "Vendor Search", icon: Search },
   { href: "/planner/preferred", label: "Preferred Vendors", icon: Heart },
+  { href: "/planner/designs", label: "AI Designs", icon: Sparkles },
 ];
 
 // First 4 items + "More" button for mobile bottom nav
