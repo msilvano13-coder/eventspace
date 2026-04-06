@@ -1,0 +1,19 @@
+blender-project/
+blender-project.zip
+generated-models/
+scraped-catalog/
+scraped-floorplan/
+scraped-tents/
+Floorplan Asset Library/
+WEDDING LIBRARY/
+scripts/scrape-*.js
+scripts/batch-*.js
+scripts/build-*.js
+scripts/preview-*.html
+scripts/preview-*.js
+scripts/split-*.js
+asset-library-groups.json
+asset-library-groups.backup.json
+models-manifest.json
+3D_RENDERING_HANDOFF.md
+3d-asset-brief.md
