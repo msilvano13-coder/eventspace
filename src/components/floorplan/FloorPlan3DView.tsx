@@ -5,6 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, MeshReflectorMaterial } from "@react-three/drei";
 import { ACESFilmicToneMapping, PCFSoftShadowMap } from "three";
 import { LightingZone, Tablescape } from "@/lib/types";
+import { showErrorToast } from "@/lib/error-toast";
 import { ErrorBoundary } from "./FloorPlan3DErrorBoundary";
 import VenueEnvironment, { VenuePresetDef, VENUE_PRESETS } from "./VenueEnvironment";
 import ProceduralEnvMap from "./ProceduralEnvMap";
@@ -60,6 +61,20 @@ function FloorPlan3DScene({
 
   const rooms = useMemo(() => objects.filter((o) => o.type === "room"), [objects]);
   const furniture = useMemo(() => objects.filter((o) => o.type === "furniture"), [objects]);
+
+  // QA Protocol 14: Dev-mode 3D render data source assertion
+  useEffect(() => {
+    if (process.env.NODE_ENV === "development" && furniture.length === 0 && floorPlanJSON) {
+      try {
+        const raw = JSON.parse(floorPlanJSON);
+        const jsonObjs = (raw?.objects || []).filter((o: any) => o.type === "Group");
+        if (jsonObjs.length > 0) {
+          showErrorToast(`DEV QA: 3D view has 0 furniture but JSON has ${jsonObjs.length} groups — data source mismatch`);
+          console.error("[QA Protocol 14] 3D parsed 0 furniture objects, but floorPlanJSON contains", jsonObjs.length, "groups");
+        }
+      } catch { /* ignore parse errors */ }
+    }
+  }, [furniture.length, floorPlanJSON]);
 
   // Compute actual room bounding box so venue elements fit the room, not the canvas
   const roomBounds = useMemo(() => {

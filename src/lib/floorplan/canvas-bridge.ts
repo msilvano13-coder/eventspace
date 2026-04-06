@@ -75,11 +75,31 @@ export function layoutObjectsToCanvasJSON(
       subObjects.push(createFabricSubGroup(child, childAsset, offsetX, offsetY, isChair));
     }
 
+    // Compute bounding box of all sub-objects for the wrapper group
+    const primaryW = primary.widthOverride ?? primaryAsset.defaultWidth;
+    const primaryH = primary.heightOverride ?? primaryAsset.defaultHeight;
+    let minX = -primaryW / 2, maxX = primaryW / 2;
+    let minY = -primaryH / 2, maxY = primaryH / 2;
+    for (const child of children) {
+      const ca = assetCatalog.get(child.assetId);
+      if (!ca) continue;
+      const cw = child.widthOverride ?? ca.defaultWidth;
+      const ch = child.heightOverride ?? ca.defaultHeight;
+      const ox = child.positionX - primary.positionX;
+      const oy = child.positionY - primary.positionY;
+      minX = Math.min(minX, ox - cw / 2);
+      maxX = Math.max(maxX, ox + cw / 2);
+      minY = Math.min(minY, oy - ch / 2);
+      maxY = Math.max(maxY, oy + ch / 2);
+    }
+
     // Wrap in combined group
     fabricObjects.push({
       type: "Group",
       left: primary.positionX,
       top: primary.positionY,
+      width: maxX - minX,
+      height: maxY - minY,
       originX: "center",
       originY: "center",
       angle: primary.rotation,
@@ -151,6 +171,8 @@ function createFabricGroup(obj: LayoutObject, asset: AssetDefinition): Record<st
     type: "Group",
     left: obj.positionX,
     top: obj.positionY,
+    width,
+    height,
     originX: "center",
     originY: "center",
     angle: obj.rotation,
@@ -222,6 +244,8 @@ function createFabricSubGroup(
     type: "Group",
     left: offsetX,
     top: offsetY,
+    width,
+    height,
     originX: "center",
     originY: "center",
     angle: obj.rotation,

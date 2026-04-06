@@ -107,6 +107,17 @@ export default function FloorPlanPage() {
         fp.id === currentPlanId ? { ...fp, json } : fp
       );
       updateEvent(eventId, { floorPlans: updated });
+
+      // QA Protocol 13: Dev-mode store consistency assertion
+      if (process.env.NODE_ENV === "development") {
+        setTimeout(() => {
+          const storeJSON = validPlansRef.current.find((fp) => fp.id === currentPlanId)?.json;
+          if (storeJSON !== json) {
+            showErrorToast("DEV QA: Store out of sync after save — handleSave may not be updating the store.");
+            console.error("[QA Protocol 13] Store JSON does not match saved JSON for plan", currentPlanId);
+          }
+        }, 500);
+      }
     },
     [eventId, updateEvent]
   );

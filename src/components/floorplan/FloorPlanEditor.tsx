@@ -38,6 +38,7 @@ import { LAYOUT_TEMPLATES, LayoutTemplate } from "@/lib/layout-templates";
 import {
   ensureObjectId,
   ensureAllObjectIds,
+  recalcGroupDimensions,
   captureObjectState,
   captureSelectionState,
   findOpenPosition,
@@ -414,6 +415,7 @@ export default function FloorPlanEditor({
         c.loadFromJSON(JSON.parse(currentSnapshot)).then(() => {
           createGrid(c, c.getWidth(), c.getHeight());
           ensureAllObjectIds(c);
+          recalcGroupDimensions(c);
           c.requestRenderAll();
           isLoadingRef.current = false;
           syncLightingToCanvas();
@@ -426,6 +428,7 @@ export default function FloorPlanEditor({
         c.loadFromJSON(JSON.parse(previousSnapshot)).then(() => {
           createGrid(c, c.getWidth(), c.getHeight());
           ensureAllObjectIds(c);
+          recalcGroupDimensions(c);
           c.requestRenderAll();
           isLoadingRef.current = false;
           syncLightingToCanvas();
@@ -1051,6 +1054,7 @@ export default function FloorPlanEditor({
         return canvas.loadFromJSON(canvasJSON);
       }).then(() => {
         ensureAllObjectIds(canvas);
+        recalcGroupDimensions(canvas);
         createGrid(canvas, canvas.getWidth(), canvas.getHeight());
         canvas.requestRenderAll();
         isLoadingRef.current = false;
@@ -1064,6 +1068,7 @@ export default function FloorPlanEditor({
           const canvasJSON = unwrapCanvasJSON(initialJSON);
           canvas.loadFromJSON(canvasJSON).then(() => {
             ensureAllObjectIds(canvas);
+            recalcGroupDimensions(canvas);
             createGrid(canvas, canvas.getWidth(), canvas.getHeight());
             canvas.requestRenderAll();
             isLoadingRef.current = false;
@@ -1084,6 +1089,7 @@ export default function FloorPlanEditor({
       const canvasJSON = unwrapCanvasJSON(initialJSON);
       canvas.loadFromJSON(canvasJSON).then(() => {
         ensureAllObjectIds(canvas);
+        recalcGroupDimensions(canvas);
         createGrid(canvas, canvas.getWidth(), canvas.getHeight());
         canvas.requestRenderAll();
         isLoadingRef.current = false;

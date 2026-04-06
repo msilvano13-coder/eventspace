@@ -1,4 +1,4 @@
-import { Canvas, FabricObject, ActiveSelection } from "fabric";
+import { Canvas, FabricObject, ActiveSelection, Group } from "fabric";
 import { v4 as uuid } from "uuid";
 import { GRID_SIZE } from "@/lib/constants";
 
@@ -23,6 +23,21 @@ export function ensureAllObjectIds(canvas: Canvas): void {
   canvas.getObjects().forEach((o) => {
     if (isContentObject(o)) ensureObjectId(o);
   });
+}
+
+/**
+ * Fix zero-dimension Groups after loadFromJSON.
+ * Fabric.js v6 doesn't always recalculate group bounds from children during
+ * deserialization, leaving groups at 0×0 (invisible). This triggers a
+ * recalculation for any affected groups.
+ */
+export function recalcGroupDimensions(canvas: Canvas): void {
+  for (const obj of canvas.getObjects()) {
+    if (obj instanceof Group && obj.width === 0 && obj.height === 0) {
+      (obj as Group).triggerLayout();
+      obj.setCoords();
+    }
+  }
 }
 
 // ── Object Filtering ──
