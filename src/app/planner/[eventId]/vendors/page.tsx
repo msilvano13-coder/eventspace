@@ -53,6 +53,7 @@ export default function VendorsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [addingPaymentFor, setAddingPaymentFor] = useState<string | null>(null);
   const [paymentForm, setPaymentForm] = useState({ description: "", amount: "", dueDate: "" });
+  const [confirmDeletePayment, setConfirmDeletePayment] = useState<{ vendorId: string; paymentId: string } | null>(null);
 
   if (loading) return <EventLoader className="px-4 py-6 sm:px-6 md:px-8 flex items-center justify-center min-h-[200px]" />;
 
@@ -308,7 +309,7 @@ export default function VendorsPage() {
                               {payment.dueDate && <span className={`text-[10px] ml-2 ${payment.paid ? "text-stone-300" : new Date(payment.dueDate) < new Date() && !payment.paid ? "text-red-500 font-semibold" : "text-stone-400"}`}>{payment.paid ? `Paid ${payment.paidDate}` : `Due ${payment.dueDate}`}</span>}
                             </div>
                             <span className={`text-xs font-medium ${payment.paid ? "text-emerald-600" : "text-stone-600"}`}>{fmt(payment.amount)}</span>
-                            {!readOnly && <button onClick={() => deletePayment(vendor.id, payment.id)} className="opacity-0 group-hover/pay:opacity-100 text-stone-300 hover:text-red-400 transition-all"><X size={12} /></button>}
+                            {!readOnly && <button onClick={() => setConfirmDeletePayment({ vendorId: vendor.id, paymentId: payment.id })} className="opacity-0 group-hover/pay:opacity-100 text-stone-300 hover:text-red-400 transition-all"><X size={12} /></button>}
                           </div>
                         ))}
                         {!readOnly && (addingPaymentFor === vendor.id ? (
@@ -344,6 +345,15 @@ export default function VendorsPage() {
         confirmLabel="Delete"
         onConfirm={() => { if (confirmDeleteId) deleteVendor(confirmDeleteId); setConfirmDeleteId(null); }}
         onCancel={() => setConfirmDeleteId(null)}
+      />
+      <ConfirmDialog
+        open={!!confirmDeletePayment}
+        title="Delete Payment?"
+        message="This payment record will be permanently removed."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={() => { if (confirmDeletePayment) deletePayment(confirmDeletePayment.vendorId, confirmDeletePayment.paymentId); setConfirmDeletePayment(null); }}
+        onCancel={() => setConfirmDeletePayment(null)}
       />
     </div>
   );

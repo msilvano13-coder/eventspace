@@ -11,6 +11,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { uploadToStorage, getPublicUrl, deleteFromStorage } from "@/lib/supabase/storage";
 import { getUserId } from "@/lib/supabase/db";
+import { showErrorToast } from "@/lib/error-toast";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export default function SettingsPage() {
   return (
@@ -36,6 +38,7 @@ function SettingsContent() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [showLogoDeleteConfirm, setShowLogoDeleteConfirm] = useState(false);
   const [teamMemberships, setTeamMemberships] = useState<{ teams: { name: string } }[]>([]);
   const [ownedTeam, setOwnedTeam] = useState<{ plan: string; max_members: number } | null>(null);
 
@@ -64,12 +67,13 @@ function SettingsContent() {
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
             console.error("verify-session failed:", data.error || res.status);
+            showErrorToast("Failed to verify payment session");
             return;
           }
           plannerStore.refetch();
           trackTrialActivated(data.plan || "unknown");
         })
-        .catch((err) => console.error("verify-session failed:", err));
+        .catch((err) => { console.error("verify-session failed:", err); showErrorToast("Failed to verify payment session"); });
       setShowSuccess(true);
       const timer = setTimeout(() => setShowSuccess(false), 5000);
       return () => clearTimeout(timer);
@@ -174,7 +178,7 @@ function SettingsContent() {
       setForm({ ...form, logoUrl: publicUrl });
     } catch (err) {
       console.error("Logo upload failed:", err);
-      alert("Failed to upload logo. Please try again.");
+      showErrorToast("Failed to upload logo. Please try again.");
     }
   }
 
@@ -239,7 +243,7 @@ function SettingsContent() {
                   className="w-20 h-20 rounded-xl object-cover border border-stone-200"
                 />
                 <button
-                  onClick={removeLogo}
+                  onClick={() => setShowLogoDeleteConfirm(true)}
                   className="absolute -top-2 -right-2 w-5 h-5 bg-red-400 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X size={10} />
@@ -657,6 +661,15 @@ function SettingsContent() {
           </button>
         </div>
       </div>
+      <ConfirmDialog
+        open={showLogoDeleteConfirm}
+        title="Remove Logo?"
+        message="Your business logo will be removed. You can upload a new one at any time."
+        confirmLabel="Remove"
+        variant="danger"
+        onConfirm={() => { removeLogo(); setShowLogoDeleteConfirm(false); }}
+        onCancel={() => setShowLogoDeleteConfirm(false)}
+      />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { Plus, Sparkles, Calendar, MapPin, Loader2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/supabase/db";
 import type { DesignProject } from "@/lib/types";
+import { showErrorToast } from "@/lib/error-toast";
 
 const STATUS_COLORS: Record<DesignProject["status"], string> = {
   draft: "bg-stone-100 text-stone-600",
@@ -60,6 +61,7 @@ export default function DesignProjectsPage() {
       );
     } catch (err) {
       console.error("Failed to fetch design projects:", err);
+      showErrorToast("Failed to load design projects");
     } finally {
       setLoading(false);
     }
@@ -93,6 +95,7 @@ export default function DesignProjectsPage() {
       router.push(`/planner/designs/${data.id}`);
     } catch (err) {
       console.error("Failed to create project:", err);
+      showErrorToast("Failed to create design project");
     } finally {
       setCreating(false);
     }

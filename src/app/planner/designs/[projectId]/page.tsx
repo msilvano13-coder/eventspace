@@ -21,6 +21,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserId } from "@/lib/supabase/db";
 import { getSignedUrl, deleteFromStorage } from "@/lib/supabase/storage";
 import type { DesignProject, VenuePhoto, GeneratedImage, FloorPlan, LayoutObject } from "@/lib/types";
+import { showErrorToast } from "@/lib/error-toast";
 
 interface EventWithFloorPlans {
   id: string;
@@ -105,6 +106,7 @@ export default function DesignProjectDetailPage() {
       await fetchPhotos();
     } catch (err) {
       console.error("Failed to fetch project:", err);
+      showErrorToast("Failed to load design project");
     } finally {
       setLoading(false);
     }
@@ -147,6 +149,7 @@ export default function DesignProjectDetailPage() {
       setPhotos(photosWithUrls);
     } catch (err) {
       console.error("Failed to fetch photos:", err);
+      showErrorToast("Failed to load venue photos");
     }
   }
 
@@ -222,6 +225,7 @@ export default function DesignProjectDetailPage() {
           ]);
         } catch (err) {
           console.error("Upload failed for file:", fileArr[i].name, err);
+          showErrorToast(`Failed to upload ${fileArr[i].name}`);
         }
       }
 
@@ -238,6 +242,7 @@ export default function DesignProjectDetailPage() {
       setPhotos((prev) => prev.filter((p) => p.id !== photo.id));
     } catch (err) {
       console.error("Failed to remove photo:", err);
+      showErrorToast("Failed to remove photo");
     }
   }
 
@@ -299,6 +304,7 @@ export default function DesignProjectDetailPage() {
       setEventsWithPlans(events);
     } catch (err) {
       console.error("Failed to fetch floor plans:", err);
+      showErrorToast("Failed to load floor plans");
     }
   }
 
@@ -430,6 +436,7 @@ export default function DesignProjectDetailPage() {
         pollTimers.current.set(generationId, timer);
       } catch (err) {
         console.error("Generation failed:", err);
+        showErrorToast("Design generation failed");
         setGenerations((prev) =>
           prev.map((g) =>
             g.id === gen.id

@@ -51,7 +51,7 @@ export default function MoodBoardPage() {
     }
     refreshUrls();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [images.length]);
+  }, [eventId, images.length]);
 
   if (loading) return <EventLoader className="px-4 py-6 sm:px-6 md:px-8 flex items-center justify-center min-h-[200px]" />;
 

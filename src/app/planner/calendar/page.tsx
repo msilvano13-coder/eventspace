@@ -78,6 +78,7 @@ export default function CalendarPage() {
     const map = new Map<string, typeof events>();
     for (const event of events) {
       const d = new Date(event.date);
+      if (isNaN(d.getTime())) continue;
       const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
       const list = map.get(key) ?? [];
       list.push(event);

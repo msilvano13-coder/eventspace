@@ -264,8 +264,10 @@ class EventStore {
           // Event not ready — retry with exponential backoff (max 3 retries)
           const retry = (attempt: number) => {
             if (attempt >= 3) return; // give up after 3 retries
+            if (!this.events.has(eventId)) return; // event evicted or deleted — stop retrying
             const delay = 500 * Math.pow(2, attempt); // 500ms, 1000ms, 2000ms
             setTimeout(() => {
+              if (!this.events.has(eventId)) return; // re-check before applying
               if (!apply()) retry(attempt + 1);
             }, delay);
           };
@@ -301,7 +303,11 @@ class EventStore {
 
   async update(id: string, partial: Partial<Event>): Promise<void> {
     const existing = this.events.get(id);
-    if (!existing) return;
+    if (!existing) {
+      showErrorToast("Changes may not have saved. Please refresh.");
+      devThrow("store.update called for non-cached event", new Error(id));
+      return;
+    }
 
     // Optimistic local update
     const updated = { ...existing, ...partial, updatedAt: new Date().toISOString() };

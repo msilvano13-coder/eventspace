@@ -26,6 +26,7 @@ import {
 import { Guest, GuestRelationship, RelationshipType, RsvpStatus } from "@/lib/types";
 import { fetchGuestRelationships, upsertGuestRelationship, deleteGuestRelationship } from "@/lib/supabase/db";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import { showErrorToast } from "@/lib/error-toast";
 
 const RSVP_COLORS: Record<RsvpStatus, string> = {
   pending: "bg-amber-50 text-amber-600",
@@ -98,6 +99,7 @@ export default function GuestsPage() {
     } catch (err) {
       console.error("addRelationship failed:", err);
       setRelError("Failed to save relationship. Please try again.");
+      showErrorToast("Failed to save relationship");
     }
   }
 
@@ -113,6 +115,7 @@ export default function GuestsPage() {
     } catch (err) {
       console.error("removeRelationship failed:", err);
       setRelError("Failed to remove relationship. Please try again.");
+      showErrorToast("Failed to remove relationship");
     }
   }
 

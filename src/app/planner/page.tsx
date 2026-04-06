@@ -7,6 +7,7 @@ import { useState, useMemo } from "react";
 import { canCreateEvent } from "@/lib/plan-features";
 import { createDefaultFloorPlans } from "@/lib/types";
 import { useIsTeamMember } from "@/hooks/useIsTeamMember";
+import { showErrorToast } from "@/lib/error-toast";
 
 const statusColors: Record<string, string> = {
   planning: "bg-amber-50 text-amber-700",
@@ -357,7 +358,7 @@ export default function PlannerDashboard() {
               setShowModal(false);
             } catch (err) {
               console.error("Failed to create event:", err);
-              alert("Failed to create event. Please try again.");
+              showErrorToast("Failed to create event. Please try again.");
             }
           }}
         />

@@ -457,6 +457,13 @@ export default function FloorPlanEditor({
       return false;
     }
 
+    // Guard: prevent saving an empty canvas (mirrors unmount flush guard)
+    const rawObjects = (json as Record<string, unknown>).objects;
+    if (Array.isArray(rawObjects) && rawObjects.length === 0) {
+      console.warn("[FloorPlan] doSave: empty canvas detected, skipping save to prevent data loss");
+      return false;
+    }
+
     // Legacy save path (Fabric.js JSON blob)
     const serialized = serializeFloorPlan(json as Record<string, unknown>);
     if (!serialized) {

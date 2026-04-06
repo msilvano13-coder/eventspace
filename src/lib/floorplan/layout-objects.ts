@@ -96,6 +96,7 @@ export async function replaceLayoutObjects(
 ): Promise<void> {
   const supabase = createClient();
   const userId = await getUserId();
+  const errors: string[] = [];
 
   // 1. Update floor plan metadata
   const { error: fpError } = await supabase
@@ -109,6 +110,16 @@ export async function replaceLayoutObjects(
 
   if (fpError) {
     console.error("[LayoutObjects] floor plan update error:", fpError.message);
+    errors.push(`metadata: ${fpError.message}`);
+  }
+
+  // Guard: if objects array is empty, only update metadata — do NOT delete existing layout objects
+  if (objects.length === 0) {
+    console.warn("[LayoutObjects] replaceLayoutObjects called with empty objects array — skipping delete");
+    if (errors.length > 0) {
+      throw new Error(`[LayoutObjects] Save had ${errors.length} error(s): ${errors.join("; ")}`);
+    }
+    return;
   }
 
   // 2. Upsert layout objects (parent objects first to satisfy FK)
@@ -121,6 +132,7 @@ export async function replaceLayoutObjects(
       .upsert(parentRows, { onConflict: "id" });
     if (error) {
       console.error("[LayoutObjects] upsert parents error:", error.message);
+      errors.push(`upsert parents: ${error.message}`);
     }
   }
 
@@ -130,30 +142,25 @@ export async function replaceLayoutObjects(
       .upsert(childRows, { onConflict: "id" });
     if (error) {
       console.error("[LayoutObjects] upsert children error:", error.message);
+      errors.push(`upsert children: ${error.message}`);
     }
   }
 
   // 3. Delete objects that are no longer in the list
   const currentIds = objects.map((o) => o.id);
-  if (currentIds.length > 0) {
-    const { error: delError } = await supabase
-      .from("layout_objects")
-      .delete()
-      .eq("floor_plan_id", floorPlanId)
-      .not("id", "in", `(${currentIds.join(",")})`);
+  const { error: delError } = await supabase
+    .from("layout_objects")
+    .delete()
+    .eq("floor_plan_id", floorPlanId)
+    .not("id", "in", `(${currentIds.join(",")})`);
 
-    if (delError) {
-      console.error("[LayoutObjects] delete removed error:", delError.message);
-    }
-  } else {
-    // All objects removed — delete everything for this floor plan
-    const { error: delError } = await supabase
-      .from("layout_objects")
-      .delete()
-      .eq("floor_plan_id", floorPlanId);
+  if (delError) {
+    console.error("[LayoutObjects] delete removed error:", delError.message);
+    errors.push(`delete removed: ${delError.message}`);
+  }
 
-    if (delError) {
-      console.error("[LayoutObjects] delete all error:", delError.message);
-    }
+  // Throw aggregate error so callers can show user feedback
+  if (errors.length > 0) {
+    throw new Error(`[LayoutObjects] Save had ${errors.length} error(s): ${errors.join("; ")}`);
   }
 }

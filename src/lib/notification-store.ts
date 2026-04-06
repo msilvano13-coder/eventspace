@@ -63,21 +63,29 @@ class NotificationStore {
   }
 
   async markAsRead(id: string): Promise<void> {
-    const supabase = createClient();
-    await supabase.from("notifications").update({ read: true }).eq("id", id);
-    this.notifications = this.notifications.map((n) =>
-      n.id === id ? { ...n, read: true } : n
-    );
-    this.emit();
+    try {
+      const supabase = createClient();
+      await supabase.from("notifications").update({ read: true }).eq("id", id);
+      this.notifications = this.notifications.map((n) =>
+        n.id === id ? { ...n, read: true } : n
+      );
+      this.emit();
+    } catch {
+      showErrorToast("Failed to mark notification as read");
+    }
   }
 
   async markAllAsRead(): Promise<void> {
     const supabase = createClient();
     const unreadIds = this.notifications.filter((n) => !n.read).map((n) => n.id);
     if (unreadIds.length === 0) return;
-    await supabase.from("notifications").update({ read: true }).in("id", unreadIds);
-    this.notifications = this.notifications.map((n) => ({ ...n, read: true }));
-    this.emit();
+    try {
+      await supabase.from("notifications").update({ read: true }).in("id", unreadIds);
+      this.notifications = this.notifications.map((n) => ({ ...n, read: true }));
+      this.emit();
+    } catch {
+      showErrorToast("Failed to update notifications");
+    }
   }
 
   subscribe = (listener: Listener): (() => void) => {

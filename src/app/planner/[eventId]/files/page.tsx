@@ -10,6 +10,7 @@ import { ArrowLeft, FileText, Image, Palette, File, Upload, Download, X, Loader2
 import { v4 as uuid } from "uuid";
 import { uploadToStorage, getSignedUrl, deleteFromStorage } from "@/lib/supabase/storage";
 import { getUserId } from "@/lib/supabase/db";
+import { showErrorToast } from "@/lib/error-toast";
 
 const typeIcons: Record<string, any> = {
   contract: FileText,
@@ -69,7 +70,7 @@ export default function FilesPage() {
         updateEvent(eventId, { files: [...event.files, ...newFiles] });
       } catch (err) {
         console.error("File upload failed:", err);
-        alert("Failed to upload files. Please try again.");
+        showErrorToast("Failed to upload files. Please try again.");
       }
       setUploading(false);
     };
@@ -91,7 +92,7 @@ export default function FilesPage() {
       URL.revokeObjectURL(objectUrl);
     } catch (err) {
       console.error("Download failed:", err);
-      alert("Failed to download file.");
+      showErrorToast("Failed to download file.");
     }
     setDownloading(null);
   }

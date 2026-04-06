@@ -106,12 +106,13 @@ export function useEventSubEntities(eventId: string, keys: string[]): void {
     }
   }
 
+  const keysKey = keys.join(",");
   useEffect(() => {
     if (!eventId) return;
     for (const key of keys) {
       store.ensureSubEntity(eventId, key);
     }
-  }, [eventId, ...keys]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [eventId, keysKey]); // eslint-disable-line react-hooks/exhaustive-deps
 }
 
 export function useEventCoreLoaded(eventId: string): boolean {

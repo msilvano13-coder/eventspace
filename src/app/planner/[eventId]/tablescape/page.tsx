@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Tablescape, TableShape, createDefaultTablescapes } from "@/lib/types";
 import { v4 as uuid } from "uuid";
 import { useIsTeamMember } from "@/hooks/useIsTeamMember";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 const TablescapeEditor = dynamic(
   () => import("@/components/tablescape/TablescapeEditor"),
@@ -34,6 +35,7 @@ export default function TablescapePage() {
   const [activeTablescapeId, setActiveTablescapeId] = useState<string | null>(null);
   const [showAddTab, setShowAddTab] = useState(false);
   const [newTabName, setNewTabName] = useState("");
+  const [confirmDeleteTabId, setConfirmDeleteTabId] = useState<string | null>(null);
   const autoCreatedRef = useRef(false);
   const tablescapesRef = useRef<Tablescape[]>([]);
   const resolvedIdRef = useRef<string | null>(null);
@@ -86,6 +88,11 @@ export default function TablescapePage() {
     [eventId, updateEvent]
   );
 
+  // Cleanup debounce timer on unmount to prevent stale saves
+  useEffect(() => () => {
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+  }, []);
+
   if (loading) return <EventLoader className="px-4 py-6 sm:px-6 md:px-8 flex items-center justify-center min-h-[200px]" />;
 
   if (!event) {
@@ -124,12 +131,17 @@ export default function TablescapePage() {
 
   function deleteTab(id: string) {
     if (tablescapes.length <= 1) return;
-    if (!confirm("Delete this tablescape? This cannot be undone.")) return;
-    const remaining = tablescapes.filter((t) => t.id !== id);
+    setConfirmDeleteTabId(id);
+  }
+
+  function confirmDeleteTab() {
+    if (!confirmDeleteTabId) return;
+    const remaining = tablescapes.filter((t) => t.id !== confirmDeleteTabId);
     updateEvent(eventId, { tablescapes: remaining });
-    if (resolvedId === id) {
+    if (resolvedId === confirmDeleteTabId) {
       setActiveTablescapeId(remaining[0]?.id ?? null);
     }
+    setConfirmDeleteTabId(null);
   }
 
   return (
@@ -259,6 +271,15 @@ export default function TablescapePage() {
           </div>
         )}
       </div>
+      <ConfirmDialog
+        open={!!confirmDeleteTabId}
+        title="Delete Tablescape?"
+        message="This tablescape and all its items will be permanently removed."
+        confirmLabel="Delete"
+        variant="danger"
+        onConfirm={confirmDeleteTab}
+        onCancel={() => setConfirmDeleteTabId(null)}
+      />
     </div>
   );
 }
