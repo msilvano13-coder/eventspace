@@ -125,10 +125,11 @@ export default function FloorPlanPage() {
     (objects: LayoutObject[], roomShape: RoomShape | null, canvasWidth: number, canvasHeight: number, floorPlanId: string) => {
       // Use the floorPlanId passed by the editor (same reason as handleSave)
       if (!floorPlanId) return;
-      // Fire-and-forget — layout objects persist independently from the legacy JSON path
+      // Fire-and-forget — layout objects are a secondary write-through store.
+      // JSON blob (saved via handleSave) is the source of truth.
+      // Failures here are logged but don't show user-facing toasts.
       replaceLayoutObjects(floorPlanId, objects, roomShape, canvasWidth, canvasHeight).catch((err) => {
-        console.error("[FloorPlan] layout objects save error:", err);
-        showErrorToast("Floor plan save failed. Your changes may not persist.");
+        console.error("[FloorPlan] layout objects save error (non-critical):", err);
       });
     },
     []
