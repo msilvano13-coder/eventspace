@@ -1250,10 +1250,15 @@ export async function fetchEventCore(eventId: string): Promise<Event | null> {
     .from("events")
     .select("*, floor_plans (*, lighting_zones (*), layout_objects (*))")
     .eq("id", eventId)
+    .is("floor_plans.deleted_at", null)
     .single();
   if (error) {
     if (error.code === "PGRST116") return null;
     throw new Error(`fetchEventCore: ${error.message}`);
+  }
+  // Filter out soft-deleted floor plans in JS (safety net if DB filter doesn't apply)
+  if (Array.isArray(data.floor_plans)) {
+    data.floor_plans = data.floor_plans.filter((fp: any) => !fp.deleted_at);
   }
   return eventCoreFromRow(data);
 }
