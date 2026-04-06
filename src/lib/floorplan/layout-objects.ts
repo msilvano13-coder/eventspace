@@ -98,19 +98,27 @@ export async function replaceLayoutObjects(
   const userId = await getUserId();
   const errors: string[] = [];
 
-  // 1. Update floor plan metadata
-  const { error: fpError } = await supabase
+  // 1. Update floor plan metadata (also verifies the row exists via .select())
+  const { error: fpError, data: fpData } = await supabase
     .from("floor_plans")
     .update({
       room_shape: roomShape,
       canvas_width: canvasWidth,
       canvas_height: canvasHeight,
     })
-    .eq("id", floorPlanId);
+    .eq("id", floorPlanId)
+    .select("id");
 
   if (fpError) {
     console.error("[LayoutObjects] floor plan update error:", fpError.message);
     errors.push(`metadata: ${fpError.message}`);
+  }
+
+  // If the floor_plans row doesn't exist yet (race with replaceFloorPlans),
+  // skip layout objects save — the next auto-save cycle will retry.
+  if (!fpError && (!fpData || fpData.length === 0)) {
+    console.warn("[LayoutObjects] floor plan row not found in DB, deferring layout objects save");
+    return;
   }
 
   // Guard: if objects array is empty, only update metadata — do NOT delete existing layout objects
