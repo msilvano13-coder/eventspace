@@ -1,4 +1,4 @@
-import { Event, createDefaultFloorPlans } from "./types";
+import { Event, createDefaultFloorPlans, createDefaultTablescapes } from "./types";
 
 export function getSeedData(): Event[] {
   return [
@@ -14,7 +14,7 @@ export function getSeedData(): Event[] {
       floorPlans: [
         ...createDefaultFloorPlans(),
       ],
-      tablescapes: [],
+      tablescapes: createDefaultTablescapes(),
       files: [
         {
           id: "f1",
@@ -93,7 +93,7 @@ export function getSeedData(): Event[] {
       floorPlans: [
         ...createDefaultFloorPlans(),
       ],
-      tablescapes: [],
+      tablescapes: createDefaultTablescapes(),
       files: [],
       timeline: [
         { id: "t5", title: "Venue walkthrough", dueDate: "2026-05-15", completed: false, order: 1 },
@@ -146,7 +146,7 @@ export function getSeedData(): Event[] {
       floorPlans: [
         ...createDefaultFloorPlans(),
       ],
-      tablescapes: [],
+      tablescapes: createDefaultTablescapes(),
       files: [
         {
           id: "f3",

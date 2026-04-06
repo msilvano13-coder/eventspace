@@ -697,3 +697,46 @@ export interface Inquiry {
   createdAt: string;
   updatedAt: string;
 }
+
+// ── AI Designs ──
+
+export interface DesignProject {
+  id: string;
+  name: string;
+  clientName: string | null;
+  clientEmail: string | null;
+  eventDate: string | null;
+  venueName: string | null;
+  status: "draft" | "active" | "generating" | "complete" | "archived";
+  shareToken: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface VenuePhoto {
+  id: string;
+  projectId: string;
+  storagePath: string;
+  originalName: string;
+  width: number | null;
+  height: number | null;
+  isPrimary: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface GeneratedImage {
+  id: string;
+  projectId: string;
+  venuePhotoId: string;
+  styleId: string | null;
+  storagePath: string | null;
+  thumbnailPath: string | null;
+  replicateId: string | null;
+  status: "pending" | "processing" | "complete" | "failed";
+  errorMessage: string | null;
+  promptUsed: string;
+  seed: number | null;
+  generationTimeMs: number | null;
+  createdAt: string;
+}

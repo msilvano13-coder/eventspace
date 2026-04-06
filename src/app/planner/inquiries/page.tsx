@@ -3,7 +3,7 @@
 import { useInquiries, useInquiryActions, useStoreActions } from "@/hooks/useStore";
 import { useState } from "react";
 import { Plus, Pencil, Trash2, ArrowRight, Phone, Mail, Calendar, DollarSign, StickyNote } from "lucide-react";
-import { Inquiry, InquiryStatus, createDefaultFloorPlans } from "@/lib/types";
+import { Inquiry, InquiryStatus, createDefaultFloorPlans, createDefaultTablescapes } from "@/lib/types";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 export default function InquiriesPage() {
@@ -67,7 +67,7 @@ export default function InquiriesPage() {
       status: "planning",
       floorPlanJSON: null,
       floorPlans: createDefaultFloorPlans(),
-      tablescapes: [],
+      tablescapes: createDefaultTablescapes(),
       files: [],
       timeline: [],
       schedule: [],
