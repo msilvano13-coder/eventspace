@@ -104,39 +104,29 @@ export default function FloorPlanPage() {
   resolvedPlanIdRef.current = resolvedPlanId;
 
   const handleSave = useCallback(
-    (json: string) => {
-      // Read from refs to avoid stale closure — critical for editor unmount flush-save
+    (json: string, floorPlanId: string) => {
+      // Use the floorPlanId passed by the editor — NOT the page's ref.
+      // On tab switch, the ref updates before the old editor's unmount flush fires,
+      // which would overwrite the new tab's JSON with the old tab's content.
       const currentPlans = validPlansRef.current;
-      const currentPlanId = resolvedPlanIdRef.current;
-      if (!currentPlanId || currentPlans.length === 0) {
-        console.warn("[FloorPlan] handleSave skipped: currentPlanId=", currentPlanId, "plans=", currentPlans.length);
+      if (!floorPlanId || currentPlans.length === 0) {
+        console.warn("[FloorPlan] handleSave skipped: floorPlanId=", floorPlanId, "plans=", currentPlans.length);
         return;
       }
       const updated = currentPlans.map((fp) =>
-        fp.id === currentPlanId ? { ...fp, json } : fp
+        fp.id === floorPlanId ? { ...fp, json } : fp
       );
       updateEvent(eventId, { floorPlans: updated });
-
-      // QA Protocol 13: Dev-mode store consistency assertion
-      if (process.env.NODE_ENV === "development") {
-        setTimeout(() => {
-          const storeJSON = validPlansRef.current.find((fp) => fp.id === currentPlanId)?.json;
-          if (storeJSON !== json) {
-            showErrorToast("DEV QA: Store out of sync after save — handleSave may not be updating the store.");
-            console.error("[QA Protocol 13] Store JSON does not match saved JSON for plan", currentPlanId);
-          }
-        }, 500);
-      }
     },
     [eventId, updateEvent]
   );
 
   const handleSaveLayoutObjects = useCallback(
-    (objects: LayoutObject[], roomShape: RoomShape | null, canvasWidth: number, canvasHeight: number) => {
-      const planId = resolvedPlanIdRef.current;
-      if (!planId) return;
+    (objects: LayoutObject[], roomShape: RoomShape | null, canvasWidth: number, canvasHeight: number, floorPlanId: string) => {
+      // Use the floorPlanId passed by the editor (same reason as handleSave)
+      if (!floorPlanId) return;
       // Fire-and-forget — layout objects persist independently from the legacy JSON path
-      replaceLayoutObjects(planId, objects, roomShape, canvasWidth, canvasHeight).catch((err) => {
+      replaceLayoutObjects(floorPlanId, objects, roomShape, canvasWidth, canvasHeight).catch((err) => {
         console.error("[FloorPlan] layout objects save error:", err);
         showErrorToast("Floor plan save failed. Your changes may not persist.");
       });

@@ -91,8 +91,8 @@ interface Props {
   initialRoomShape?: RoomShape | null;
   initialCanvasWidth?: number;
   initialCanvasHeight?: number;
-  onSave?: (json: string) => void;
-  onSaveLayoutObjects?: (objects: LayoutObject[], roomShape: RoomShape | null, canvasWidth: number, canvasHeight: number) => void;
+  onSave?: (json: string, floorPlanId: string) => void;
+  onSaveLayoutObjects?: (objects: LayoutObject[], roomShape: RoomShape | null, canvasWidth: number, canvasHeight: number, floorPlanId: string) => void;
   // Lighting integration — zones rendered directly on canvas
   lightingZones?: LightingZone[];
   lightingEnabled?: boolean;
@@ -470,13 +470,18 @@ export default function FloorPlanEditor({
       console.warn("[FloorPlan] doSave: serializeFloorPlan returned null (validation failed)");
       return false;
     }
-    onSaveRef.current?.(serialized);
+    // Pass the editor's own floorPlanId so the page saves to the correct plan,
+    // even during unmount flush (when the page's activePlanId may have changed).
+    const planId = floorPlanIdRef.current;
+    if (planId) {
+      onSaveRef.current?.(serialized, planId);
+    }
 
     // Phase 2: Also extract and persist layout objects
-    if (onSaveLayoutObjectsRef.current && floorPlanIdRef.current && canvas) {
+    if (onSaveLayoutObjectsRef.current && planId && canvas) {
       const layoutObjects = canvasToLayoutObjects(
         json as Record<string, unknown>,
-        floorPlanIdRef.current,
+        planId,
       );
       const roomShape = roomShapeFromCanvas(json as Record<string, unknown>);
       onSaveLayoutObjectsRef.current(
@@ -484,6 +489,7 @@ export default function FloorPlanEditor({
         roomShape,
         canvas.getWidth(),
         canvas.getHeight(),
+        planId,
       );
     }
 
@@ -1319,8 +1325,8 @@ export default function FloorPlanEditor({
           (rawJSON as any).width = canvas.getWidth();
           (rawJSON as any).height = canvas.getHeight();
           const serialized = serializeFloorPlan(rawJSON as Record<string, unknown>);
-          if (serialized) {
-            onSaveRef.current?.(serialized);
+          if (serialized && floorPlanIdRef.current) {
+            onSaveRef.current?.(serialized, floorPlanIdRef.current);
           }
         } catch {
           // Canvas may already be partially disposed — best-effort save
