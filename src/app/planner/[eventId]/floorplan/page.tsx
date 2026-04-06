@@ -538,7 +538,8 @@ export default function FloorPlanPage() {
                 eventId={eventId}
                 floorPlanId={activePlan.id}
                 initialJSON={pendingCanvasJSONRef.current || activePlan.json}
-                initialLayoutObjects={pendingCanvasJSONRef.current ? undefined : activePlan.layoutObjects}
+                // JSON is the single source of truth — layout_objects are a write-through secondary store
+                initialLayoutObjects={undefined}
                 initialRoomShape={activePlan.roomShape}
                 initialCanvasWidth={activePlan.canvasWidth}
                 initialCanvasHeight={activePlan.canvasHeight}

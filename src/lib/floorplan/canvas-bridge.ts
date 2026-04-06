@@ -332,6 +332,8 @@ export function canvasToLayoutObjects(
         if (!subAssetId) continue;
 
         const isChair = !sub.data?.tableId;
+        // Use stable IDs for ALL sub-objects (chairs + tables) so upserts work correctly.
+        // Previously chairs got uuid() every save, causing orphaned rows and data loss.
         const objId = sub.data?._objectId || obj.data?._objectId || uuid();
 
         // Sub-object positions are relative to parent — convert to absolute
@@ -339,7 +341,7 @@ export function canvasToLayoutObjects(
         const absY = parentTop + (sub.top || 0);
 
         const layoutObj: LayoutObject = {
-          id: isChair ? uuid() : objId,
+          id: objId,
           floorPlanId,
           assetId: subAssetId,
           positionX: absX,

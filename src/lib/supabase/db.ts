@@ -1248,7 +1248,9 @@ export async function fetchEventCore(eventId: string): Promise<Event | null> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("events")
-    .select("*, floor_plans (*, lighting_zones (*), layout_objects (*))")
+    // layout_objects omitted — JSON blob is the single source of truth for canvas state.
+    // layout_objects are a write-through secondary store, not needed on load.
+    .select("*, floor_plans (*, lighting_zones (*))")
     .eq("id", eventId)
     .is("floor_plans.deleted_at", null)
     .single();
