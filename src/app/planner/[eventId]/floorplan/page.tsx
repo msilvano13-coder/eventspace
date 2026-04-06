@@ -70,6 +70,8 @@ export default function FloorPlanPage() {
   const [snapshots, setSnapshots] = useState<FloorPlanSnapshot[]>([]);
   const [snapshotLoading, setSnapshotLoading] = useState(false);
   const getCanvasDataURLRef = useRef<(() => string | null) | null>(null);
+  const getCanvasJSONRef = useRef<(() => string | null) | null>(null);
+  const pendingCanvasJSONRef = useRef<string | null>(null);
   const autoCreatedRef = useRef(false);
   // Refs for latest values — prevents stale closure in flush-save on editor unmount
   const validPlansRef = useRef<FloorPlan[]>([]);
@@ -327,7 +329,14 @@ export default function FloorPlanPage() {
 
         {/* 3D View toggle */}
         <button
-          onClick={() => setShow3D(!show3D)}
+          onClick={() => {
+            if (!show3D) {
+              // Snapshot current canvas state before unmounting the 2D editor
+              const json = getCanvasJSONRef.current?.();
+              if (json) pendingCanvasJSONRef.current = json;
+            }
+            setShow3D(!show3D);
+          }}
           className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
             show3D
               ? "bg-indigo-50 text-indigo-600 border border-indigo-200"
@@ -526,8 +535,8 @@ export default function FloorPlanPage() {
                 key={activePlan.id}
                 eventId={eventId}
                 floorPlanId={activePlan.id}
-                initialJSON={activePlan.json}
-                initialLayoutObjects={activePlan.layoutObjects}
+                initialJSON={pendingCanvasJSONRef.current || activePlan.json}
+                initialLayoutObjects={pendingCanvasJSONRef.current ? undefined : activePlan.layoutObjects}
                 initialRoomShape={activePlan.roomShape}
                 initialCanvasWidth={activePlan.canvasWidth}
                 initialCanvasHeight={activePlan.canvasHeight}
@@ -539,6 +548,7 @@ export default function FloorPlanPage() {
                 selectedZoneId={selectedZoneId}
                 onSelectZone={setSelectedZoneId}
                 onCanvasReady={(getDataURL) => { getCanvasDataURLRef.current = getDataURL; }}
+                onCanvasJSONReady={(getJSON) => { getCanvasJSONRef.current = getJSON; }}
                 onGuestDrop={readOnly ? undefined : handleGuestDrop}
                 readOnly={readOnly}
                 tablescapes={event.tablescapes ?? []}

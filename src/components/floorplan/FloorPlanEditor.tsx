@@ -101,6 +101,7 @@ interface Props {
   onSelectZone?: (id: string | null) => void;
   readOnly?: boolean; // client portal: makes lighting non-interactive
   onCanvasReady?: (getDataURL: () => string | null) => void;
+  onCanvasJSONReady?: (getJSON: () => string | null) => void;
   // Seating drag-and-drop — called when a guest is dropped onto a table on the canvas
   onGuestDrop?: (guestId: string, tableId: string) => void;
   // Tablescape assignment — available designs to assign to tables
@@ -246,6 +247,7 @@ export default function FloorPlanEditor({
   onSelectZone,
   readOnly = false,
   onCanvasReady,
+  onCanvasJSONReady,
   onGuestDrop,
   tablescapes = [],
   onAssignTablescape,
@@ -1038,6 +1040,14 @@ export default function FloorPlanEditor({
         gridObjectsRef.current.forEach((o) => o.set("visible", snapEnabledRef.current));
         canvas.requestRenderAll();
         return dataURL;
+      });
+    }
+
+    // Expose canvas JSON getter so parent can snapshot state before unmounting
+    if (onCanvasJSONReady) {
+      onCanvasJSONReady(() => {
+        const json = getCanvasJSON();
+        return json ? JSON.stringify(json) : null;
       });
     }
 
