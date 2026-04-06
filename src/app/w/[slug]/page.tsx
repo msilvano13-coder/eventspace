@@ -743,7 +743,7 @@ export default function WeddingPage() {
 
       {/* Footer */}
       <footer className="py-8 text-center text-[11px] text-stone-300 bg-stone-50">
-        Powered by EventSpace
+        Powered by SoiréeSpace
       </footer>
     </div>
   );

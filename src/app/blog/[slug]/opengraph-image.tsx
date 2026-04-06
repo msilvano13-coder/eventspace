@@ -2,7 +2,7 @@ import { ImageResponse } from "next/og";
 import { blogPosts, getBlogPost } from "@/lib/blog-data";
 
 export const runtime = "edge";
-export const alt = "EventSpace Blog";
+export const alt = "SoiréeSpace Blog";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -29,7 +29,7 @@ export default function OGImage({ params }: { params: { slug: string } }) {
             color: "#1c1917",
           }}
         >
-          EventSpace Blog
+          SoiréeSpace Blog
         </div>
       ),
       size
@@ -82,7 +82,7 @@ export default function OGImage({ params }: { params: { slug: string } }) {
               color: "#44403c",
             }}
           >
-            EventSpace
+            SoiréeSpace
           </span>
           <div style={{ flex: 1 }} />
           <span
@@ -134,7 +134,7 @@ export default function OGImage({ params }: { params: { slug: string } }) {
         >
           <span>{post.readingTime}</span>
           <span>·</span>
-          <span>eventspace.app/blog</span>
+          <span>soireespace.com/blog</span>
         </div>
       </div>
     ),

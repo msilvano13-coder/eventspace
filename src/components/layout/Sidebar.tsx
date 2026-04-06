@@ -70,7 +70,7 @@ export default function Sidebar() {
               E
             </div>
             <span className="text-lg font-heading font-semibold text-stone-800">
-              EventSpace
+              SoiréeSpace
             </span>
           </Link>
           <TeamSwitcher />

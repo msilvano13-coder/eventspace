@@ -21,7 +21,7 @@ export default function AdminSidebar() {
             E
           </div>
           <span className="text-lg font-heading font-semibold text-stone-800">
-            EventSpace
+            SoiréeSpace
           </span>
           <span className="text-[10px] font-medium bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded-full uppercase tracking-wide">
             Admin

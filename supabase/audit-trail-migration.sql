@@ -1,5 +1,5 @@
 -- =============================================================================
--- EventSpace Audit Trail Migration
+-- SoiréeSpace Audit Trail Migration
 -- Generated: 2026-03-30
 -- Description: Contract audit log for e-signature legal compliance.
 --              Follows Session 7 scalability pattern: direct user_id + composite indexes.

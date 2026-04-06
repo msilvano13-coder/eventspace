@@ -1,6 +1,6 @@
-# EventSpace Operator's Guide
+# SoiréeSpace Operator's Guide
 
-A plain-English guide to every backend service EventSpace uses, what it does, and how to manage it.
+A plain-English guide to every backend service SoiréeSpace uses, what it does, and how to manage it.
 
 ---
 
@@ -19,7 +19,7 @@ A plain-English guide to every backend service EventSpace uses, what it does, an
 
 **What it is:** Vercel hosts your website. When you push code to GitHub, Vercel automatically builds and deploys it to the internet.
 
-**What it does for EventSpace:**
+**What it does for SoiréeSpace:**
 - Serves your website to users (the HTML, CSS, JavaScript)
 - Runs your API routes (the `/api/*` endpoints that talk to Stripe, Supabase, etc.)
 - Provides a CDN (Content Delivery Network) so pages load fast worldwide
@@ -37,7 +37,7 @@ Go to your project > Deployments. Green = live, Red = failed. If a deploy fails,
 Settings > Environment Variables. This is where secrets like API keys live. If you change a secret (like rotating a Stripe key), update it here and redeploy.
 
 **Custom domain:**
-Settings > Domains. Add your domain (e.g., `eventspace.com`) and follow the DNS instructions.
+Settings > Domains. Add your domain (e.g., `soireespace.com`) and follow the DNS instructions.
 
 **Logs (debugging):**
 Logs tab shows real-time API route logs. If something isn't working (payments failing, pages erroring), check here first.
@@ -130,7 +130,7 @@ You can customize the text and branding of these emails.
 
 **Dashboard:** https://dashboard.stripe.com
 
-### How payments work in EventSpace:
+### How payments work in SoiréeSpace:
 
 1. User clicks "Upgrade" on the pricing page
 2. Your app creates a **Checkout Session** (a Stripe-hosted payment page)
@@ -173,7 +173,7 @@ Toggle in the top-left of Stripe Dashboard. Use Test mode for development (fake 
 
 **Dashboard:** https://us.posthog.com (sign in with your account)
 
-### What EventSpace tracks:
+### What SoiréeSpace tracks:
 
 **Automatic (every page):**
 - Page views — which pages users visit and how long they stay
@@ -257,7 +257,7 @@ These are configured in **Vercel > Settings > Environment Variables**. Never put
 | `STRIPE_WEBHOOK_SECRET` | Stripe | Signs webhook payloads so your app can verify they're really from Stripe |
 | `GOOGLE_PLACES_API_KEY` | Google | API key for vendor discovery. Optional — app works in demo mode without it |
 | `COOKIE_SECRET` | Security | HMAC secret for signing profile cache cookies in Edge middleware. Generate with: `openssl rand -hex 32` |
-| `NEXT_PUBLIC_SITE_URL` | SEO | Your production URL (e.g., `https://eventspace.com`). Used for sitemaps and canonical links |
+| `NEXT_PUBLIC_SITE_URL` | SEO | Your production URL (e.g., `https://soireespace.com`). Used for sitemaps and canonical links |
 
 ### Which keys are sensitive?
 

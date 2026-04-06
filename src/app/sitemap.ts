@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { blogPosts } from "@/lib/blog-data";
 
-const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://eventspace-nine.vercel.app";
+const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://soireespace.com";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const staticPages: MetadataRoute.Sitemap = [

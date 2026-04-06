@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Event Presentation | EventSpace",
+  title: "Event Presentation | SoiréeSpace",
   description: "View your event floor plan in 3D",
 };
 

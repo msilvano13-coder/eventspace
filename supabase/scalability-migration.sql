@@ -1,5 +1,5 @@
 -- =============================================================================
--- EventSpace Scalability Migration
+-- SoiréeSpace Scalability Migration
 -- Generated: 2026-03-30
 -- Description: Denormalize user_id on high-traffic child tables for O(1) RLS,
 --              add composite indexes, and update RLS policies + client portal RPCs

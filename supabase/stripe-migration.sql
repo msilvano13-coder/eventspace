@@ -1,5 +1,5 @@
 -- =============================================================================
--- EventSpace — Stripe Subscription & Trial Tracking
+-- SoiréeSpace — Stripe Subscription & Trial Tracking
 -- =============================================================================
 
 -- Add subscription columns to profiles

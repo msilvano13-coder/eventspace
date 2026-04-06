@@ -14,10 +14,10 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
   const post = getBlogPost(params.slug);
   if (!post) return {};
 
-  const url = `https://eventspace.app/blog/${post.slug}`;
+  const url = `https://soireespace.com/blog/${post.slug}`;
 
   return {
-    title: `${post.title} | EventSpace`,
+    title: `${post.title} | SoiréeSpace`,
     description: post.description,
     keywords: post.keywords,
     openGraph: {
@@ -27,7 +27,7 @@ export function generateMetadata({ params }: { params: { slug: string } }): Meta
       type: "article",
       publishedTime: post.publishedAt,
       modifiedTime: post.updatedAt,
-      authors: ["EventSpace Team"],
+      authors: ["SoiréeSpace Team"],
     },
     twitter: {
       card: "summary_large_image",
@@ -52,21 +52,21 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
     dateModified: post.updatedAt,
     author: {
       "@type": "Organization",
-      name: "EventSpace",
-      url: "https://eventspace.app",
+      name: "SoiréeSpace",
+      url: "https://soireespace.com",
     },
     publisher: {
       "@type": "Organization",
-      name: "EventSpace",
-      url: "https://eventspace.app",
+      name: "SoiréeSpace",
+      url: "https://soireespace.com",
       logo: {
         "@type": "ImageObject",
-        url: "https://eventspace.app/og-image.png",
+        url: "https://soireespace.com/og-image.png",
       },
     },
     mainEntityOfPage: {
       "@type": "WebPage",
-      "@id": `https://eventspace.app/blog/${post.slug}`,
+      "@id": `https://soireespace.com/blog/${post.slug}`,
     },
     keywords: post.keywords.join(", "),
   };
@@ -89,7 +89,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
           <Link href="/" className="flex items-center gap-2 font-heading font-bold text-stone-800">
             <span className="w-7 h-7 bg-rose-500 rounded-lg flex items-center justify-center text-white text-xs font-bold">E</span>
-            EventSpace
+            SoiréeSpace
           </Link>
           <div className="flex items-center gap-4">
             <Link href="/blog" className="text-sm text-stone-500 hover:text-stone-800 transition-colors">
@@ -205,7 +205,7 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
       {/* Footer */}
       <footer className="bg-stone-900 py-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-stone-500">&copy; {new Date().getFullYear()} EventSpace. All rights reserved.</p>
+          <p className="text-sm text-stone-500">&copy; {new Date().getFullYear()} SoiréeSpace. All rights reserved.</p>
           <div className="flex gap-6">
             <Link href="/privacy" className="text-sm text-stone-500 hover:text-stone-300 transition-colors">Privacy</Link>
             <Link href="/terms" className="text-sm text-stone-500 hover:text-stone-300 transition-colors">Terms</Link>

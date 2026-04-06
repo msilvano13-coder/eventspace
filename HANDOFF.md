@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-We're building **EventSpace**, a web-based event planning app. Planners use it to design floor plans and table settings in 3D. We need a library of polished 3D rental items (chairs, tables, glassware, linens, etc.) from a real rental company's catalog.
+We're building **SoiréeSpace**, a web-based event planning app. Planners use it to design floor plans and table settings in 3D. We need a library of polished 3D rental items (chairs, tables, glassware, linens, etc.) from a real rental company's catalog.
 
 We've already generated **379 base meshes** using AI (Rodin/Hyper3D) from product photos. These models have the right shapes and proportions but need professional polish to look production-quality in a web viewer.
 

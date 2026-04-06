@@ -91,10 +91,10 @@ export const blogPosts: BlogPost[] = [
 </ul>`,
       },
       {
-        heading: "How EventSpace Makes Floor Planning Effortless",
-        content: `<p>EventSpace was built specifically for professional event planners. The floor plan tool includes a full drag-and-drop furniture library, custom room dimensions, lighting zones, and a stunning <strong>3D visualization</strong> with venue presets and realistic lighting.</p>
+        heading: "How SoiréeSpace Makes Floor Planning Effortless",
+        content: `<p>SoiréeSpace was built specifically for professional event planners. The floor plan tool includes a full drag-and-drop furniture library, custom room dimensions, lighting zones, and a stunning <strong>3D visualization</strong> with venue presets and realistic lighting.</p>
 <p>Every floor plan is automatically shared through your <strong>branded client portal</strong> — your logo, your colors, your tagline. Clients see the layout, the guest list, the timeline, and the contracts all in one place.</p>
-<p>And because EventSpace connects your floor plan to your guest list, you can assign seats directly on the layout and use <strong>smart seating</strong> to auto-arrange guests based on VIP priority, group relationships, and dietary needs.</p>
+<p>And because SoiréeSpace connects your floor plan to your guest list, you can assign seats directly on the layout and use <strong>smart seating</strong> to auto-arrange guests based on VIP priority, group relationships, and dietary needs.</p>
 <p>Plans start at just <strong>$99 one-time</strong> for the DIY plan, or try Professional free for 30 days with unlimited events and all features.</p>`,
       },
     ],
@@ -182,8 +182,8 @@ export const blogPosts: BlogPost[] = [
 </ul>`,
       },
       {
-        heading: "How EventSpace Handles Contracts and E-Signatures",
-        content: `<p>EventSpace includes a complete contract management system built specifically for event planners. You can create reusable templates, assign contracts to specific events, and collect <strong>dual e-signatures</strong> — planner and client — with full ESIGN Act compliance.</p>
+        heading: "How SoiréeSpace Handles Contracts and E-Signatures",
+        content: `<p>SoiréeSpace includes a complete contract management system built specifically for event planners. You can create reusable templates, assign contracts to specific events, and collect <strong>dual e-signatures</strong> — planner and client — with full ESIGN Act compliance.</p>
 <p>Every signature includes a legally compliant <strong>e-signature disclosure</strong> that the signer must acknowledge before signing. The system automatically logs a full <strong>audit trail</strong>: who viewed the contract, when they signed, their IP address, and the exact text they agreed to.</p>
 <p>Clients sign through your <strong>branded client portal</strong> — no account creation required. They see your logo, your colors, and the contract. One tap to review, one signature to sign.</p>
 <p>Contract templates, e-signatures, and audit trails are included in both the <strong>$99 DIY plan</strong> and the Professional plan.</p>`,
@@ -314,8 +314,8 @@ export const blogPosts: BlogPost[] = [
 <p>The difference becomes obvious when you're managing 3–5 events simultaneously and each one has 40+ timeline items.</p>`,
       },
       {
-        heading: "How EventSpace Handles Day-of Timelines",
-        content: `<p>EventSpace includes a built-in timeline builder with <strong>drag-and-drop reordering</strong>, PDF export for day-of binders, and automatic sharing through your branded client portal.</p>
+        heading: "How SoiréeSpace Handles Day-of Timelines",
+        content: `<p>SoiréeSpace includes a built-in timeline builder with <strong>drag-and-drop reordering</strong>, PDF export for day-of binders, and automatic sharing through your branded client portal.</p>
 <p>Build your timeline once, drag to adjust when plans change, and export a beautiful PDF with your business branding. Your client sees the same timeline in real time through their portal — no email attachments, no version confusion.</p>
 <p>The timeline connects to your vendor list and guest count, so everything stays synchronized. When you update the dinner time, everyone sees it.</p>
 <p>Timeline management is included in both the <strong>$99 DIY plan</strong> and the Professional plan.</p>`,
@@ -407,8 +407,8 @@ export const blogPosts: BlogPost[] = [
 <p>A purpose-built client portal, integrated into your planning software, eliminates all of these issues. One tool, one login, one brand experience.</p>`,
       },
       {
-        heading: "How EventSpace's Client Portal Works",
-        content: `<p>Every event in EventSpace gets a <strong>branded client portal</strong> with your logo, brand color, and tagline. Share a single link with your client — no account creation required.</p>
+        heading: "How SoiréeSpace's Client Portal Works",
+        content: `<p>Every event in SoiréeSpace gets a <strong>branded client portal</strong> with your logo, brand color, and tagline. Share a single link with your client — no account creation required.</p>
 <p>From the portal, clients can:</p>
 <ul>
 <li>View and manage the guest list with RSVP tracking</li>
@@ -509,10 +509,10 @@ export const blogPosts: BlogPost[] = [
 </ul>`,
       },
       {
-        heading: "How EventSpace Handles Smart Seating",
-        content: `<p>EventSpace includes a <strong>smart seating algorithm</strong> that automatically assigns guests to tables based on VIP priority, group cohesion, keep-together rules, and dietary needs.</p>
+        heading: "How SoiréeSpace Handles Smart Seating",
+        content: `<p>SoiréeSpace includes a <strong>smart seating algorithm</strong> that automatically assigns guests to tables based on VIP priority, group cohesion, keep-together rules, and dietary needs.</p>
 <p>Your guest list connects directly to your floor plan. After running smart seating, you see guest names on each table in the 2D and 3D views. Drag to adjust, then share the result through your branded client portal for approval.</p>
-<p>Guest management in EventSpace also includes RSVP tracking, meal choice management, plus-one handling, and dietary need tagging — everything flows into the seating algorithm automatically.</p>
+<p>Guest management in SoiréeSpace also includes RSVP tracking, meal choice management, plus-one handling, and dietary need tagging — everything flows into the seating algorithm automatically.</p>
 <p>Smart seating and guest management are included in both the <strong>$99 DIY plan</strong> and the Professional plan.</p>`,
       },
     ],

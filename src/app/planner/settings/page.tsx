@@ -456,7 +456,7 @@ function SettingsContent() {
 
             {profile.plan === "expired" && (
               <div className="p-3 bg-red-50 rounded-xl">
-                <p className="text-sm text-red-600 font-medium">Your trial has expired. Upgrade to continue using EventSpace.</p>
+                <p className="text-sm text-red-600 font-medium">Your trial has expired. Upgrade to continue using SoiréeSpace.</p>
               </div>
             )}
 
@@ -573,7 +573,7 @@ function SettingsContent() {
             <div className="p-3 bg-stone-50 rounded-xl">
               <p className="text-sm font-medium text-stone-700">Do Not Sell My Information</p>
               <p className="text-xs text-stone-400 mt-1">
-                EventSpace does not sell, rent, or trade your personal information to third parties. Your data is only used to provide the service.
+                SoiréeSpace does not sell, rent, or trade your personal information to third parties. Your data is only used to provide the service.
               </p>
             </div>
 

@@ -1,6 +1,6 @@
 -- ============================================================
 -- Phase 2: Spatial Data Model + Asset Schema
--- EventSpace Floor Plan Engine
+-- SoiréeSpace Floor Plan Engine
 -- ============================================================
 
 -- ── 1. Asset Definitions ──

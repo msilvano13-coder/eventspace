@@ -58,7 +58,7 @@ export default function ResetPasswordPage() {
             <span className="w-10 h-10 rounded-xl bg-rose-500 flex items-center justify-center text-white font-heading font-bold text-lg">
               E
             </span>
-            <span className="font-heading text-2xl font-semibold text-stone-900">EventSpace</span>
+            <span className="font-heading text-2xl font-semibold text-stone-900">SoiréeSpace</span>
           </Link>
         </div>
 

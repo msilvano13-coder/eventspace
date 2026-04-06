@@ -1,5 +1,5 @@
 -- ============================================================
--- EventSpace: Storage Migration — Add storage path columns
+-- SoiréeSpace: Storage Migration — Add storage path columns
 -- Run this in Supabase SQL Editor
 -- ============================================================
 

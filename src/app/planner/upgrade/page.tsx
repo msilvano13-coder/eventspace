@@ -171,11 +171,11 @@ function UpgradeContent() {
       <div className="text-center mb-10">
         <div className="inline-flex items-center gap-2 bg-rose-50 text-rose-600 px-4 py-1.5 rounded-full text-sm font-medium mb-4">
           <Sparkles size={14} />
-          {isExpired ? "Your trial has ended" : isFreshSignup ? "Welcome to EventSpace" : "Upgrade your plan"}
+          {isExpired ? "Your trial has ended" : isFreshSignup ? "Welcome to SoiréeSpace" : "Upgrade your plan"}
         </div>
         <h1 className="font-heading text-2xl sm:text-3xl font-bold text-stone-900 mb-2">
           {isExpired
-            ? "Continue Planning with EventSpace"
+            ? "Continue Planning with SoiréeSpace"
             : "Choose Your Plan"}
         </h1>
         <p className="text-stone-500 max-w-lg mx-auto">

@@ -105,7 +105,7 @@ const FAQS: { q: string; a: string }[] = [
   },
   {
     q: "Do I need to install anything?",
-    a: "No. EventSpace runs entirely in your browser — desktop, tablet, and mobile.",
+    a: "No. SoiréeSpace runs entirely in your browser — desktop, tablet, and mobile.",
   },
   {
     q: "How does the wedding website work?",
@@ -191,7 +191,7 @@ export default function HomePage() {
               E
             </span>
             <span className="font-heading text-lg font-semibold tracking-tight">
-              EventSpace
+              SoiréeSpace
             </span>
           </Link>
 
@@ -838,7 +838,7 @@ export default function HomePage() {
                   E
                 </span>
                 <span className="font-heading text-lg font-semibold text-white">
-                  EventSpace
+                  SoiréeSpace
                 </span>
               </div>
               <p className="text-sm leading-relaxed max-w-xs">
@@ -928,7 +928,7 @@ export default function HomePage() {
           </div>
 
           <div className="mt-14 pt-8 border-t border-stone-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-[13px]">
-            <p>&copy; {new Date().getFullYear()} EventSpace</p>
+            <p>&copy; {new Date().getFullYear()} SoiréeSpace</p>
             <div className="flex gap-6">
               <Link
                 href="/privacy"

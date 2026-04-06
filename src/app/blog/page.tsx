@@ -3,7 +3,7 @@ import { blogPosts } from "@/lib/blog-data";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Event Planning Blog — Tips, Templates & Guides | EventSpace",
+  title: "Event Planning Blog — Tips, Templates & Guides | SoiréeSpace",
   description:
     "Expert guides for professional event planners: floor plans, contracts, timelines, seating charts, and client management. Free templates and actionable tips.",
   keywords: [
@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     "event industry resources",
   ],
   openGraph: {
-    title: "Event Planning Blog | EventSpace",
+    title: "Event Planning Blog | SoiréeSpace",
     description:
       "Expert guides for professional event planners: floor plans, contracts, timelines, seating charts, and client management.",
     type: "website",
@@ -29,7 +29,7 @@ export default function BlogPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
           <Link href="/" className="flex items-center gap-2 font-heading font-bold text-stone-800">
             <span className="w-7 h-7 bg-rose-500 rounded-lg flex items-center justify-center text-white text-xs font-bold">E</span>
-            EventSpace
+            SoiréeSpace
           </Link>
           <div className="flex items-center gap-4">
             <Link href="/#pricing" className="text-sm text-stone-500 hover:text-stone-800 transition-colors">
@@ -48,7 +48,7 @@ export default function BlogPage() {
       {/* Header */}
       <header className="max-w-6xl mx-auto px-4 sm:px-6 pt-16 pb-12">
         <Link href="/" className="text-sm text-stone-400 hover:text-stone-600 transition-colors">
-          &larr; Back to EventSpace
+          &larr; Back to SoiréeSpace
         </Link>
         <h1 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900 mt-4">
           Event Planning Blog
@@ -94,7 +94,7 @@ export default function BlogPage() {
             Ready to Plan Smarter?
           </h2>
           <p className="text-rose-100 mt-2">
-            Try EventSpace free for 30 days. No credit card required.
+            Try SoiréeSpace free for 30 days. No credit card required.
           </p>
           <Link
             href="/sign-up"
@@ -108,7 +108,7 @@ export default function BlogPage() {
       {/* Footer */}
       <footer className="bg-stone-900 py-8">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-sm text-stone-500">&copy; {new Date().getFullYear()} EventSpace. All rights reserved.</p>
+          <p className="text-sm text-stone-500">&copy; {new Date().getFullYear()} SoiréeSpace. All rights reserved.</p>
           <div className="flex gap-6">
             <Link href="/privacy" className="text-sm text-stone-500 hover:text-stone-300 transition-colors">Privacy</Link>
             <Link href="/terms" className="text-sm text-stone-500 hover:text-stone-300 transition-colors">Terms</Link>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Privacy Policy | EventSpace",
+  title: "Privacy Policy | SoiréeSpace",
 };
 
 export default function PrivacyPage() {
@@ -12,7 +12,7 @@ export default function PrivacyPage() {
           href="/"
           className="inline-flex items-center gap-2 text-sm text-stone-400 hover:text-stone-600 transition-colors mb-8"
         >
-          &larr; Back to EventSpace
+          &larr; Back to SoiréeSpace
         </Link>
 
         <h1 className="font-heading text-3xl sm:text-4xl font-bold text-stone-900 mb-2">
@@ -26,14 +26,14 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-heading text-xl font-semibold text-stone-800">1. Information We Collect</h2>
             <p className="text-stone-600 leading-relaxed">
-              When you create an account, we collect your email address, name, and any business information you provide in your profile settings. When you use EventSpace, we store the event data you create including guest lists, vendor information, timelines, floor plans, contracts, files, and budget details. We also collect payment information through our payment processor, Stripe.
+              When you create an account, we collect your email address, name, and any business information you provide in your profile settings. When you use SoiréeSpace, we store the event data you create including guest lists, vendor information, timelines, floor plans, contracts, files, and budget details. We also collect payment information through our payment processor, Stripe.
             </p>
           </section>
 
           <section>
             <h2 className="font-heading text-xl font-semibold text-stone-800">2. How We Use Your Information</h2>
             <p className="text-stone-600 leading-relaxed">
-              We use your information solely to provide and improve the EventSpace service. This includes:
+              We use your information solely to provide and improve the SoiréeSpace service. This includes:
             </p>
             <ul className="list-disc pl-5 text-stone-600 space-y-1">
               <li>Providing access to your event planning tools and data</li>
@@ -46,14 +46,14 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-heading text-xl font-semibold text-stone-800">3. We Do Not Sell Your Information</h2>
             <p className="text-stone-600 leading-relaxed">
-              <strong>EventSpace does not sell, rent, or trade your personal information to third parties.</strong> We do not share your data with advertisers, data brokers, or any other third parties for their marketing purposes. Your event data, client information, and personal details are yours alone.
+              <strong>SoiréeSpace does not sell, rent, or trade your personal information to third parties.</strong> We do not share your data with advertisers, data brokers, or any other third parties for their marketing purposes. Your event data, client information, and personal details are yours alone.
             </p>
           </section>
 
           <section>
             <h2 className="font-heading text-xl font-semibold text-stone-800">4. Third-Party Services</h2>
             <p className="text-stone-600 leading-relaxed">
-              We use the following third-party services to operate EventSpace:
+              We use the following third-party services to operate SoiréeSpace:
             </p>
             <ul className="list-disc pl-5 text-stone-600 space-y-1">
               <li><strong>Supabase</strong> — Database hosting and authentication</li>
@@ -69,7 +69,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-heading text-xl font-semibold text-stone-800">5. Cookies</h2>
             <p className="text-stone-600 leading-relaxed">
-              EventSpace uses only essential cookies required for the service to function. These include:
+              SoiréeSpace uses only essential cookies required for the service to function. These include:
             </p>
             <ul className="list-disc pl-5 text-stone-600 space-y-1">
               <li><strong>Authentication cookies</strong> — To keep you signed in and secure your session</li>
@@ -91,7 +91,7 @@ export default function PrivacyPage() {
             <h2 className="font-heading text-xl font-semibold text-stone-800">7. Your Rights</h2>
             <p className="text-stone-600 leading-relaxed">You have the right to:</p>
             <ul className="list-disc pl-5 text-stone-600 space-y-1">
-              <li><strong>Access your data</strong> — All your data is visible within your EventSpace account</li>
+              <li><strong>Access your data</strong> — All your data is visible within your SoiréeSpace account</li>
               <li><strong>Request data deletion</strong> — You can permanently delete your account and all associated data from the Settings page, or by contacting us</li>
               <li><strong>Opt out of data sales</strong> — We do not sell your data. There is nothing to opt out of.</li>
               <li><strong>Export your data</strong> — Contact us to request an export of your data</li>
@@ -121,7 +121,7 @@ export default function PrivacyPage() {
           <section>
             <h2 className="font-heading text-xl font-semibold text-stone-800">10. Age Requirement</h2>
             <p className="text-stone-600 leading-relaxed">
-              EventSpace is not intended for users under the age of 13. We do not knowingly collect personal information from children under 13. If we become aware that we have collected data from a child under 13, we will promptly delete that information.
+              SoiréeSpace is not intended for users under the age of 13. We do not knowingly collect personal information from children under 13. If we become aware that we have collected data from a child under 13, we will promptly delete that information.
             </p>
           </section>
 
@@ -147,7 +147,7 @@ export default function PrivacyPage() {
 
         <div className="mt-12 pt-8 border-t border-stone-200 text-center">
           <p className="text-xs text-stone-400">
-            &copy; {new Date().getFullYear()} EventSpace. All rights reserved.
+            &copy; {new Date().getFullYear()} SoiréeSpace. All rights reserved.
           </p>
         </div>
       </div>

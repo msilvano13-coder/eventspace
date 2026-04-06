@@ -1,5 +1,5 @@
 -- =============================================================================
--- EventSpace SaaS - Complete Database Migration
+-- SoiréeSpace SaaS - Complete Database Migration
 -- Generated: 2026-03-28
 -- Description: Full schema with RLS policies, indexes, and trigger functions
 -- =============================================================================

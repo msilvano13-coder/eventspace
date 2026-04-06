@@ -17,13 +17,13 @@ const inter = Inter({
   display: "swap",
 });
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://eventspace.app";
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://soireespace.com";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "EventSpace — Event Planning Software for Professional Planners",
-    template: "%s | EventSpace",
+    default: "SoiréeSpace — Event Planning Software for Professional Planners",
+    template: "%s | SoiréeSpace",
   },
   description:
     "Plan weddings, galas, and corporate events with interactive floor plans, vendor management, guest tracking, contracts, and a branded client portal. Try free for 30 days.",
@@ -39,15 +39,15 @@ export const metadata: Metadata = {
     "wedding planning app",
     "event coordination software",
   ],
-  authors: [{ name: "EventSpace" }],
-  creator: "EventSpace",
-  publisher: "EventSpace",
+  authors: [{ name: "SoiréeSpace" }],
+  creator: "SoiréeSpace",
+  publisher: "SoiréeSpace",
   openGraph: {
     type: "website",
     locale: "en_US",
     url: siteUrl,
-    siteName: "EventSpace",
-    title: "EventSpace — Event Planning Software for Professional Planners",
+    siteName: "SoiréeSpace",
+    title: "SoiréeSpace — Event Planning Software for Professional Planners",
     description:
       "Plan weddings, galas, and corporate events with interactive floor plans, vendor management, guest tracking, contracts, and a branded client portal.",
     images: [
@@ -55,13 +55,13 @@ export const metadata: Metadata = {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "EventSpace — Event Planning Software",
+        alt: "SoiréeSpace — Event Planning Software",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "EventSpace — Event Planning Software for Professional Planners",
+    title: "SoiréeSpace — Event Planning Software for Professional Planners",
     description:
       "Interactive floor plans, vendor management, guest tracking, contracts, and a branded client portal. Try free for 30 days.",
     images: ["/og-image.png"],
@@ -90,7 +90,7 @@ export default function RootLayout({
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "EventSpace",
+    name: "SoiréeSpace",
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web",
     description:

@@ -1,7 +1,7 @@
 import { ImageResponse } from "next/og";
 
 export const runtime = "edge";
-export const alt = "EventSpace Blog — Tips & Guides for Event Planners";
+export const alt = "SoiréeSpace Blog — Tips & Guides for Event Planners";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -45,7 +45,7 @@ export default function OGImage() {
             E
           </div>
           <span style={{ fontSize: "28px", fontWeight: 700, color: "#44403c" }}>
-            EventSpace
+            SoiréeSpace
           </span>
         </div>
 

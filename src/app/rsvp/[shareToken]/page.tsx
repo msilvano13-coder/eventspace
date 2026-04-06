@@ -380,7 +380,7 @@ export default function RsvpPage() {
         </div>
 
         <p className="text-center text-[11px] text-stone-300 mt-6">
-          Powered by EventSpace
+          Powered by SoiréeSpace
         </p>
       </div>
     </div>

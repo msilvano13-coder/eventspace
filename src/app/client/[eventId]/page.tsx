@@ -835,7 +835,7 @@ export default function ClientPortalPage() {
               )}
             </p>
           )}
-          <p className="text-[10px] text-stone-300">Powered by EventSpace</p>
+          <p className="text-[10px] text-stone-300">Powered by SoiréeSpace</p>
         </div>
       </div>
     </div>
