@@ -121,9 +121,14 @@ export async function replaceLayoutObjects(
     return;
   }
 
-  // Guard: if objects array is empty, only update metadata — do NOT delete existing layout objects
+  // If objects array is empty, delete all layout objects for this floor plan
+  // (user intentionally cleared the canvas). JSON blob is the source of truth.
   if (objects.length === 0) {
-    console.warn("[LayoutObjects] replaceLayoutObjects called with empty objects array — skipping delete");
+    const { error: delAllError } = await supabase
+      .from("layout_objects")
+      .delete()
+      .eq("floor_plan_id", floorPlanId);
+    if (delAllError) errors.push(`delete all: ${delAllError.message}`);
     if (errors.length > 0) {
       throw new Error(`[LayoutObjects] Save had ${errors.length} error(s): ${errors.join("; ")}`);
     }

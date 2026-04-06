@@ -457,10 +457,10 @@ export default function FloorPlanEditor({
       return false;
     }
 
-    // Guard: prevent saving an empty canvas (mirrors unmount flush guard)
-    const rawObjects = (json as Record<string, unknown>).objects;
-    if (Array.isArray(rawObjects) && rawObjects.length === 0) {
-      console.warn("[FloorPlan] doSave: empty canvas detected, skipping save to prevent data loss");
+    // Skip save while canvas is still loading — saving here would serialize
+    // a partially-loaded canvas and overwrite real data.
+    if (isLoadingRef.current) {
+      console.warn("[FloorPlan] doSave: canvas still loading, skipping save");
       return false;
     }
 
@@ -1310,21 +1310,17 @@ export default function FloorPlanEditor({
           const guideObjs = allObjs.filter((o: any) => o.data?.isGuide);
           const gridObjs = gridObjectsRef.current.filter((o) => allObjs.includes(o));
           const overlayObj = lightingOverlayRef.current;
-          // Count user objects (exclude grid, lighting, guides, room backdrop)
-          const userObjCount = allObjs.length - lightingObjs.length - guideObjs.length - gridObjs.length - (overlayObj && allObjs.includes(overlayObj) ? 1 : 0);
-          // Only save if there are actual user objects — prevents overwriting real data with empty canvas
-          if (userObjCount > 0) {
-            lightingObjs.forEach((o) => canvas.remove(o));
-            guideObjs.forEach((o) => canvas.remove(o));
-            gridObjs.forEach((o) => canvas.remove(o));
-            if (overlayObj) canvas.remove(overlayObj);
-            const rawJSON = canvas.toJSON();
-            (rawJSON as any).width = canvas.getWidth();
-            (rawJSON as any).height = canvas.getHeight();
-            const serialized = serializeFloorPlan(rawJSON as Record<string, unknown>);
-            if (serialized) {
-              onSaveRef.current?.(serialized);
-            }
+          // Remove non-content objects before serializing
+          lightingObjs.forEach((o) => canvas.remove(o));
+          guideObjs.forEach((o) => canvas.remove(o));
+          gridObjs.forEach((o) => canvas.remove(o));
+          if (overlayObj) canvas.remove(overlayObj);
+          const rawJSON = canvas.toJSON();
+          (rawJSON as any).width = canvas.getWidth();
+          (rawJSON as any).height = canvas.getHeight();
+          const serialized = serializeFloorPlan(rawJSON as Record<string, unknown>);
+          if (serialized) {
+            onSaveRef.current?.(serialized);
           }
         } catch {
           // Canvas may already be partially disposed — best-effort save

@@ -135,7 +135,6 @@ export default function FloorPlanPage() {
     (objects: LayoutObject[], roomShape: RoomShape | null, canvasWidth: number, canvasHeight: number) => {
       const planId = resolvedPlanIdRef.current;
       if (!planId) return;
-      if (objects.length === 0) return; // Guard: prevent accidental wipe of layout objects
       // Fire-and-forget — layout objects persist independently from the legacy JSON path
       replaceLayoutObjects(planId, objects, roomShape, canvasWidth, canvasHeight).catch((err) => {
         console.error("[FloorPlan] layout objects save error:", err);
