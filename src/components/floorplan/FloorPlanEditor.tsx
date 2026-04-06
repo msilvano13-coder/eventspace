@@ -14,6 +14,7 @@ import {
   ActiveSelection,
   Line,
   util,
+  classRegistry,
 } from "fabric";
 import { GRID_SIZE, ROOM_PRESETS, FURNITURE_GROUPS, FurnitureGroup, pxToFeetInches } from "@/lib/constants";
 import {
@@ -26,6 +27,9 @@ const origToObject = FabricObject.prototype.toObject;
 FabricObject.prototype.toObject = function (propertiesToInclude?: string[]) {
   return origToObject.call(this, [...(propertiesToInclude || []), "data"]);
 };
+
+// Register FabricText so loadFromJSON can resolve type: "FabricText" from layoutObjects
+classRegistry.setClass(FabricText, "FabricText");
 
 import { v4 as uuid } from "uuid";
 import { FurnitureItemDef, LayoutObject, LightingZone, RoomPreset, RoomShape, Tablescape } from "@/lib/types";

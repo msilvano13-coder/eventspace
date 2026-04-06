@@ -5,6 +5,7 @@ import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { DoubleSide, Color } from "three";
 import { LightingZone } from "@/lib/types";
+import { kelvinToHex } from "@/lib/color-temperature";
 import {
   S,
   DOWNLIGHT_TYPES,
@@ -330,7 +331,7 @@ export function LightingZone3D({
   // Linear curve for visible intensity across full slider range
   const t = zone.intensity / 100;
   const intensity = 0.5 + t * 14.5;
-  const color = getCachedColor(zone.color);
+  const color = getCachedColor(zone.colorTemperature ? kelvinToHex(zone.colorTemperature) : zone.color);
   const mountHeight = (zone.height ?? 8);  // in feet (= world units since S = 1/12)
   const spreadRad = ((zone.spread ?? 45) * Math.PI) / 180;
   const isDownlight = DOWNLIGHT_TYPES.has(zone.type);

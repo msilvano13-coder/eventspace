@@ -186,7 +186,7 @@ function Ground() {
   return (
     <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.001, 0]} receiveShadow>
       <planeGeometry args={[10, 10]} />
-      <meshStandardMaterial color="#f8f5f0" roughness={0.9} />
+      <meshStandardMaterial color="#c8c0b4" roughness={0.9} />
     </mesh>
   );
 }

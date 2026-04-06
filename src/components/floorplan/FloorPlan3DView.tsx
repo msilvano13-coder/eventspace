@@ -230,7 +230,7 @@ function FloorPlan3DScene({
 
       {/* Room floor */}
       {rooms.map((room, i) => (
-        <RoomFloor key={`room-${i}`} obj={room} originX={originX} originY={originY} settings={settings} showWalls={showWalls} floorOverride={activePreset?.floorOverride} />
+        <RoomFloor key={`room-${i}`} obj={room} originX={originX} originY={originY} settings={settings} showWalls={showWalls} floorOverride={activePreset?.floorOverride} furnitureObjects={furniture} />
       ))}
 
       {/* Furniture */}
@@ -323,6 +323,8 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
     let span: number;
     let cX = 0;
     let cZ = 0;
+    let spanX: number;
+    let spanZ: number;
 
     if (allObjs.length > 0) {
       // Compute bounding box of all visible objects in world coords
@@ -338,17 +340,29 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
         maxWZ = Math.max(maxWZ, wz + hh * S);
       }
       span = Math.max(maxWX - minWX, maxWZ - minWZ);
+      spanX = maxWX - minWX;
+      spanZ = maxWZ - minWZ;
       cX = (minWX + maxWX) / 2;
       cZ = (minWZ + maxWZ) / 2;
     } else {
       span = Math.max(parsed.canvasWidth, parsed.canvasHeight) * S;
+      spanX = span;
+      spanZ = span;
     }
 
     // Camera distance: close enough to see furniture detail with room context
     const dist = Math.max(span * 0.75, 8);
+
+    // Detect landscape vs portrait to spread the wider dimension across the viewport.
+    const isLandscape = spanX > spanZ;
+
+    // Smaller X/Z offsets keep camera inside room walls; higher Y gives overview angle
+    const offsetX = isLandscape ? dist * 0.25 : dist * 0.35;
+    const offsetZ = isLandscape ? dist * 0.35 : dist * 0.25;
+
     return {
       camConfig: {
-        position: [cX + dist * 0.5, dist * 0.45, cZ + dist * 0.7] as [number, number, number],
+        position: [cX + offsetX, dist * 0.55, cZ + offsetZ] as [number, number, number],
         fov: 45,
         near: 0.1,
         far: 1000,

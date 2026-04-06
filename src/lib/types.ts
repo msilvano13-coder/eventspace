@@ -75,6 +75,7 @@ export interface LightingZone {
   name: string;
   type: LightingType;
   color: string;          // hex color
+  colorTemperature?: number; // Kelvin (1000–15000) — overrides color when set
   intensity: number;      // 0–100
   x: number;              // percentage position (0–100)
   y: number;              // percentage position (0–100)
@@ -259,7 +260,7 @@ export interface TimelineItem {
 export interface FurnitureItemDef {
   id: string;
   name: string;
-  category: "table" | "seating" | "entertainment" | "decor" | "structure";
+  category: "table" | "seating" | "entertainment" | "decor" | "structure" | "room-feature";
   shape: "circle" | "rect";
   defaultWidth: number;
   defaultHeight: number;

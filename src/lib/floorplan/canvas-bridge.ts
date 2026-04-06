@@ -409,11 +409,18 @@ export function roomShapeFromCanvas(
   // Extract points from Path data or from stored points
   if (roomObj.path) {
     // Parse SVG path commands back to points
+    // Handles both string format ("M 0 0 L 100 0 ...") and
+    // Fabric.js v6 array format ([["M",0,0],["L",100,0],...])
     const points: number[][] = [];
-    const pathStr = typeof roomObj.path === "string" ? roomObj.path : "";
-    const commands = pathStr.match(/[ML]\s*[\d.]+\s*[\d.]+/g) || [];
+    let pathStr = "";
+    if (typeof roomObj.path === "string") {
+      pathStr = roomObj.path;
+    } else if (Array.isArray(roomObj.path)) {
+      pathStr = roomObj.path.map((cmd: any[]) => cmd.join(" ")).join(" ");
+    }
+    const commands = pathStr.match(/[ML]\s*[\d.-]+\s*[\d.-]+/g) || [];
     for (const cmd of commands) {
-      const nums = cmd.match(/[\d.]+/g);
+      const nums = cmd.match(/[\d.-]+/g);
       if (nums && nums.length >= 2) {
         points.push([parseFloat(nums[0]), parseFloat(nums[1])]);
       }

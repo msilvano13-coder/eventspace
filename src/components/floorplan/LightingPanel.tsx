@@ -196,6 +196,40 @@ export default function LightingPanel({ zones, onUpdateZones, selectedZoneId, on
             </div>
           </div>
 
+          {/* Color Temperature */}
+          <div className="mb-3">
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider">
+                Color Temp — {selectedZone.colorTemperature ? `${selectedZone.colorTemperature}K` : "Off"}
+              </label>
+              {selectedZone.colorTemperature && (
+                <button
+                  onClick={() => updateZone(selectedZone.id, { colorTemperature: undefined })}
+                  className="text-[10px] text-stone-400 hover:text-stone-600"
+                >
+                  Use color instead
+                </button>
+              )}
+            </div>
+            <input
+              type="range"
+              min="1800"
+              max="10000"
+              step="100"
+              value={selectedZone.colorTemperature ?? 3000}
+              onChange={(e) => updateZone(selectedZone.id, { colorTemperature: parseInt(e.target.value) })}
+              className="w-full accent-amber-400 h-2"
+              style={{
+                background: `linear-gradient(to right, #ff9329, #fff4e0, #c9e2ff)`,
+                borderRadius: 4,
+              }}
+            />
+            <div className="flex justify-between text-[10px] text-stone-400 mt-0.5">
+              <span>Warm (1800K)</span>
+              <span>Cool (10000K)</span>
+            </div>
+          </div>
+
           {/* Intensity */}
           <div className="mb-3">
             <label className="block text-[11px] font-medium text-stone-400 uppercase tracking-wider mb-1">

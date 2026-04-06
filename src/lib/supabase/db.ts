@@ -2843,3 +2843,49 @@ export async function fetchContractAuditLog(contractId: string): Promise<Contrac
   if (error) throw new Error(`fetchContractAuditLog: ${error.message}`);
   return (data ?? []).map(auditEntryFromRow);
 }
+
+// ── Floor plan snapshots (manual save/restore) ──
+
+export interface FloorPlanSnapshot {
+  id: string;
+  floorPlanId: string;
+  label: string;
+  createdAt: string;
+}
+
+/** Create a manual snapshot of a floor plan's current state */
+export async function createFloorPlanSnapshot(floorPlanId: string, label: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("snapshot_floor_plans", {
+    p_floor_plan_id: floorPlanId,
+    p_label: label,
+  });
+  if (error) throw new Error(`createFloorPlanSnapshot: ${error.message}`);
+}
+
+/** List snapshots for a floor plan */
+export async function listFloorPlanSnapshots(floorPlanId: string): Promise<FloorPlanSnapshot[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("floor_plan_snapshots")
+    .select("id, floor_plan_id, label, created_at")
+    .eq("floor_plan_id", floorPlanId)
+    .order("created_at", { ascending: false })
+    .limit(20);
+  if (error) throw new Error(`listFloorPlanSnapshots: ${error.message}`);
+  return (data ?? []).map((row: any) => ({
+    id: row.id,
+    floorPlanId: row.floor_plan_id,
+    label: row.label || "",
+    createdAt: row.created_at,
+  }));
+}
+
+/** Restore a floor plan from a snapshot */
+export async function restoreFloorPlanSnapshot(snapshotId: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.rpc("restore_floor_plan_snapshot", {
+    p_snapshot_id: snapshotId,
+  });
+  if (error) throw new Error(`restoreFloorPlanSnapshot: ${error.message}`);
+}

@@ -5,12 +5,12 @@ import { useParams } from "next/navigation";
 import { useEvent, useEventSubEntities, useEventCoreLoaded, useStoreActions, useEventsLoading, usePlannerProfile } from "@/hooks/useStore";
 import EventLoader from "@/components/ui/EventLoader";
 import Link from "next/link";
-import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown, FileDown, Box, X, Share2, Check } from "lucide-react";
+import { ArrowLeft, Plus, Users, Lightbulb, ChevronUp, ChevronDown, FileDown, Box, X, Share2, Check, History } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { FloorPlan, Guest, GuestRelationship, LayoutObject, LightingZone, RoomShape, View3DSettings, createDefaultFloorPlans } from "@/lib/types";
 import { replaceLayoutObjects } from "@/lib/floorplan/layout-objects";
 import { v4 as uuid } from "uuid";
-import { fetchGuestRelationships, updateFloorPlanSettings } from "@/lib/supabase/db";
+import { fetchGuestRelationships, updateFloorPlanSettings, createFloorPlanSnapshot, listFloorPlanSnapshots, restoreFloorPlanSnapshot, type FloorPlanSnapshot } from "@/lib/supabase/db";
 import { exportFloorPlanPDF } from "@/lib/floorplan-export-pdf";
 import { showErrorToast } from "@/lib/error-toast";
 import SeatingPanel from "@/components/floorplan/SeatingPanel";
@@ -18,17 +18,21 @@ import LightingPanel from "@/components/floorplan/LightingPanel";
 import { FloorPlanErrorBoundary } from "@/components/floorplan/FloorPlanErrorBoundary";
 import { useIsTeamMember } from "@/hooks/useIsTeamMember";
 
-const FloorPlanEditor = dynamic(
-  () => import("@/components/floorplan/FloorPlanEditor"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex-1 flex items-center justify-center bg-stone-100">
-        <p className="text-stone-400 text-sm">Loading editor...</p>
-      </div>
-    ),
-  }
-);
+// Eagerly preload editor chunk + asset catalog at module level to reduce initial load time
+const editorChunk = () => import("@/components/floorplan/FloorPlanEditor");
+if (typeof window !== "undefined") {
+  editorChunk();
+  import("@/lib/asset-catalog").then((m) => m.getAssetCatalog());
+}
+
+const FloorPlanEditor = dynamic(editorChunk, {
+  ssr: false,
+  loading: () => (
+    <div className="flex-1 flex items-center justify-center bg-stone-100">
+      <p className="text-stone-400 text-sm">Loading editor...</p>
+    </div>
+  ),
+});
 
 const FloorPlan3DView = dynamic(
   () => import("@/components/floorplan/FloorPlan3DView"),
@@ -62,6 +66,9 @@ export default function FloorPlanPage() {
   const [guestRelationships, setGuestRelationships] = useState<GuestRelationship[]>([]);
   const [shareCopied, setShareCopied] = useState(false);
   const [showApprovalNote, setShowApprovalNote] = useState(event?.layoutApprovalStatus === "changes_requested");
+  const [showSnapshots, setShowSnapshots] = useState(false);
+  const [snapshots, setSnapshots] = useState<FloorPlanSnapshot[]>([]);
+  const [snapshotLoading, setSnapshotLoading] = useState(false);
   const getCanvasDataURLRef = useRef<(() => string | null) | null>(null);
   const autoCreatedRef = useRef(false);
   // Refs for latest values — prevents stale closure in flush-save on editor unmount
@@ -216,6 +223,50 @@ export default function FloorPlanPage() {
     setTimeout(() => setShareCopied(false), 2000);
   }
 
+  async function handleSaveSnapshot() {
+    if (!activePlan) return;
+    const label = prompt("Snapshot label (optional):", `Snapshot ${new Date().toLocaleString()}`);
+    if (label === null) return; // cancelled
+    setSnapshotLoading(true);
+    try {
+      await createFloorPlanSnapshot(activePlan.id, label || `Snapshot ${new Date().toLocaleString()}`);
+      const list = await listFloorPlanSnapshots(activePlan.id);
+      setSnapshots(list);
+    } catch (err) {
+      showErrorToast("Failed to save snapshot.");
+      console.error("[Snapshot] save error:", err);
+    }
+    setSnapshotLoading(false);
+  }
+
+  async function handleOpenSnapshots() {
+    if (!activePlan) return;
+    setShowSnapshots(true);
+    setSnapshotLoading(true);
+    try {
+      const list = await listFloorPlanSnapshots(activePlan.id);
+      setSnapshots(list);
+    } catch (err) {
+      showErrorToast("Failed to load snapshots.");
+      console.error("[Snapshot] list error:", err);
+    }
+    setSnapshotLoading(false);
+  }
+
+  async function handleRestoreSnapshot(snapshotId: string) {
+    if (!confirm("Restore this snapshot? Current layout will be replaced.")) return;
+    setSnapshotLoading(true);
+    try {
+      await restoreFloorPlanSnapshot(snapshotId);
+      // Reload page to pick up restored data
+      window.location.reload();
+    } catch (err) {
+      showErrorToast("Failed to restore snapshot.");
+      console.error("[Snapshot] restore error:", err);
+      setSnapshotLoading(false);
+    }
+  }
+
   function toggleLighting() {
     if (showLighting) {
       setShowLighting(false);
@@ -297,6 +348,22 @@ export default function FloorPlanPage() {
           <FileDown size={13} />
           <span className="hidden sm:inline">PDF</span>
         </button>
+
+        {/* Snapshot History */}
+        {!readOnly && (
+          <button
+            onClick={handleOpenSnapshots}
+            className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors ${
+              showSnapshots
+                ? "bg-violet-50 text-violet-600 border border-violet-200"
+                : "text-stone-400 hover:text-stone-600 hover:bg-stone-50 border border-transparent"
+            }`}
+            title="Version History"
+          >
+            <History size={13} />
+            <span className="hidden sm:inline">History</span>
+          </button>
+        )}
 
         {/* Share Presentation (Pro/Teams only) */}
         {!isDiy && (
@@ -533,6 +600,47 @@ export default function FloorPlanPage() {
               </div>
             </div>
           </>
+        )}
+
+        {/* Snapshot History Panel */}
+        {showSnapshots && !readOnly && (
+          <div className="absolute top-0 right-0 bottom-0 z-40 w-72 bg-white border-l border-stone-200 shadow-xl flex flex-col">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-stone-200">
+              <h3 className="text-sm font-heading font-semibold text-stone-800">Version History</h3>
+              <button onClick={() => setShowSnapshots(false)} className="text-stone-400 hover:text-stone-600">
+                <X size={14} />
+              </button>
+            </div>
+            <div className="p-4">
+              <button
+                onClick={handleSaveSnapshot}
+                disabled={snapshotLoading}
+                className="w-full px-3 py-2 text-xs font-medium bg-violet-50 text-violet-600 rounded-lg hover:bg-violet-100 transition-colors disabled:opacity-50"
+              >
+                {snapshotLoading ? "Saving..." : "Save Snapshot"}
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto px-4 pb-4">
+              {snapshots.length === 0 && !snapshotLoading && (
+                <p className="text-xs text-stone-400 text-center py-4">No snapshots yet. Save one to create a restore point.</p>
+              )}
+              {snapshots.map((snap) => (
+                <div key={snap.id} className="mb-2 p-3 border border-stone-200 rounded-lg hover:border-stone-300 transition-colors">
+                  <p className="text-xs font-medium text-stone-700 truncate">{snap.label || "Untitled"}</p>
+                  <p className="text-[10px] text-stone-400 mt-0.5">
+                    {new Date(snap.createdAt).toLocaleString()}
+                  </p>
+                  <button
+                    onClick={() => handleRestoreSnapshot(snap.id)}
+                    disabled={snapshotLoading}
+                    className="mt-2 text-[10px] font-medium text-violet-500 hover:text-violet-700 disabled:opacity-50"
+                  >
+                    Restore this version
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
 
         {/* Seating panels */}

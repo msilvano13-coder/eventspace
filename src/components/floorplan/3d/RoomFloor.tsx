@@ -177,13 +177,78 @@ function TexturedFloor({
 
 // ── Main RoomFloor Component ──
 
-export function RoomFloor({ obj, originX, originY, settings, showWalls = true, floorOverride }: {
+// IDs of room feature furniture that should cut openings in walls
+const WALL_OPENING_IDS = new Set(["door-single", "door-double", "window-standard", "window-floor", "bay-window"]);
+
+// Represents a sub-segment of wall (after cutting openings)
+interface WallSubSegment {
+  cx: number;
+  cz: number;
+  length: number;
+  angle: number;
+}
+
+/** Split a wall segment around nearby door/window furniture, returning sub-segments */
+function splitWallAroundOpenings(
+  seg: { x1: number; z1: number; x2: number; z2: number; length: number; angle: number; cx: number; cz: number },
+  openings: { pos: number; halfWidth: number }[], // pos = projection along segment (0..length), halfWidth in world units
+): WallSubSegment[] {
+  if (openings.length === 0) return [{ cx: seg.cx, cz: seg.cz, length: seg.length, angle: seg.angle }];
+
+  // Sort openings by position along the wall
+  const sorted = [...openings].sort((a, b) => a.pos - b.pos);
+
+  // Direction unit vector
+  const dx = (seg.x2 - seg.x1) / seg.length;
+  const dz = (seg.z2 - seg.z1) / seg.length;
+
+  const subs: WallSubSegment[] = [];
+  let cursor = 0; // how far along the wall we've consumed
+
+  for (const op of sorted) {
+    const gapStart = Math.max(0, op.pos - op.halfWidth);
+    const gapEnd = Math.min(seg.length, op.pos + op.halfWidth);
+    if (gapStart <= cursor) {
+      cursor = Math.max(cursor, gapEnd);
+      continue;
+    }
+    // Solid section before this opening
+    const solidLen = gapStart - cursor;
+    if (solidLen > 0.05) {
+      const midT = cursor + solidLen / 2;
+      subs.push({
+        cx: seg.x1 + dx * midT,
+        cz: seg.z1 + dz * midT,
+        length: solidLen,
+        angle: seg.angle,
+      });
+    }
+    cursor = gapEnd;
+  }
+
+  // Remaining solid section after last opening
+  const remaining = seg.length - cursor;
+  if (remaining > 0.05) {
+    const midT = cursor + remaining / 2;
+    subs.push({
+      cx: seg.x1 + dx * midT,
+      cz: seg.z1 + dz * midT,
+      length: remaining,
+      angle: seg.angle,
+    });
+  }
+
+  return subs;
+}
+
+export function RoomFloor({ obj, originX, originY, settings, showWalls = true, floorOverride, furnitureObjects }: {
   obj: ParsedObject;
   originX: number;
   originY: number;
   settings: View3DSettings;
   showWalls?: boolean;
   floorOverride?: { color: string; roughness: number; metalness: number };
+  furnitureObjects?: ParsedObject[];
 }) {
   const quality = useQuality();
 
@@ -215,6 +280,39 @@ export function RoomFloor({ obj, originX, originY, settings, showWalls = true, f
     }
     return segments;
   }, [obj.points, originX, originY]);
+
+  // Split wall segments around door/window furniture to create openings
+  const renderSegments = useMemo(() => {
+    if (wallSegments.length === 0) return [];
+    const doorWindowObjs = (furnitureObjects ?? []).filter((f) => WALL_OPENING_IDS.has(f.furnitureId));
+    if (doorWindowObjs.length === 0) return wallSegments;
+
+    // Convert furniture positions to world coords
+    const openingsWorld = doorWindowObjs.map((f) => ({
+      wx: (f.x - originX) * S,
+      wz: (f.y - originY) * S,
+      halfW: ((f.width || 36) * S) / 2,
+    }));
+
+    return wallSegments.flatMap((seg) => {
+      // Find openings near this wall segment (within threshold distance)
+      const nearOpenings: { pos: number; halfWidth: number }[] = [];
+      for (const op of openingsWorld) {
+        // Project furniture center onto the wall line
+        const vx = seg.x2 - seg.x1;
+        const vz = seg.z2 - seg.z1;
+        const t = ((op.wx - seg.x1) * vx + (op.wz - seg.z1) * vz) / (seg.length * seg.length);
+        if (t < -0.1 || t > 1.1) continue; // not near this wall
+        // Perpendicular distance from wall
+        const projX = seg.x1 + t * vx;
+        const projZ = seg.z1 + t * vz;
+        const perpDist = Math.sqrt((op.wx - projX) ** 2 + (op.wz - projZ) ** 2);
+        if (perpDist > 1.0) continue; // too far from wall (>1 world unit = 12 inches)
+        nearOpenings.push({ pos: t * seg.length, halfWidth: op.halfW });
+      }
+      return splitWallAroundOpenings(seg, nearOpenings);
+    });
+  }, [wallSegments, furnitureObjects, originX, originY]);
 
   // Compute bounding rect
   const roomBBox = useMemo(() => {
@@ -296,6 +394,7 @@ export function RoomFloor({ obj, originX, originY, settings, showWalls = true, f
       )}
 
       {/* Walls, baseboard, crown — only when venue has walls */}
+      {/* Wall segments are split around door/window furniture to create openings */}
       {showWalls && (() => {
         const wBase = settings.wallColor ?? "#f5f0e8";
         const wBaseboard = settings.wallColor ? adjustBrightness(wBase, -0.15) : "#cdc5b8";
@@ -305,31 +404,31 @@ export function RoomFloor({ obj, originX, originY, settings, showWalls = true, f
         const wCrown = settings.wallColor ? adjustBrightness(wBase, -0.07) : "#e0d8ce";
         return (
           <>
-            {wallSegments.map((seg, i) => (
+            {renderSegments.map((seg, i) => (
               <mesh key={`base-${i}`} position={[seg.cx, 0.15, seg.cz]} rotation={[0, -seg.angle, 0]}>
                 <boxGeometry args={[seg.length, 0.3, wallThickness + 0.06]} />
                 <meshStandardMaterial color={wBaseboard} roughness={0.5} metalness={0.04} />
               </mesh>
             ))}
-            {wallSegments.map((seg, i) => (
+            {renderSegments.map((seg, i) => (
               <mesh key={`wainscot-${i}`} position={[seg.cx, WALL_HEIGHT * 0.19, seg.cz]} rotation={[0, -seg.angle, 0]} receiveShadow>
                 <boxGeometry args={[seg.length, WALL_HEIGHT * 0.35, wallThickness * 0.85]} />
                 <meshStandardMaterial color={wWainscot} roughness={0.75} metalness={0.02} transparent opacity={0.85} />
               </mesh>
             ))}
-            {wallSegments.map((seg, i) => (
+            {renderSegments.map((seg, i) => (
               <mesh key={`rail-${i}`} position={[seg.cx, WALL_HEIGHT * 0.38, seg.cz]} rotation={[0, -seg.angle, 0]}>
                 <boxGeometry args={[seg.length, 0.08, wallThickness + 0.03]} />
                 <meshStandardMaterial color={wRail} roughness={0.45} metalness={0.06} />
               </mesh>
             ))}
-            {wallSegments.map((seg, i) => (
+            {renderSegments.map((seg, i) => (
               <mesh key={`wall-${i}`} position={[seg.cx, WALL_HEIGHT * 0.68, seg.cz]} rotation={[0, -seg.angle, 0]} receiveShadow>
                 <boxGeometry args={[seg.length, WALL_HEIGHT * 0.6, wallThickness]} />
                 <meshStandardMaterial color={wUpper} roughness={0.92} metalness={0} transparent opacity={0.75} />
               </mesh>
             ))}
-            {wallSegments.map((seg, i) => (
+            {renderSegments.map((seg, i) => (
               <mesh key={`crown-${i}`} position={[seg.cx, WALL_HEIGHT - 0.1, seg.cz]} rotation={[0, -seg.angle, 0]}>
                 <boxGeometry args={[seg.length, 0.2, wallThickness + 0.06]} />
                 <meshStandardMaterial color={wCrown} roughness={0.45} metalness={0.06} />

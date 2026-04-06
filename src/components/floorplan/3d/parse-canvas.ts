@@ -132,7 +132,27 @@ export function parseCanvasJSON(floorPlanJSON: string | null): {
     if (data.isGrid || data.isLighting || data.isLightingOverlay || data.isGuide) return;
 
     if (data.isRoom) {
-      const points = obj.points || [];
+      // Room shapes come in two formats:
+      // 1. Polygon (from applyRoomPreset): has .points array of {x, y}
+      // 2. Path (from layoutObjectsToCanvasJSON): has .path as SVG string or array
+      let points: { x: number; y: number }[] = obj.points || [];
+
+      // Parse Path SVG data when .points is missing (Path-based room shapes)
+      if (points.length < 3 && obj.path) {
+        let pathStr = "";
+        if (typeof obj.path === "string") {
+          pathStr = obj.path;
+        } else if (Array.isArray(obj.path)) {
+          // Fabric.js v6 serializes path as array of arrays: [["M",0,0],["L",100,0],...]
+          pathStr = obj.path.map((cmd: any[]) => cmd.join(" ")).join(" ");
+        }
+        const commands = pathStr.match(/[ML]\s*[\d.-]+\s*[\d.-]+/g) || [];
+        points = commands.map((cmd: string) => {
+          const nums = cmd.match(/[\d.-]+/g)!;
+          return { x: parseFloat(nums[0]), y: parseFloat(nums[1]) };
+        });
+      }
+
       if (points.length < 3) return;
 
       // Fabric.js Polygon (originX:"left") stores left/top as the bounding-box edge.
