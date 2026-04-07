@@ -29,6 +29,7 @@ import {
   ArrowUpRight,
   Minus,
 } from "lucide-react";
+import { LogoMark } from "@/components/ui/Logo";
 
 /* ------------------------------------------------------------------ */
 /*  Data                                                               */
@@ -187,9 +188,7 @@ export default function HomePage() {
       <nav className="sticky top-0 z-50 bg-stone-50/80 backdrop-blur-xl border-b border-stone-200/40">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-md flex items-center justify-center text-white font-heading font-bold text-xs italic" style={{ background: "linear-gradient(135deg, #b8a9c9, #f2c4c4)" }}>
-              S
-            </span>
+            <LogoMark size={28} />
             <span className="font-heading text-lg font-semibold tracking-tight">
               SoiréeSpace
             </span>
@@ -847,9 +846,7 @@ export default function HomePage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
             <div>
               <div className="flex items-center gap-2.5 mb-4">
-                <span className="w-7 h-7 rounded-md flex items-center justify-center text-white font-heading font-bold text-xs italic" style={{ background: "linear-gradient(135deg, #b8a9c9, #f2c4c4)" }}>
-                  S
-                </span>
+                <LogoMark size={28} />
                 <span className="font-heading text-lg font-semibold text-white">
                   SoiréeSpace
                 </span>

@@ -26,6 +26,7 @@ const config: Config = {
         heading: ["var(--font-heading)", "serif"],
         body: ["var(--font-body)", "sans-serif"],
         hand: ["var(--font-hand)", "cursive"],
+        logo: ["var(--font-logo)", "cursive"],
       },
       boxShadow: {
         soft: "0 1px 3px 0 rgba(0,0,0,0.04), 0 1px 2px -1px rgba(0,0,0,0.04)",

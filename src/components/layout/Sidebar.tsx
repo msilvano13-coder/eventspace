@@ -10,6 +10,7 @@ import { clearUserIdCache } from "@/lib/supabase/db";
 import { usePlannerProfile } from "@/hooks/useStore";
 import { isProFeature } from "@/lib/plan-features";
 import TeamSwitcher from "@/components/layout/TeamSwitcher";
+import { LogoMark } from "@/components/ui/Logo";
 import NotificationBell from "@/components/layout/NotificationBell";
 const navItems = [
   { href: "/planner", label: "Dashboard", icon: LayoutDashboard },
@@ -66,9 +67,7 @@ export default function Sidebar() {
       <aside className="hidden md:flex md:flex-col w-60 bg-white border-r border-stone-200 min-h-screen">
         <div className="p-5 border-b border-stone-100 space-y-2">
           <Link href="/planner" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-heading font-bold text-white text-sm italic" style={{ background: "linear-gradient(135deg, #b8a9c9, #f2c4c4)" }}>
-              S
-            </div>
+            <LogoMark size={32} />
             <span className="text-lg font-heading font-semibold text-stone-800">
               SoiréeSpace
             </span>
