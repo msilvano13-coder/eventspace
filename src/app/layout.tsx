@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Playfair_Display, Inter } from "next/font/google";
+import { Playfair_Display, Inter, Caveat } from "next/font/google";
 import { Analytics } from "@vercel/analytics/react";
 import PostHogProvider from "@/components/providers/PostHogProvider";
 import ErrorToast from "@/components/ui/ErrorToast";
@@ -14,6 +14,12 @@ const playfair = Playfair_Display({
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-body",
+  display: "swap",
+});
+
+const caveat = Caveat({
+  subsets: ["latin"],
+  variable: "--font-hand",
   display: "swap",
 });
 
@@ -117,7 +123,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`${playfair.variable} ${inter.variable} font-body antialiased bg-stone-50`}
+        className={`${playfair.variable} ${inter.variable} ${caveat.variable} font-body antialiased`}
       >
         <PostHogProvider>{children}</PostHogProvider>
         <ErrorToast />

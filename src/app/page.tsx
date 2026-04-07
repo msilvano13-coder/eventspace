@@ -187,8 +187,8 @@ export default function HomePage() {
       <nav className="sticky top-0 z-50 bg-stone-50/80 backdrop-blur-xl border-b border-stone-200/40">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 h-14 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-md bg-stone-900 flex items-center justify-center text-white font-heading font-bold text-xs">
-              E
+            <span className="w-7 h-7 rounded-md flex items-center justify-center text-white font-heading font-bold text-xs italic" style={{ background: "linear-gradient(135deg, #b8a9c9, #f2c4c4)" }}>
+              S
             </span>
             <span className="font-heading text-lg font-semibold tracking-tight">
               SoiréeSpace
@@ -216,7 +216,8 @@ export default function HomePage() {
             </Link>
             <Link
               href="/sign-up"
-              className="text-[13px] font-medium text-white bg-stone-900 hover:bg-stone-800 px-4 py-1.5 rounded-lg transition-colors"
+              className="text-[13px] font-medium text-white px-5 py-1.5 rounded-full transition-all hover:-translate-y-0.5"
+              style={{ background: "linear-gradient(135deg, #b8a9c9, #a08cb8)" }}
             >
               Get started
             </Link>
@@ -253,7 +254,8 @@ export default function HomePage() {
               </Link>
               <Link
                 href="/sign-up"
-                className="mt-1 text-center font-medium text-white bg-stone-900 px-5 py-2.5 rounded-lg text-[15px]"
+                className="mt-1 text-center font-medium text-white px-5 py-2.5 rounded-full text-[15px]"
+                style={{ background: "linear-gradient(135deg, #b8a9c9, #a08cb8)" }}
               >
                 Get started
               </Link>
@@ -275,12 +277,15 @@ export default function HomePage() {
 
           {/* Headline — asymmetric, editorial */}
           <h1 className="font-heading text-[clamp(2.5rem,6vw,5.5rem)] font-bold leading-[0.95] tracking-tight text-stone-900 max-w-5xl">
-            Every detail.
+            Every little
             <br />
-            <span className="italic font-normal text-stone-400">
-              Intentional.
+            <span className="italic font-normal bg-gradient-to-r from-rose-400 to-rose-300 bg-clip-text text-transparent">
+              magical detail.
             </span>
           </h1>
+          <p className="font-hand text-xl text-amber-600 mt-4 -rotate-2 inline-block">
+            (every detail, intentional)
+          </p>
 
           <div className="mt-10 sm:mt-12 flex flex-col sm:flex-row gap-12 sm:gap-20 max-w-4xl">
             <p className="text-lg sm:text-xl text-stone-500 leading-relaxed max-w-lg">
@@ -295,10 +300,10 @@ export default function HomePage() {
                   href="/sign-up"
                   className="group inline-flex items-center gap-3 text-[15px] font-medium text-stone-900 hover:text-rose-600 transition-colors"
                 >
-                  <span className="w-10 h-10 rounded-full bg-rose-500 group-hover:bg-rose-600 flex items-center justify-center transition-colors">
+                  <span className="w-10 h-10 rounded-full flex items-center justify-center transition-colors" style={{ background: "linear-gradient(135deg, #b8a9c9, #f2c4c4)" }}>
                     <ArrowRight size={16} className="text-white" />
                   </span>
-                  Start free trial
+                  Start your story
                 </Link>
                 <p className="text-xs text-stone-400 ml-[52px] mt-1">
                   No credit card required
@@ -349,6 +354,9 @@ export default function HomePage() {
                 No more juggling tools.
               </span>
             </h2>
+            <p className="font-hand text-lg text-amber-600 mt-2 -rotate-1 inline-block">
+              ...just the magic
+            </p>
           </div>
 
           {/* Bento grid */}
@@ -357,10 +365,10 @@ export default function HomePage() {
             {FEATURES_BENTO.filter((f) => f.size === "large").map((f) => (
               <div
                 key={f.title}
-                className="lg:col-span-1 bg-white rounded-2xl p-7 sm:p-8 border border-stone-200/60 hover:border-stone-300 transition-colors relative group"
+                className="lg:col-span-1 bg-white rounded-2xl p-7 sm:p-8 border border-stone-200/60 hover:border-rose-300 hover:-translate-y-1 transition-all duration-300 relative group"
               >
                 {"badge" in f && f.badge && (
-                  <span className="absolute top-6 right-6 text-[11px] font-semibold text-rose-500 bg-rose-50 rounded-full px-2.5 py-0.5">
+                  <span className="absolute top-6 right-6 text-[11px] font-semibold text-white bg-gradient-to-r from-rose-400 to-rose-300 rounded-full px-2.5 py-0.5">
                     {f.badge}
                   </span>
                 )}
@@ -383,7 +391,7 @@ export default function HomePage() {
             {FEATURES_BENTO.filter((f) => f.size === "medium").map((f) => (
               <div
                 key={f.title}
-                className="bg-white rounded-2xl p-7 border border-stone-200/60 hover:border-stone-300 transition-colors group"
+                className="bg-white rounded-2xl p-7 border border-stone-200/60 hover:border-rose-300 hover:-translate-y-1 transition-all duration-300 group"
               >
                 <div className="w-10 h-10 rounded-xl bg-stone-100 flex items-center justify-center mb-5 group-hover:bg-rose-50 transition-colors">
                   <f.icon
@@ -426,7 +434,7 @@ export default function HomePage() {
               Two paths.
               <br />
               <span className="text-stone-400 font-normal">
-                Same great tools.
+                Same enchanting tools.
               </span>
             </h2>
           </div>
@@ -614,8 +622,8 @@ export default function HomePage() {
             </div>
 
             {/* Professional */}
-            <div className="rounded-2xl border-2 border-stone-900 bg-white p-8 relative">
-              <span className="absolute -top-3 left-6 bg-stone-900 text-white text-[11px] font-medium px-3 py-1 rounded-full">
+            <div className="rounded-2xl border-2 border-rose-400 bg-white p-8 relative">
+              <span className="absolute -top-3 left-6 text-white text-[11px] font-medium px-3 py-1 rounded-full" style={{ background: "linear-gradient(135deg, #b8a9c9, #f2c4c4)" }}>
                 Most popular
               </span>
               <p className="text-[13px] text-rose-500 font-medium mb-4">
@@ -639,7 +647,8 @@ export default function HomePage() {
 
               <Link
                 href="/sign-up?plan=professional"
-                className="mt-6 block text-center text-[13px] font-medium text-white bg-stone-900 hover:bg-stone-800 px-6 py-2.5 rounded-lg transition-colors"
+                className="mt-6 block text-center text-[13px] font-medium text-white px-6 py-2.5 rounded-full transition-all hover:-translate-y-0.5"
+                style={{ background: "linear-gradient(135deg, #b8a9c9, #a08cb8)" }}
               >
                 Start free trial
               </Link>
@@ -809,14 +818,18 @@ export default function HomePage() {
           <h2 className="font-heading text-3xl sm:text-5xl font-bold text-stone-900 leading-tight">
             Your next event
             <br />
-            <span className="italic font-normal text-stone-400">
+            <span className="italic font-normal bg-gradient-to-r from-rose-400 to-rose-300 bg-clip-text text-transparent">
               starts here.
             </span>
           </h2>
+          <p className="font-hand text-xl text-amber-600 mt-3 -rotate-2 inline-block">
+            {"...and it's going to be beautiful"}
+          </p>
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/sign-up"
-              className="inline-flex items-center gap-2.5 text-[15px] font-medium text-white bg-stone-900 hover:bg-stone-800 px-7 py-3 rounded-xl transition-colors"
+              className="inline-flex items-center gap-2.5 text-[15px] font-medium text-white px-7 py-3 rounded-full transition-all hover:-translate-y-0.5"
+              style={{ background: "linear-gradient(135deg, #b8a9c9, #a08cb8)" }}
             >
               Get started free
               <ArrowRight size={16} />
@@ -834,8 +847,8 @@ export default function HomePage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10">
             <div>
               <div className="flex items-center gap-2.5 mb-4">
-                <span className="w-7 h-7 rounded-md bg-white/10 flex items-center justify-center text-white font-heading font-bold text-xs">
-                  E
+                <span className="w-7 h-7 rounded-md flex items-center justify-center text-white font-heading font-bold text-xs italic" style={{ background: "linear-gradient(135deg, #b8a9c9, #f2c4c4)" }}>
+                  S
                 </span>
                 <span className="font-heading text-lg font-semibold text-white">
                   SoiréeSpace

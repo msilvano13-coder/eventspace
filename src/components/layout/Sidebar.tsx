@@ -66,8 +66,8 @@ export default function Sidebar() {
       <aside className="hidden md:flex md:flex-col w-60 bg-white border-r border-stone-200 min-h-screen">
         <div className="p-5 border-b border-stone-100 space-y-2">
           <Link href="/planner" className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-rose-400 rounded-lg flex items-center justify-center font-heading font-bold text-white text-sm">
-              E
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center font-heading font-bold text-white text-sm italic" style={{ background: "linear-gradient(135deg, #b8a9c9, #f2c4c4)" }}>
+              S
             </div>
             <span className="text-lg font-heading font-semibold text-stone-800">
               SoiréeSpace
