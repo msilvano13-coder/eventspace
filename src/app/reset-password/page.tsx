@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Loader2, CheckCircle2 } from "lucide-react";
+import { LogoMark } from "@/components/ui/Logo";
 
 export default function ResetPasswordPage() {
   const router = useRouter();
@@ -55,9 +56,7 @@ export default function ResetPasswordPage() {
         {/* Logo */}
         <div className="text-center mb-8">
           <Link href="/" className="inline-flex items-center gap-2">
-            <span className="w-10 h-10 rounded-xl bg-rose-500 flex items-center justify-center text-white font-heading font-bold text-lg">
-              E
-            </span>
+            <LogoMark size={40} />
             <span className="font-heading text-2xl font-semibold text-stone-900">SoiréeSpace</span>
           </Link>
         </div>

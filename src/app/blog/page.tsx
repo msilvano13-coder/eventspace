@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { blogPosts } from "@/lib/blog-data";
+import { LogoMark } from "@/components/ui/Logo";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -28,7 +29,7 @@ export default function BlogPage() {
       <nav className="sticky top-0 z-50 bg-stone-50/80 backdrop-blur-lg border-b border-stone-200/60">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-between h-14">
           <Link href="/" className="flex items-center gap-2 font-heading font-bold text-stone-800">
-            <span className="w-7 h-7 bg-rose-500 rounded-lg flex items-center justify-center text-white text-xs font-bold">E</span>
+            <LogoMark size={28} />
             SoiréeSpace
           </Link>
           <div className="flex items-center gap-4">

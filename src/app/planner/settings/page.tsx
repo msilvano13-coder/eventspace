@@ -440,7 +440,7 @@ function SettingsContent() {
                   <p className="text-xs font-medium text-stone-500">Trial Status</p>
                   {trialDaysLeft > 0 ? (
                     <p className="text-sm text-stone-800">
-                      <span className="text-rose-500 font-semibold">{trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""}</span> remaining
+                      <span className="text-red-500 font-semibold">{trialDaysLeft} day{trialDaysLeft !== 1 ? "s" : ""}</span> remaining
                       {profile.trialEndsAt && (
                         <span className="text-stone-400 text-xs ml-2">
                           (expires {new Date(profile.trialEndsAt).toLocaleDateString()})
@@ -448,7 +448,7 @@ function SettingsContent() {
                       )}
                     </p>
                   ) : (
-                    <p className="text-sm text-rose-500 font-medium">Your trial has expired</p>
+                    <p className="text-sm text-red-500 font-medium">Your trial has expired</p>
                   )}
                 </div>
               </div>

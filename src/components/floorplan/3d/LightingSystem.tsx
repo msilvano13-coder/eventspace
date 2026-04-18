@@ -323,6 +323,8 @@ export function LightingZone3D({
 }) {
   const quality = useQuality();
   const shadowMapSize = quality.tier === "high" ? 1024 : 512;
+  // Disable all shadow casting on low tier
+  const effectiveCastShadow = castShadow && quality.useShadowMaps;
 
   const px = (zone.x / 100) * canvasWidth;
   const py = (zone.y / 100) * canvasHeight;
@@ -373,7 +375,7 @@ export function LightingZone3D({
     const coneRadius = Math.tan(spreadRad / 2) * coneHeight;
     const useEmissiveCone = quality.tier !== "low";
 
-    const isGobo = zone.type === "gobo";
+    const isGobo = zone.type === "gobo" && quality.useGobos;
     const goboPattern = zone.goboPattern ?? "leaves";
 
     return (
@@ -390,7 +392,7 @@ export function LightingZone3D({
             coneHeight={coneHeight}
             coneRadius={coneRadius}
             pattern={goboPattern}
-            castShadow={castShadow}
+            castShadow={effectiveCastShadow}
             shadowMapSize={shadowMapSize}
           />
         ) : (
@@ -404,7 +406,7 @@ export function LightingZone3D({
               penumbra={0.4}
               position={[0, mountHeight, 0]}
               target-position={[0, 0, 0]}
-              castShadow={castShadow}
+              castShadow={effectiveCastShadow}
               shadow-mapSize-width={castShadow ? shadowMapSize : undefined}
               shadow-mapSize-height={castShadow ? shadowMapSize : undefined}
             />
@@ -478,7 +480,7 @@ export function LightingZone3D({
           penumbra={0.3}
           position={[0, 0.2, 0]}
           target-position={[0, mountHeight, 0]}
-          castShadow={castShadow}
+          castShadow={effectiveCastShadow}
           shadow-mapSize-width={castShadow ? shadowMapSize : undefined}
           shadow-mapSize-height={castShadow ? shadowMapSize : undefined}
         />
@@ -586,6 +588,17 @@ export function LightingZone3D({
   // ── Candles: warm flickering point lights ──
   if (zone.type === "candles") {
     const baseY = snapElevation > 0 ? snapElevation : 0;
+    // On low tier, skip candle meshes — just render a bare point light
+    if (!quality.useCandleMeshes) {
+      return (
+        <pointLight
+          position={[posX, baseY + 0.2, posZ]}
+          color="#ffcc66"
+          intensity={intensity * 0.8}
+          distance={lightDistance}
+        />
+      );
+    }
     return (
       <CandleLight
         posX={posX}
@@ -594,7 +607,7 @@ export function LightingZone3D({
         color={color}
         intensity={intensity}
         lightDistance={lightDistance}
-        castShadow={castShadow}
+        castShadow={effectiveCastShadow}
         shadowMapSize={shadowMapSize}
       />
     );

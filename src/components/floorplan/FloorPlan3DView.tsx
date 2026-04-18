@@ -9,7 +9,7 @@ import { showErrorToast } from "@/lib/error-toast";
 import { ErrorBoundary } from "./FloorPlan3DErrorBoundary";
 import VenueEnvironment, { VenuePresetDef, VENUE_PRESETS } from "./VenueEnvironment";
 import ProceduralEnvMap from "./ProceduralEnvMap";
-import { QualityProvider } from "./QualityTier";
+import { QualityProvider, useQuality } from "./QualityTier";
 
 import {
   S,
@@ -129,17 +129,21 @@ function FloorPlan3DScene({
   const fogColor = activePreset?.fogColor ?? "#f0ece6";
   const showWalls = activePreset?.showWalls ?? true;
 
+  const quality = useQuality();
+
   return (
     <>
       {/* Procedural environment map — gives PBR materials something to reflect */}
       <ProceduralEnvMap mood={settings.lightingMood} />
 
-      {/* Fog for depth — tighter for indoor venues, looser for outdoor */}
-      <fog attach="fog" args={[
-        fogColor,
-        activePreset?.showWalls ? maxDim * 1.5 : maxDim * 2.5,
-        activePreset?.showWalls ? maxDim * 3.5 : maxDim * 6,
-      ]} />
+      {/* Fog for depth — skipped on low tier */}
+      {quality.useFog && (
+        <fog attach="fog" args={[
+          fogColor,
+          activePreset?.showWalls ? maxDim * 1.5 : maxDim * 2.5,
+          activePreset?.showWalls ? maxDim * 3.5 : maxDim * 6,
+        ]} />
+      )}
 
       {/* Scene lighting — mood-driven key + fill, color cast blended toward neutral */}
       {/* roomDimmer (0–1) scales ambient scene lights when lighting mode is active */}
@@ -157,9 +161,9 @@ function FloorPlan3DScene({
               position={[cx + maxDim * 0.4, maxDim * 0.6, cz + maxDim * 0.3]}
               intensity={lightingEnabled ? mood.keyIntensity * 0.4 * dim : mood.keyIntensity}
               color={blendToNeutral(mood.keyColor, settings.lightingColorCast)}
-              castShadow={settings.showShadows}
-              shadow-mapSize-width={2048}
-              shadow-mapSize-height={2048}
+              castShadow={settings.showShadows && quality.useShadowMaps}
+              shadow-mapSize-width={quality.shadowMapSize}
+              shadow-mapSize-height={quality.shadowMapSize}
               shadow-camera-left={-maxDim}
               shadow-camera-right={maxDim}
               shadow-camera-top={maxDim}
@@ -167,29 +171,34 @@ function FloorPlan3DScene({
               shadow-bias={-0.0002}
               shadow-normalBias={0.02}
             />
-            {/* Fill light — from opposite side, dims when user lighting takes over */}
-            <directionalLight
-              position={[cx - maxDim * 0.3, maxDim * 0.4, cz - maxDim * 0.3]}
-              intensity={lightingEnabled ? mood.fillIntensity * 0.3 * dim : mood.fillIntensity}
-              color={blendToNeutral(mood.fillColor, settings.lightingColorCast)}
-            />
-            {/* Rim light for edge separation — softer when user lighting is on */}
-            <directionalLight
-              position={[cx, maxDim * 0.3, cz - maxDim * 0.5]}
-              intensity={lightingEnabled ? 0.06 * dim : 0.12}
-              color={blendToNeutral("#f0ece6", settings.lightingColorCast)}
-            />
-            {/* Bounce light from below — simulates floor reflection */}
-            <hemisphereLight
-              args={[blendToNeutral("#faf7f0", settings.lightingColorCast), blendToNeutral("#d4c8b8", settings.lightingColorCast), lightingEnabled ? 0.08 * dim : 0.15]}
-            />
+            {/* Fill, rim, hemisphere — only on medium/high */}
+            {quality.useFullLighting && (
+              <>
+                {/* Fill light — from opposite side, dims when user lighting takes over */}
+                <directionalLight
+                  position={[cx - maxDim * 0.3, maxDim * 0.4, cz - maxDim * 0.3]}
+                  intensity={lightingEnabled ? mood.fillIntensity * 0.3 * dim : mood.fillIntensity}
+                  color={blendToNeutral(mood.fillColor, settings.lightingColorCast)}
+                />
+                {/* Rim light for edge separation — softer when user lighting is on */}
+                <directionalLight
+                  position={[cx, maxDim * 0.3, cz - maxDim * 0.5]}
+                  intensity={lightingEnabled ? 0.06 * dim : 0.12}
+                  color={blendToNeutral("#f0ece6", settings.lightingColorCast)}
+                />
+                {/* Bounce light from below — simulates floor reflection */}
+                <hemisphereLight
+                  args={[blendToNeutral("#faf7f0", settings.lightingColorCast), blendToNeutral("#d4c8b8", settings.lightingColorCast), lightingEnabled ? 0.08 * dim : 0.15]}
+                />
+              </>
+            )}
           </>
         );
       })()}
 
-      {/* Ground plane (fallback if no room) — reflective for marble/hardwood, flat for carpet/concrete */}
+      {/* Ground plane (fallback if no room) — reflective only on medium/high */}
       {rooms.length === 0 && (
-        effectiveFloor.roughness < 0.5 ? (
+        effectiveFloor.roughness < 0.5 && quality.useReflections ? (
           <mesh key={`ground-reflect-${effectiveFloor.color}`} rotation={[-Math.PI / 2, 0, 0]} position={[roomBounds.cx, -0.01, roomBounds.cz]} receiveShadow>
             <planeGeometry args={[roomBounds.span * 1.5, roomBounds.span * 1.5]} />
             <MeshReflectorMaterial
@@ -212,8 +221,8 @@ function FloorPlan3DScene({
         )
       )}
 
-      {/* Contact shadows — sized to room, mood-tinted */}
-      {settings.showShadows && (
+      {/* Contact shadows — skipped on low tier */}
+      {settings.showShadows && quality.useContactShadows && (
         <ContactShadows
           position={[roomBounds.cx, -0.005, roomBounds.cz]}
           opacity={settings.lightingMood === "dramatic" ? 0.45 : 0.35}
@@ -415,17 +424,20 @@ export default function FloorPlan3DView(props: FloorPlan3DViewProps) {
     };
   }, []);
 
+  const isMobile = typeof navigator !== "undefined" && /Mobi|Android/i.test(navigator.userAgent);
+
   return (
     <ErrorBoundary>
       <div className="w-full h-full bg-gradient-to-b from-stone-200 to-stone-300 relative">
         <Canvas
-          shadows
+          shadows={!isMobile}
+          frameloop={isMobile ? "demand" : "always"}
           camera={camConfig}
-          dpr={[1, 2]}
+          dpr={isMobile ? [1, 1] : [1, 2]}
           onCreated={handleCreated}
           gl={{
-            antialias: true,
-            powerPreference: "default",
+            antialias: !isMobile,
+            powerPreference: isMobile ? "low-power" : "default",
             toneMapping: ACESFilmicToneMapping,
             toneMappingExposure: 1.1,
           }}

@@ -92,6 +92,31 @@ export function useAssetModelUrl(furnitureId: string): {
 }
 
 /**
+ * Resolves the raw product-render URL (.webp) for a furniture ID.
+ * Independent of the GLTF quality gate — works even when GLTF is disabled,
+ * so low-tier devices and GLTF-less assets can still use a billboard impostor
+ * instead of falling through to bare procedural geometry.
+ *
+ * Returns null if no manifest entry exists for this ID.
+ */
+export function useAssetRenderUrl(furnitureId: string): string | null {
+  const [manifest, setManifest] = useState<Map<string, ManifestEntry> | null>(
+    getFloorplanManifestSync
+  );
+
+  useEffect(() => {
+    if (!manifest) {
+      getFloorplanManifest().then(setManifest);
+    }
+  }, [manifest]);
+
+  if (!manifest) return null;
+  const entry = manifest.get(furnitureId);
+  if (!entry) return null;
+  return `${CDN_URL}/${entry.filePath.replace(/\.glb$/i, ".webp")}`;
+}
+
+/**
  * Loads and clones a GLTF scene from a URL.
  * Must be called inside a Suspense boundary (useGLTF suspends).
  */

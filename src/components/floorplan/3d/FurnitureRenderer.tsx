@@ -21,8 +21,10 @@ import {
   type ParsedObject,
   type View3DSettings,
 } from "./constants";
-import { useAssetModelUrl } from "./useAssetModel";
+import { useAssetModelUrl, useAssetRenderUrl } from "./useAssetModel";
 import { GLTFFurnitureInner, GLTFErrorBoundary } from "./GLTFFurniture";
+import { FurnitureBillboard, BillboardErrorBoundary } from "./FurnitureBillboard";
+import { useQuality } from "../QualityTier";
 
 // ── Label texture cache ──
 
@@ -209,6 +211,7 @@ function TablescapeItems3D({ tablescape, tableTopY }: { tablescape: Tablescape; 
 // ── Main FurnitureMesh component ──
 
 export function FurnitureMesh({ obj, originX, originY, settings, tablescapes }: { obj: ParsedObject; originX: number; originY: number; settings: View3DSettings; tablescapes?: Tablescape[] }) {
+  const quality = useQuality();
   const h3d = getHeight(obj.furnitureId) * S;
   const pbr = getPBR(obj.furnitureId);
 
@@ -232,11 +235,12 @@ export function FurnitureMesh({ obj, originX, originY, settings, tablescapes }: 
 
   // ── GLTF model path — render loaded model instead of procedural geometry ──
   const { url: gltfUrl, useProcedural } = useAssetModelUrl(obj.furnitureId);
+  const renderUrl = useAssetRenderUrl(obj.furnitureId);
 
   if (!useProcedural && gltfUrl) {
     const heightInches = getHeight(obj.furnitureId);
     const tableTopY = heightInches * S;
-    const tablescape = obj.tablescapeId && tablescapes
+    const tablescape = obj.tablescapeId && tablescapes && quality.useTablescapes
       ? tablescapes.find((t) => t.id === obj.tablescapeId)
       : undefined;
 
@@ -262,6 +266,31 @@ export function FurnitureMesh({ obj, originX, originY, settings, tablescapes }: 
             tablescape={tablescape}
             tableTopY={tableTopY}
           />
+        )}
+      </group>
+    );
+  }
+
+  // ── Billboard impostor path — used when GLTF is disabled (low tier) or the
+  // asset has no GLTF entry. Shows the raw product render as a camera-facing
+  // plane with a dark-background chroma-key shader. Much better than bare
+  // procedural geometry for assets that have renders but not finished models.
+  if (useProcedural && renderUrl) {
+    const heightInches = getHeight(obj.furnitureId);
+    return (
+      <group position={[posX, 0, posZ]} rotation={[0, rotY, 0]}>
+        <BillboardErrorBoundary furnitureId={obj.furnitureId}>
+          <Suspense fallback={null}>
+            <FurnitureBillboard
+              url={renderUrl}
+              widthInches={obj.width}
+              heightInches={heightInches}
+              depthInches={obj.height}
+            />
+          </Suspense>
+        </BillboardErrorBoundary>
+        {settings.showLabels && (
+          <FurnitureLabel label={obj.label} y={heightInches * S * H_MULT + 0.15} />
         )}
       </group>
     );
@@ -353,7 +382,7 @@ export function FurnitureMesh({ obj, originX, originY, settings, tablescapes }: 
           );
         })}
         {/* Tablescape items (only if assigned) */}
-        {obj.tablescapeId && tablescapes && tablescapes.find((t) => t.id === obj.tablescapeId) ? (
+        {obj.tablescapeId && tablescapes && quality.useTablescapes && tablescapes.find((t) => t.id === obj.tablescapeId) ? (
           <TablescapeItems3D
             tablescape={tablescapes.find((t) => t.id === obj.tablescapeId)!}
             tableTopY={tableTopY + topThick / 2}
@@ -462,7 +491,7 @@ export function FurnitureMesh({ obj, originX, originY, settings, tablescapes }: 
           <meshStandardMaterial color={linenColor} roughness={0.92} metalness={0} envMapIntensity={0.05} />
         </mesh>
         {/* Centerpiece or tablescape items */}
-        {obj.tablescapeId && tablescapes && tablescapes.find((t) => t.id === obj.tablescapeId) ? (
+        {obj.tablescapeId && tablescapes && quality.useTablescapes && tablescapes.find((t) => t.id === obj.tablescapeId) ? (
           <TablescapeItems3D
             tablescape={tablescapes.find((t) => t.id === obj.tablescapeId)!}
             tableTopY={tableTopY}

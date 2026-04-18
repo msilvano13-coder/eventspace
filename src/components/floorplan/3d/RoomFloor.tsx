@@ -65,10 +65,12 @@ function TexturedFloor({
   floorMaterial,
   floorColor,
   bbox,
+  anisotropy,
 }: {
   floorMaterial: View3DSettings["floorMaterial"];
   floorColor: string | null;
   bbox: { cx: number; cz: number; w: number; d: number };
+  anisotropy: number;
 }) {
   const paths = FLOOR_TEXTURE_PATHS[floorMaterial];
   const repeat = FLOOR_TILE_REPEAT[floorMaterial] ?? 4;
@@ -93,9 +95,9 @@ function TexturedFloor({
       tex.repeat.set(repeat, repeat * (bbox.d / bbox.w));
       tex.minFilter = THREE.LinearMipmapLinearFilter;
       tex.magFilter = THREE.LinearFilter;
-      tex.anisotropy = 8;
+      tex.anisotropy = anisotropy;
     }
-  }, [albedoTex, normalTex, roughTex, aoTex, paths.ao, repeat, bbox.w, bbox.d]);
+  }, [albedoTex, normalTex, roughTex, aoTex, paths.ao, repeat, bbox.w, bbox.d, anisotropy]);
 
   // Floor color behavior:
   // - No custom color (null): show raw albedo texture as-is (full natural detail)
@@ -349,7 +351,7 @@ export function RoomFloor({ obj, originX, originY, settings, showWalls = true, f
   const baseFloorMat = FLOOR_MATERIALS[settings.floorMaterial];
   const floorMat = floorOverride ?? (settings.floorColor ? { ...baseFloorMat, color: settings.floorColor } : baseFloorMat);
   const useTextures = quality.useTextures && !floorOverride;
-  const isReflective = !floorOverride && (settings.floorMaterial === "marble" || settings.floorMaterial === "hardwood" || settings.floorMaterial === "tile");
+  const isReflective = quality.useReflections && !floorOverride && (settings.floorMaterial === "marble" || settings.floorMaterial === "hardwood" || settings.floorMaterial === "tile");
 
   return (
     <group>
@@ -359,6 +361,7 @@ export function RoomFloor({ obj, originX, originY, settings, showWalls = true, f
           floorMaterial={settings.floorMaterial}
           floorColor={settings.floorColor}
           bbox={roomBBox}
+          anisotropy={quality.anisotropy}
         />
       ) : (
         <mesh key={`floor-${floorMat.color}-${settings.floorMaterial}`} rotation={[-Math.PI / 2, 0, 0]} position={[roomBBox.cx, 0.001, roomBBox.cz]} receiveShadow>

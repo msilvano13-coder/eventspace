@@ -29,6 +29,24 @@ export interface QualitySettings {
   useGLTF: boolean;
   /** Whether to enable post-processing effects (SSAO, vignette) */
   usePostProcessing: boolean;
+  /** Whether to render contact shadows */
+  useContactShadows: boolean;
+  /** Whether to render reflective floor overlays (MeshReflectorMaterial) */
+  useReflections: boolean;
+  /** Whether to render fog */
+  useFog: boolean;
+  /** Whether to render shadow maps on directional/spot lights */
+  useShadowMaps: boolean;
+  /** Whether to render candle meshes (glass, wax, flames) vs bare point light */
+  useCandleMeshes: boolean;
+  /** Whether to render gobo projections */
+  useGobos: boolean;
+  /** Whether to render tablescape GLTF items on tables */
+  useTablescapes: boolean;
+  /** Whether to use full lighting rig (fill, rim, hemisphere) vs minimal */
+  useFullLighting: boolean;
+  /** Texture anisotropy level */
+  anisotropy: number;
 }
 
 const TIER_SETTINGS: Record<QualityTier, QualitySettings> = {
@@ -38,13 +56,22 @@ const TIER_SETTINGS: Record<QualityTier, QualitySettings> = {
     envMapSize: 64,
     shadowResolution: 256,
     useClearcoat: false,
-    cylinderSegments: 16,
-    shadowMapSize: 1024,
+    cylinderSegments: 8,
+    shadowMapSize: 512,
     useTextures: false,
     textureSize: 0,
     useBevels: false,
     useGLTF: false,
     usePostProcessing: false,
+    useContactShadows: false,
+    useReflections: false,
+    useFog: false,
+    useShadowMaps: false,
+    useCandleMeshes: false,
+    useGobos: false,
+    useTablescapes: false,
+    useFullLighting: false,
+    anisotropy: 1,
   },
   medium: {
     tier: "medium",
@@ -59,6 +86,15 @@ const TIER_SETTINGS: Record<QualityTier, QualitySettings> = {
     useBevels: true,
     useGLTF: true,
     usePostProcessing: true,
+    useContactShadows: true,
+    useReflections: true,
+    useFog: true,
+    useShadowMaps: true,
+    useCandleMeshes: true,
+    useGobos: true,
+    useTablescapes: true,
+    useFullLighting: true,
+    anisotropy: 8,
   },
   high: {
     tier: "high",
@@ -73,6 +109,15 @@ const TIER_SETTINGS: Record<QualityTier, QualitySettings> = {
     useBevels: true,
     useGLTF: true,
     usePostProcessing: true,
+    useContactShadows: true,
+    useReflections: true,
+    useFog: true,
+    useShadowMaps: true,
+    useCandleMeshes: true,
+    useGobos: true,
+    useTablescapes: true,
+    useFullLighting: true,
+    anisotropy: 8,
   },
 };
 
